@@ -1,0 +1,4 @@
+{
+  "_comment": "Where scripts/claude-sync.mjs stores Claude conversations and memory. MUST be a PRIVATE repo — transcripts contain everything from your sessions. Never use the public alchidle repo.",
+  "repo": "https://github.com/davon768/alchidle-claude.git"
+}

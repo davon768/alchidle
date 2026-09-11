@@ -35,3 +35,15 @@ Content is data-driven. Adding a potion, zone, skill or upgrade means adding one
 ## Android
 
 See the **Android** section of [DESIGN.md](DESIGN.md). Short version: Capacitor wraps `dist/` in a native app project.
+
+## Working from another computer
+
+One-time setup (needs Git, Node.js 22+ and access to the private `alchidle-claude` repo):
+
+```bash
+git clone https://github.com/davon768/alchidle.git
+cd alchidle
+npm run setup
+```
+
+After that, `git pull` / `git push` keep the code in sync. Claude Code conversations and memory for this project sync automatically through hooks in `.claude/settings.json` (see `scripts/claude-sync.mjs`): they're pulled when a session starts and pushed while you work. To continue a synced conversation, run `claude --resume` in this folder. Check the sync any time with `npm run sync:status`.

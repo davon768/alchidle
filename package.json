@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "setup": "npm install && node scripts/claude-sync.mjs setup",
+    "sync:status": "node scripts/claude-sync.mjs status",
+    "sync:pull": "node scripts/claude-sync.mjs pull",
+    "sync:push": "node scripts/claude-sync.mjs push"
   },
   "dependencies": {
     "lit-html": "^3.3.3"
