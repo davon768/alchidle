@@ -15,6 +15,7 @@
   --epic: #ff7ad9;
   --radius: 12px;
   --nav-w: 200px;
+  --feed-w: 280px;
   --header-h: 64px;
   --font-head: 'Cinzel', Georgia, serif;
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -37,9 +38,9 @@ button { font: inherit; color: inherit; }
 /* ── Shell ─────────────────────────────── */
 .shell {
   display: grid;
-  grid-template-columns: var(--nav-w) 1fr;
-  grid-template-rows: var(--header-h) 1fr;
-  grid-template-areas: 'header header' 'nav main';
+  grid-template-columns: var(--nav-w) minmax(0, 1fr) var(--feed-w);
+  grid-template-rows: var(--header-h) minmax(0, 1fr);
+  grid-template-areas: 'header header header' 'nav main feed';
   height: 100vh;
   height: 100dvh;
 }
@@ -201,8 +202,7 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .skill .pip.on { background: var(--tree-color, var(--accent)); }
 
 /* ── Toasts & modal ───────────────────── */
-.toasts { position: fixed; right: 16px; top: calc(var(--header-h) + 12px); display: flex; flex-direction: column; gap: 8px; z-index: 50; pointer-events: none; max-width: min(380px, calc(100vw - 32px)); }
-.toast { background: #251b3c; border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: 10px 12px; border-radius: 10px; box-shadow: 0 6px 20px #0008; animation: slidein 0.25s ease-out; font-size: 13px; }
+.toast { background: #251b3c; border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: 8px 10px; border-radius: 10px; animation: slidein 0.25s ease-out; font-size: 13px; transition: opacity 0.4s; }
 .toast.good { border-left-color: var(--good); }
 .toast.warn { border-left-color: var(--warn); }
 .toast.epic { border-left-color: var(--epic); background: #33193f; }
@@ -222,7 +222,7 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 /* ── Mobile ────────────────────────────── */
 @media (max-width: 760px) {
   :root { --header-h: 56px; }
-  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; grid-template-areas: 'header' 'main' 'nav'; }
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto; grid-template-areas: 'header' 'main' 'feed' 'nav'; }
   .header { gap: 10px; padding: 6px 12px; padding-top: calc(6px + env(safe-area-inset-top)); flex-wrap: wrap; min-height: var(--header-h); }
   .brand { display: none; }
   .lvl { flex: 1 1 120px; min-width: 100px; }
@@ -230,13 +230,11 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
   .tab { flex-direction: column; gap: 2px; padding: 6px 8px; font-size: 10px; min-width: 58px; align-items: center; text-align: center; }
   .tab .icon { font-size: 20px; }
   .main { padding: 14px 12px 30px; }
-  .toasts { top: auto; bottom: calc(80px + env(safe-area-inset-bottom)); right: 12px; left: 12px; max-width: none; }
   .skill-row .row-label { display: none; }
 }
 
 /* ── Item pop-ups ──────────────────────── */
-.pops { position: fixed; left: calc(var(--nav-w) + 16px); bottom: 16px; display: flex; flex-direction: column-reverse; gap: 6px; z-index: 40; pointer-events: none; }
-.pop { display: flex; align-items: center; gap: 8px; background: #1d1530ee; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px 5px 6px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 14px #0007; animation: popin 0.35s cubic-bezier(.2, 1.6, .4, 1); }
+.pop { display: flex; align-items: center; gap: 8px; min-width: 0; transition: opacity 0.4s; background: #1d1530ee; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px 5px 6px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 14px #0007; animation: popin 0.35s cubic-bezier(.2, 1.6, .4, 1); }
 .pop .pop-icon { font-size: 18px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; background: #2b2144; border-radius: 50%; }
 .pop .pop-qty { color: var(--good); }
 @keyframes popin { from { transform: scale(0.6) translateY(8px); opacity: 0; } }
@@ -282,10 +280,33 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .badge-new { position: absolute; top: 6px; right: 8px; font-size: 9px; font-weight: 800; background: var(--epic); color: #2a0020; padding: 1px 6px; border-radius: 999px; }
 
 @media (max-width: 760px) {
-  .pops { left: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); }
-  .toasts { bottom: auto; top: calc(var(--header-h) + 8px); }
   .arena { grid-template-columns: 1fr 1fr; }
   .arena .vs { display: none; }
+}
+
+/* ── Activity feed (never overlays the game) ── */
+.feed { grid-area: feed; min-width: 0; min-height: 0; background: var(--bg2); }
+.feed-full { height: 100%; overflow-y: auto; border-left: 1px solid var(--border); padding: 14px 12px 24px; display: flex; flex-direction: column; gap: 18px; }
+.feed h4 { margin: 0 0 8px; font-family: var(--font-head); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.feed-list { display: flex; flex-direction: column; gap: 6px; }
+.feed .stale { opacity: 0.5; }
+.feed-empty { font-size: 12px; color: var(--dim); }
+.feed-compact { display: none; }
+.pop-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feed-msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.feed-msg.good { color: var(--good); }
+.feed-msg.warn { color: var(--warn); }
+.feed-msg.epic { color: var(--epic); }
+.mini-pop { flex: none; font-size: 12px; font-weight: 600; background: #150f22; border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
+@media (max-width: 1099px) {
+  .feed-full { display: none; }
+  .feed-compact { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-top: 1px solid var(--border); overflow-x: auto; white-space: nowrap; }
+}
+@media (min-width: 761px) and (max-width: 1099px) {
+  .shell { grid-template-columns: var(--nav-w) minmax(0, 1fr); grid-template-rows: var(--header-h) minmax(0, 1fr) auto; grid-template-areas: 'header header' 'nav main' 'nav feed'; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast, .pop { animation: none; }
 }
 
 /* ── Goals ─────────────────────────────── */

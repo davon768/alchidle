@@ -92,7 +92,7 @@ export function journalView(s: GameState): TemplateResult {
         <span>Item pop-ups:</span>
         <button class="btn small ${s.settings.lootPops ? 'on' : ''}" @click=${act((g) => (g.settings.lootPops = !g.settings.lootPops))}>
           ${s.settings.lootPops ? 'ON' : 'OFF'}</button>
-        <span class="dim">Shows a notification whenever items are added to your inventory.</span>
+        <span class="dim">Lists items in the activity feed as they're added to your inventory.</span>
       </div>
       <div class="row">
         <button class="btn primary" @click=${() => { saveGame(game.s); toast('Game saved.', 'good'); }}>💾 Save now</button>

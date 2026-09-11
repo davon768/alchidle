@@ -1,5 +1,5 @@
 import { html, render, type TemplateResult } from 'lit-html';
-import { keyed } from 'lit-html/directives/keyed.js';
+import { repeat } from 'lit-html/directives/repeat.js';
 import type { GameState, Mods } from '../core/types';
 import { game } from '../core/game';
 import { computeMods, describeEffects } from '../core/mods';
@@ -67,44 +67,67 @@ const TABS: TabDef[] = [
   { id: 'journal', icon: '📓', label: 'Journal', unlocked: () => true },
 ];
 
-// ── Toasts ───────────────────────────────────────────────────
-interface Toast { id: number; msg: string; kind: ToastKind }
+// ── Activity feed: messages and item gains get their own column (or strip), never covering the game ──
+interface Toast { id: number; msg: string; kind: ToastKind; t: number }
+const MSG_MAX = 8;
 let toasts: Toast[] = [];
 let toastId = 0;
 
 onToast((msg, kind) => {
-  const t = { id: ++toastId, msg, kind };
-  toasts = [...toasts.slice(-4), t];
-  setTimeout(() => { toasts = toasts.filter((x) => x.id !== t.id); }, 4000);
+  toasts = [{ id: ++toastId, msg, kind, t: performance.now() }, ...toasts].slice(0, MSG_MAX);
 });
 
-// ── Item pop-ups: repeated gains of the same item merge into one bumping counter ──
+/** Repeated gains of the same item within a few seconds merge into one bumping counter. */
 interface Pop extends Gain { bump: number; t: number }
-const POP_LIFE = 2600;
-const POP_MAX = 6;
+const MERGE_MS = 5000;
+const GAIN_MAX = 14;
 let pops: Pop[] = [];
 
 onGain((g) => {
   ui.newItems.add(g.key);
   if (!game.s.settings.lootPops) return;
   const now = performance.now();
-  const p = pops.find((x) => x.key === g.key);
+  const p = pops.find((x) => x.key === g.key && now - x.t < MERGE_MS);
   if (p) {
     p.qty += g.qty;
     p.bump++;
     p.t = now;
+    pops = [p, ...pops.filter((x) => x !== p)];
   } else {
-    pops.push({ ...g, bump: 0, t: now });
-    if (pops.length > POP_MAX) pops.shift();
+    pops = [{ ...g, bump: 0, t: now }, ...pops].slice(0, GAIN_MAX);
   }
 });
 
-function popsTemplate(): TemplateResult {
+function feedTemplate(s: GameState): TemplateResult {
   const now = performance.now();
-  pops = pops.filter((p) => now - p.t < POP_LIFE);
-  return html`<div class="pops">${pops.map((p) => keyed(`${p.key}:${p.bump}`, html`<div class="pop" style=${p.color ? `border-color:${p.color}` : ''}>
-    <span class="pop-icon">${p.icon}</span><span class="pop-qty">+${fmt(p.qty)}</span><span style=${p.color ? `color:${p.color}` : ''}>${p.name}</span>
-  </div>`))}</div>`;
+  const age = (t: number) => now - t;
+  const latest = toasts[0] && age(toasts[0].t) < 6000 ? toasts[0] : null;
+  const recent = pops.filter((p) => age(p.t) < 8000).slice(0, 8);
+  return html`<aside class="feed" aria-label="Activity">
+    <div class="feed-full">
+      <section>
+        <h4>Messages</h4>
+        ${toasts.length
+          ? html`<div class="feed-list">${repeat(toasts, (t) => t.id, (t) => html`<div class="toast ${t.kind} ${age(t.t) > 10000 ? 'stale' : ''}">${t.msg}</div>`)}</div>`
+          : html`<div class="feed-empty">Level-ups, events and discoveries show up here.</div>`}
+      </section>
+      ${s.settings.lootPops ? html`<section>
+        <h4>Items gained</h4>
+        ${pops.length
+          ? html`<div class="feed-list">${repeat(pops, (p) => `${p.key}:${p.bump}`, (p) => html`<div class="pop ${age(p.t) > 6000 ? 'stale' : ''}" style=${p.color ? `border-color:${p.color}` : ''}>
+              <span class="pop-icon">${p.icon}</span><span class="pop-qty">+${fmt(p.qty)}</span><span class="pop-name" style=${p.color ? `color:${p.color}` : ''}>${p.name}</span>
+            </div>`)}</div>`
+          : html`<div class="feed-empty">Harvests, brews and loot show up here.</div>`}
+      </section>` : ''}
+    </div>
+    <div class="feed-compact" aria-live="polite">
+      ${latest
+        ? html`<span class="feed-msg ${latest.kind}">${latest.msg}</span>`
+        : recent.length
+          ? recent.map((p) => html`<span class="mini-pop" title=${p.name}>${p.icon} +${fmt(p.qty)}</span>`)
+          : html`<span class="feed-empty">Activity shows up here</span>`}
+    </div>
+  </aside>`;
 }
 
 // ── Guidance ─────────────────────────────────────────────────
@@ -214,8 +237,7 @@ function appTemplate(): TemplateResult {
       ${statusStrip(s)}
       ${viewFor(ui.tab, s, m)}
     </main>
-    <div class="toasts">${toasts.map((t) => html`<div class="toast ${t.kind}">${t.msg}</div>`)}</div>
-    ${popsTemplate()}
+    ${feedTemplate(s)}
     ${ui.modal ? html`<div class="modal-bg" @click=${(e: Event) => { if (e.target === e.currentTarget) closeModal(); }}>${ui.modal}</div>` : ''}
   </div>`;
 }
