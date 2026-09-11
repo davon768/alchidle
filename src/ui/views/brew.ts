@@ -10,7 +10,9 @@ import { act, bar, chip, gold, sectionTitle } from '../common';
 export function brewView(s: GameState, m: Mods): TemplateResult {
   const recipes = unlockedRecipes(s);
   return html`<div class="view">
-    ${sectionTitle('⚗️ Cauldrons', html`${s.cauldrons.length} cauldron${s.cauldrons.length > 1 ? 's' : ''} · ${m.autoBrew > 0 ? html`<span class="good">Auto-repeat unlocked</span>` : 'Brew one batch at a time'}`)}
+    ${sectionTitle('⚗️ Cauldrons', html`${s.cauldrons.length} cauldron${s.cauldrons.length > 1 ? 's' : ''} · ${m.autoBrew > 0
+      ? html`<span class="good">🧑‍🔬 ${Math.min(Math.floor(m.autoBrew), s.cauldrons.length)}/${s.cauldrons.length} tended by Brewers</span>`
+      : 'Brew one batch at a time — hire a Brewer apprentice to auto-repeat'}`)}
 
     <div class="grid wide">
       ${s.cauldrons.map((c, i) => {
@@ -19,7 +21,7 @@ export function brewView(s: GameState, m: Mods): TemplateResult {
         const frac = r && c.active ? c.progress / r.time : 0;
         return html`<div class="card">
           <div class="row between">
-            <h3>Cauldron ${i + 1}</h3>
+            <h3>Cauldron ${i + 1}${i < m.autoBrew ? html` <span title="Tended by your Brewers">🧑‍🔬</span>` : ''}</h3>
             ${r ? html`<span class="dim">🎖️ Proficiency ${profLevelOf(s, r.id)}</span>` : ''}
           </div>
           <div class="cauldron-vis ${c.active ? 'active' : ''}">
@@ -40,7 +42,7 @@ export function brewView(s: GameState, m: Mods): TemplateResult {
               ${c.active
                 ? html`<button class="btn small danger" @click=${act((st) => cancelBrew(st, i))}>Cancel</button>`
                 : html`<button class="btn primary" ?disabled=${!hasAll(s, r.inputs)} @click=${act((st) => brew(st, i))}>Brew</button>`}
-              <button class="btn small ${c.repeat ? 'on' : ''}" ?disabled=${m.autoBrew <= 0} @click=${act((st) => toggleRepeat(st, i))}>🔁 Repeat ${c.repeat ? 'ON' : 'OFF'}</button>
+              <button class="btn small ${c.repeat ? 'on' : ''}" ?disabled=${i >= m.autoBrew} title=${i >= m.autoBrew ? 'Needs a Brewer apprentice tending this cauldron' : ''} @click=${act((st) => toggleRepeat(st, i))}>🔁 Repeat ${c.repeat ? 'ON' : 'OFF'}</button>
             </div>` : html`<div class="dim">Pick a recipe to start brewing.</div>`}
         </div>`;
       })}

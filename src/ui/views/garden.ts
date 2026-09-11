@@ -14,7 +14,9 @@ export function gardenView(s: GameState, m: Mods): TemplateResult {
   const chosen = PLANT_MAP[ui.plantChoice];
 
   return html`<div class="view">
-    ${sectionTitle('🌱 Garden', html`${s.plots.length} plots · ${m.autoHarvest > 0 ? html`<span class="good">Gnomes auto-harvesting</span>` : 'Tap ripe plants to harvest'}`)}
+    ${sectionTitle('🌱 Garden', html`${s.plots.length} plots · ${m.autoHarvest > 0
+      ? html`<span class="good">🧑‍🌾 ${Math.min(Math.floor(m.autoHarvest), s.plots.length)}/${s.plots.length} plots tended by Gardeners</span>`
+      : 'Tap ripe plants to harvest — hire a Gardener apprentice to automate'}`)}
 
     <div class="card">
       <div class="dim">Choose what to plant — each herb has its own 🎖️ proficiency</div>
@@ -46,6 +48,7 @@ export function gardenView(s: GameState, m: Mods): TemplateResult {
         const frac = plot.progress / p.time;
         const icon = plot.ready ? item(p.herb).icon : frac < 0.5 ? '🌱' : '🌿';
         return html`<div class="plot ${plot.ready ? 'ready' : ''}" @click=${act((st) => harvest(st, i))}>
+          ${i < m.autoHarvest ? html`<span class="tend-badge" title="Tended by your Gardeners">🧑‍🌾</span>` : ''}
           <div class="sprout" style="transform:scale(${plot.ready ? 1.15 : 0.6 + frac * 0.5})">${icon}</div>
           <div class="small">${p.name} <span class="dim">Lv ${profLevelOf(s, p.id)}</span></div>
           ${plot.ready

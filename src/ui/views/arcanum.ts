@@ -64,7 +64,7 @@ export function arcanumView(s: GameState, m: Mods): TemplateResult {
     <div class="card">
       ${bar(s.mana / mMax, undefined, `${fmt(Math.floor(s.mana))} / ${fmt(mMax)} mana · +${manaRegenRate(s, m).toFixed(1)}/s`, 'mana tall')}
       <div class="dim">Combat spells and rituals share one mana pool — Mana Draughts on your potion belt top it up in battle.
-        ${m.autoRitual <= 0 ? ' Learn Ritualist (Battlemage tree) to auto-recast rituals.' : ''}</div>
+        ${m.autoRitual <= 0 ? ' Assign a Scribe apprentice to keep rituals running automatically.' : ` Your Scribes keep up to ${Math.floor(m.autoRitual)} ritual${Math.floor(m.autoRitual) > 1 ? 's' : ''} running.`}</div>
     </div>
     <div class="pill-tabs">
       <button class="btn small ${ui.spellTab === 'combat' ? 'active' : ''}" @click=${act(() => (ui.spellTab = 'combat'))}>⚔️ Combat spells</button>

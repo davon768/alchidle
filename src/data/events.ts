@@ -1,6 +1,6 @@
 import type { Effect } from '../core/types';
 
-export type EventSpecial = 'merchant' | 'champion' | 'fever' | 'raid';
+export type EventSpecial = 'merchant' | 'champion' | 'fever' | 'raid' | 'jobfair';
 
 export interface EventDef {
   id: string;
@@ -24,6 +24,8 @@ export const EVENTS: EventDef[] = [
     effects: [{ stat: 'xpGain', value: 0.5 }, { stat: 'masteryRate', value: 0.5 }] },
   { id: 'fever', name: 'Fever in Town', icon: '🤒', level: 4, duration: 240, weight: 7, special: 'fever', desc: 'Everyone needs healing potions — now!',
     effects: [{ stat: 'contractReward', value: 0.25 }] },
+  { id: 'jobfair', name: 'Job Fair', icon: '🎪', level: 3, duration: 240, weight: 5, special: 'jobfair',
+    desc: 'Talented hopefuls are looking for a master — fresh, likely gifted candidates await in 👥 Apprentices.', effects: [{ stat: 'apprenticeXp', value: 0.25 }] },
   { id: 'boom', name: 'Market Boom', icon: '📈', level: 5, duration: 180, weight: 8, desc: 'Coin is flowing through town.',
     effects: [{ stat: 'sellPrice', value: 0.4 }] },
   { id: 'lucky', name: 'Lucky Day', icon: '🍀', level: 5, duration: 180, weight: 6, desc: 'Nothing goes wrong today.',

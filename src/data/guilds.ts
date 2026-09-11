@@ -17,7 +17,7 @@ export const GUILDS: GuildDef[] = [
     perRank: [{ stat: 'growSpeed', value: 0.06 }, { stat: 'harvestYield', value: 0.06 }],
     milestones: [
       { rank: 2, effects: [{ stat: 'plots', value: 1 }], label: '+1 garden plot' },
-      { rank: 4, effects: [{ stat: 'autoHarvest', value: 1 }], label: 'Druid helpers auto-harvest' },
+      { rank: 4, effects: [{ stat: 'autoHarvest', value: 4 }], label: 'Druids help your Gardeners tend +4 plots' },
     ] },
   { id: 'crucible', name: 'Order of the Crucible', icon: '⚗️', color: '#b57bff', desc: 'Purist alchemists obsessed with perfection.',
     perRank: [{ stat: 'brewSpeed', value: 0.06 }, { stat: 'doubleBrew', value: 0.015 }],
@@ -29,7 +29,7 @@ export const GUILDS: GuildDef[] = [
     perRank: [{ stat: 'sellPrice', value: 0.06 }, { stat: 'tradeBonus', value: 0.04 }],
     milestones: [
       { rank: 2, effects: [{ stat: 'demandRecovery', value: 0.3 }], label: '+30% demand recovery' },
-      { rank: 4, effects: [{ stat: 'autoSell', value: 1 }], label: 'Exchange brokers auto-sell' },
+      { rank: 4, effects: [{ stat: 'apprenticeSlots', value: 1 }], label: 'The Exchange sponsors +1 apprentice slot' },
     ] },
   { id: 'wayfarer', name: "Wayfarers' Lodge", icon: '🧭', color: '#4fb3ff', desc: 'Explorers who map the unmappable.',
     perRank: [{ stat: 'scavSpeed', value: 0.06 }, { stat: 'scavYield', value: 0.05 }],

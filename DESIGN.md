@@ -11,7 +11,7 @@
  Gold earned this run ► Magnum Opus (ascension) ► Philosopher's Stones ► Eternal perks ► faster next run
 ```
 
-Early game is hands-on (click to plant, brew, sell). Each system then gets its own automation unlock (gnome, perpetual flame, falcon, shop clerk), so the game moves from active play to idle play at the pace you choose.
+Early game is hands-on (click to plant, brew, sell). Automation comes from **apprentices** you hire and train: each role automates one system, and how much it handles grows with training. The game moves from active play to idle play at the pace you invest in your staff.
 
 ## 2. Systems (v0.1)
 
@@ -45,6 +45,28 @@ Also added: Battlemage skill tree (14 nodes), Spellblade Order guild, 4 Workshop
 **Combat math:** damage = A²/(A+D), so it never hits zero. Enemies scale ×1.10 per floor and rewards ×1.08. Hero stats = (level base + flat gear) × multipliers.
 
 **Combat balance** (30-minute auto-battle, hero level held fixed): on arrival with previous-tier gear, you reach about 40–85% of a dungeon's floors. With farmed current-tier gear you clear it or nearly clear it. The Dragon's Lair and Void Citadel expect Battlemage skills and ascension perks.
+
+### Apprentices (v0.4): replace bought automation
+
+The Workshop's Garden Gnome, Everburning Coal, Trained Falcon and Shop Clerk are gone. Automation now comes from people you hire in the 👥 Apprentices tab (from level 3).
+
+| Role | Automates | Grows with level |
+|---|---|---|
+| 🧑‍🌾 Gardener | harvest and replant | tends 2 + L/3 plots |
+| 🧑‍🔬 Brewer | cauldron 🔁 repeat | tends 1 + L/6 cauldrons |
+| 🧝 Scout | expedition 🔁 repeat | tends 1 + L/12 parties |
+| 🧑‍💼 Shopkeeper | auto-sell of marked potions | 1 + L/5 potion types |
+| 🤺 Squire | resumes pushing floors after a retreat | re-push delay 176s → 15s |
+| 🧙 Scribe | recasts auto-marked rituals | 1 + L/10 rituals |
+
+- **Hiring:** 3 candidates rotate every 10 minutes; you can pay to call new ones, and the *Job Fair* event brings 4× more gifted applicants. **Talent** (Common / Gifted / Prodigy: 70 / 25 / 5%) sets the level cap (25 / 40 / 50), learning speed and hiring cost. Each candidate has 1–2 **traits**: Quick Learner, Bookworm, Hard Worker, Frugal, Diligent, Clumsy, or role-affinity traits like Green Thumb (+2 plots as a Gardener).
+- **Slots:** 2 to start; more from Apprentice Quarters (Workshop), the Headmaster skill and the Gilded Exchange guild.
+- **Training:** apprentices earn XP from the work they do. **Studying** is faster, but costs tuition that rises steeply with level, and they don't work meanwhile. Your own **proficiency** in that craft makes you a better teacher (up to ×2 study speed).
+- **Perks every 5 levels** per role (for example, Gardener: +grow speed, +yield, cheaper seeds). They stack across apprentices.
+- **Graduation:** at their level cap, an apprentice can graduate into the **Hall of Masters**. They leave, and you get a permanent bonus (× talent: 1 / 1.6 / 2.5) plus +5% apprentice XP for every future apprentice. Masters survive ascension. You choose between keeping a strong worker and banking permanent power.
+- **Tie-ins:** the old automation skills and guild milestones now add tending capacity (only while someone of that role is working). New: Training Library (Workshop), Mentorship and Headmaster (Arcana tree), the Loyal Apprentices and Eternal Academy ascension perks, and 3 achievements. Old saves turn bought helpers into level-10 apprentices.
+
+**Backlog ideas for this system:** specializations at level 20 (for example, Gardener → Botanist or Druid); morale and fatigue with rest rotation; lessons that consume ingredients for XP bursts; apprentices as dungeon companions; certification exams at levels 10/25/40 for bonus perks; rival guilds poaching staff; apprentice-driven events ("Ivy had an idea!"); friendships between apprentices who work the same system.
 
 ### Proficiency (v0.3): replaces recipe mastery
 

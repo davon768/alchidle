@@ -1,6 +1,8 @@
 import type { GameState } from './types';
 import { newState, SAVE_VERSION } from './state';
+import type { RoleId } from './types';
 import { PROF_MAP } from '../data/proficiency';
+import { createApprentice } from '../data/apprentices';
 
 const KEY = 'alchemy-idle-save';
 
@@ -28,6 +30,19 @@ function migrate(raw: LegacySave): GameState {
     }
   }
   delete s.mastery;
+  // v2 → v3: bought automation (gnome, coal, falcon, clerk) becomes experienced apprentices.
+  const legacyHelpers: [string, RoleId, string, string][] = [
+    ['gnome', 'gardener', 'Gnorbert', '🧙'], ['flame', 'brewer', 'Cinder', '🧑‍🔬'], ['falcon', 'scout', 'Talon', '🧝'], ['clerk', 'shopkeeper', 'Bramble', '🧑‍💼'],
+  ];
+  for (const [upgrade, role, name, icon] of legacyHelpers) {
+    if (!s.upgrades[upgrade]) continue;
+    delete s.upgrades[upgrade];
+    s.staff.hired.push(createApprentice(`a${s.staff.nextId++}`, name, icon, 0, [], role, 10));
+  }
+  if (s.asc.nodes['automata']) {
+    s.asc.nodes['loyal'] = s.asc.nodes['automata'];
+    delete s.asc.nodes['automata'];
+  }
   s.version = SAVE_VERSION;
   return s;
 }

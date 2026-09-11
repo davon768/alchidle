@@ -21,7 +21,7 @@ export function exploreView(s: GameState, m: Mods): TemplateResult {
           <div class="row between"><h3>${z.icon} ${z.name}</h3><span class="dim">Party ${i + 1}</span></div>
           ${bar(e.progress / time, '#4fb3ff', fmtTime((time - e.progress) / m.scavSpeed))}
           <div class="row">
-            <button class="btn small ${e.repeat ? 'on' : ''}" ?disabled=${m.autoScav <= 0} @click=${act((st) => toggleExpRepeat(st, i))}>🔁 Repeat ${e.repeat ? 'ON' : 'OFF'}</button>
+            <button class="btn small ${e.repeat ? 'on' : ''}" ?disabled=${i >= m.autoScav} title=${i >= m.autoScav ? 'Needs a Scout apprentice tending this party' : ''} @click=${act((st) => toggleExpRepeat(st, i))}>🔁 Repeat ${e.repeat ? 'ON' : 'OFF'}</button>
             <button class="btn small danger" @click=${act((st) => recall(st, i))}>Recall</button>
           </div>
         </div>`;

@@ -50,7 +50,11 @@ export function marketView(s: GameState, m: Mods): TemplateResult {
           })}
         </table>
       </div>
-      ${ui.marketFilter === 'potion' && m.autoSell <= 0 ? html`<div class="dim">Hire a Shop Clerk (Workshop) to auto-sell potions as they finish brewing.</div>` : ''}
+      ${ui.marketFilter === 'potion'
+        ? html`<div class="dim">${m.autoSell <= 0
+          ? 'Assign a Shopkeeper apprentice (👥 Apprentices) to auto-sell potions as they finish brewing.'
+          : `Your Shopkeepers auto-sell up to ${Math.floor(m.autoSell)} potion type${Math.floor(m.autoSell) > 1 ? 's' : ''} (${Object.values(s.autoSell).filter(Boolean).length} marked).`}</div>`
+        : ''}
     </div>
 
     ${sectionTitle('🛒 Supplies', 'Basic materials for sale — more stock unlocks as you level')}

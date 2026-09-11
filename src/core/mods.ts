@@ -7,6 +7,8 @@ import { ACHIEVEMENTS } from '../data/achievements';
 import { gearEffects } from '../data/gear';
 import { SPELL_MAP, ritualEffects } from '../data/spells';
 import { EVENT_MAP } from '../data/events';
+import { MASTER_XP, ROLE_MAP, TALENTS, apprenticeCapacity } from '../data/apprentices';
+import type { RoleId } from './types';
 import { fmt } from './format';
 
 export function baseMods(): Mods {
@@ -17,7 +19,7 @@ export function baseMods(): Mods {
     scavSpeed: 1, scavYield: 1, rareFind: 1,
     xpGain: 1, stoneGain: 1, offlineHours: 8,
     plots: 2, cauldrons: 1, expSlots: 1, skillPoints: 0, startGold: 0,
-    autoHarvest: 0, autoBrew: 0, autoSell: 0, autoScav: 0, autoRitual: 0,
+    autoHarvest: 0, autoBrew: 0, autoSell: 0, autoScav: 0, autoRitual: 0, apprenticeSlots: 2, apprenticeXp: 1,
     attack: 0, attackMult: 1, defense: 0, defenseMult: 1, maxHp: 0, hpMult: 1,
     spellPower: 0, spellMult: 1, critChance: 0.05, critDamage: 1.5, dodge: 0,
     maxMana: 0, manaRegen: 0, potionPower: 1, lootFind: 1, enemyPower: 1,
@@ -64,6 +66,26 @@ export function computeMods(s: GameState): Mods {
     if (ev) apply(m, ev.effects, 1);
   }
 
+  // Apprentices: working apprentices add tending capacity and their earned perks; graduates add permanent bonuses.
+  const workers: Record<RoleId, number> = { gardener: 0, brewer: 0, scout: 0, shopkeeper: 0, squire: 0, scribe: 0 };
+  const capacity: Record<RoleId, number> = { gardener: 0, brewer: 0, scout: 0, shopkeeper: 0, squire: 0, scribe: 0 };
+  for (const a of s.staff.hired) {
+    if (!a.role || a.mode !== 'work') continue;
+    workers[a.role]++;
+    capacity[a.role] += apprenticeCapacity(a);
+    for (const p of ROLE_MAP[a.role].perks) if (p.level <= a.level) apply(m, p.effects, 1);
+  }
+  for (const ms of s.staff.masters) {
+    apply(m, ROLE_MAP[ms.role].master, TALENTS[ms.talent].master);
+    m.apprenticeXp += MASTER_XP;
+  }
+  // Bonus capacity from skills and guilds only helps when someone of that role is actually working.
+  m.autoHarvest = workers.gardener ? m.autoHarvest + capacity.gardener : 0;
+  m.autoBrew = workers.brewer ? m.autoBrew + capacity.brewer : 0;
+  m.autoScav = workers.scout ? m.autoScav + capacity.scout : 0;
+  m.autoSell = workers.shopkeeper ? m.autoSell + capacity.shopkeeper : 0;
+  m.autoRitual = workers.scribe ? m.autoRitual + capacity.scribe : 0;
+
   m.seedDiscount = Math.min(0.75, m.seedDiscount);
   m.doubleBrew = Math.min(1, m.doubleBrew);
   m.ingredientSave = Math.min(0.5, m.ingredientSave);
@@ -101,11 +123,13 @@ export const STAT_INFO: Record<StatKey, { label: string; fmt: StatFormat }> = {
   expSlots: { label: 'expedition slot', fmt: 'flat' },
   skillPoints: { label: 'skill points', fmt: 'flat' },
   startGold: { label: 'Inheritance rank', fmt: 'flat' },
-  autoHarvest: { label: 'Auto-harvest & replant', fmt: 'flag' },
-  autoBrew: { label: 'Auto-repeat brewing', fmt: 'flag' },
-  autoSell: { label: 'Auto-sell potions', fmt: 'flag' },
-  autoScav: { label: 'Auto-repeat expeditions', fmt: 'flag' },
-  autoRitual: { label: 'Auto-cast rituals', fmt: 'flag' },
+  autoHarvest: { label: 'plots tended by your Gardeners', fmt: 'flat' },
+  autoBrew: { label: 'cauldrons tended by your Brewers', fmt: 'flat' },
+  autoSell: { label: 'potion types your Shopkeepers auto-sell', fmt: 'flat' },
+  autoScav: { label: 'parties tended by your Scouts', fmt: 'flat' },
+  autoRitual: { label: 'rituals your Scribes keep running', fmt: 'flat' },
+  apprenticeSlots: { label: 'apprentice slot', fmt: 'flat' },
+  apprenticeXp: { label: 'apprentice XP', fmt: 'pct' },
   attack: { label: 'attack', fmt: 'flat' },
   attackMult: { label: 'attack', fmt: 'pct' },
   defense: { label: 'defense', fmt: 'flat' },

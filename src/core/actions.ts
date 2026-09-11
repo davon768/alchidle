@@ -73,8 +73,8 @@ export function cancelBrew(s: GameState, ci: number): void {
 export function toggleRepeat(s: GameState, ci: number): void {
   const c = s.cauldrons[ci];
   if (!c) return;
-  if (computeMods(s).autoBrew <= 0) {
-    toast('Unlock auto-repeat with the Everburning Coal (Workshop) or Perpetual Flame (Alchemy skill).', 'warn');
+  if (ci >= computeMods(s).autoBrew) {
+    toast('Assign a Brewer apprentice (👥 Apprentices) to tend this cauldron — trained Brewers tend more cauldrons.', 'warn');
     return;
   }
   c.repeat = !c.repeat;
@@ -89,7 +89,7 @@ export function startExpedition(s: GameState, slot: number, zoneId: string): voi
     toast('A party is already exploring there.', 'warn');
     return;
   }
-  s.expeditions[slot] = { zoneId, progress: 0, repeat: computeMods(s).autoScav > 0 };
+  s.expeditions[slot] = { zoneId, progress: 0, repeat: slot < computeMods(s).autoScav };
 }
 
 export function recall(s: GameState, slot: number): void {
@@ -99,8 +99,8 @@ export function recall(s: GameState, slot: number): void {
 export function toggleExpRepeat(s: GameState, slot: number): void {
   const e = s.expeditions[slot];
   if (!e) return;
-  if (computeMods(s).autoScav <= 0) {
-    toast('Unlock auto-repeat with the Trained Falcon (Workshop) or Familiar Scout (Exploration skill).', 'warn');
+  if (slot >= computeMods(s).autoScav) {
+    toast('Assign a Scout apprentice (👥 Apprentices) to tend this party — trained Scouts tend more parties.', 'warn');
     return;
   }
   e.repeat = !e.repeat;
@@ -135,6 +135,14 @@ export function buy(s: GameState, id: string, qty: number): void {
 }
 
 export function toggleAutoSell(s: GameState, id: string): void {
+  if (!s.autoSell[id]) {
+    const cap = Math.floor(computeMods(s).autoSell);
+    const used = Object.values(s.autoSell).filter(Boolean).length;
+    if (used >= cap) {
+      toast(cap > 0 ? `Your Shopkeepers can handle ${cap} potion type${cap > 1 ? 's' : ''} — train them or hire another.` : 'Assign a Shopkeeper apprentice to auto-sell potions.', 'warn');
+      return;
+    }
+  }
   s.autoSell[id] = !s.autoSell[id];
 }
 

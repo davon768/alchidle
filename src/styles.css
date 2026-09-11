@@ -167,6 +167,7 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .plot { position: relative; }
 .plot-clear { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid #5a4028; background: #2a1d12; color: var(--muted); font-size: 11px; cursor: pointer; opacity: 0.5; }
 .plot-clear:hover { opacity: 1; color: var(--warn); }
+.tend-badge { position: absolute; top: 6px; left: 8px; font-size: 15px; filter: drop-shadow(0 1px 2px #000a); }
 .plot.ready { border-color: var(--good); box-shadow: 0 0 14px #5fd06855; animation: pulse 1.6s infinite; }
 .plot .sprout { font-size: 34px; transition: transform 0.3s; }
 .plot .bar { width: 100%; }

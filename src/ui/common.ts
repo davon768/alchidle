@@ -5,7 +5,7 @@ import { item, type ItemKind } from '../data/items';
 import { fmt } from '../core/format';
 
 export type TabId =
-  | 'garden' | 'brew' | 'explore' | 'dungeon' | 'market' | 'inventory' | 'proficiency' | 'arcanum' | 'armory'
+  | 'garden' | 'brew' | 'explore' | 'staff' | 'dungeon' | 'market' | 'inventory' | 'proficiency' | 'arcanum' | 'armory'
   | 'trade' | 'guild' | 'workshop' | 'skills' | 'ascend' | 'journal';
 
 export const ui = {

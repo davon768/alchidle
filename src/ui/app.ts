@@ -31,6 +31,8 @@ import { skillsView } from './views/skills';
 import { ascendView } from './views/ascend';
 import { journalView } from './views/journal';
 import { proficiencyView } from './views/proficiency';
+import { staffView } from './views/apprentices';
+import { apprenticeCap } from '../data/apprentices';
 
 interface TabDef {
   id: TabId;
@@ -46,6 +48,8 @@ const TABS: TabDef[] = [
   { id: 'garden', icon: '🌱', label: 'Garden', unlocked: () => true, dot: (s, m) => m.autoHarvest <= 0 && s.plots.some((p) => p.ready || !p.plantId) },
   { id: 'brew', icon: '⚗️', label: 'Cauldrons', unlocked: () => true, dot: (s) => s.cauldrons.some((c) => !c.active) },
   { id: 'explore', icon: '🧭', label: 'Expeditions', unlocked: () => true, dot: (s) => s.expeditions.some((e) => !e) },
+  { id: 'staff', icon: '👥', label: 'Apprentices', unlocked: (s) => s.level >= 3 || s.staff.hired.length > 0 || s.staff.masters.length > 0,
+    dot: (s) => s.staff.hired.some((a) => !a.role || a.level >= apprenticeCap(a)) },
   { id: 'dungeon', icon: '⚔️', label: 'Dungeons', unlocked: (s) => s.level >= DUNGEON_UNLOCK_LEVEL, dot: (s) => !s.combat.dungeonId },
   { id: 'market', icon: '🏪', label: 'Market', unlocked: () => true },
   { id: 'inventory', icon: '🎒', label: 'Inventory', unlocked: () => true },
@@ -113,6 +117,7 @@ function nextGoal(s: GameState): string | null {
     ...ZONES.map((z) => ({ lvl: z.level, text: `${z.icon} ${z.name}` })),
     ...DUNGEONS.map((d) => ({ lvl: d.level, text: `${d.icon} ${d.name}` })),
     { lvl: 2, text: '📜 Skills' },
+    { lvl: 3, text: '👥 Apprentices (hire help to automate)' },
     { lvl: 6, text: '🐪 Trading Post' },
     { lvl: GUILD_UNLOCK_LEVEL, text: '🛡️ Guilds' },
     { lvl: DUNGEON_UNLOCK_LEVEL, text: '⚔️ Dungeons, 🔮 Arcanum & 🗡️ Armory' },
@@ -150,6 +155,7 @@ function viewFor(tab: TabId, s: GameState, m: Mods): TemplateResult {
     case 'garden': return gardenView(s, m);
     case 'brew': return brewView(s, m);
     case 'explore': return exploreView(s, m);
+    case 'staff': return staffView(s, m);
     case 'dungeon': return dungeonView(s, m);
     case 'market': return marketView(s, m);
     case 'inventory': return inventoryView(s, m);

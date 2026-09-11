@@ -1,7 +1,7 @@
 import type { CombatState, GameState, Stats } from './types';
 import { startGoldFor } from '../data/ascension';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export function xpToNext(level: number): number {
   return Math.floor(25 * 1.21 ** (level - 1) + 15 * level);
@@ -23,7 +23,7 @@ function freshStats(): Stats {
 export function freshCombat(): CombatState {
   return {
     dungeonId: null, floor: 1, kills: 0, autoAdvance: true, enemy: null, hp: 1, shield: 0,
-    heroTimer: 0, enemyTimer: 0, potionCd: 0, cooldowns: {}, buffs: [], slow: 0, dead: 0, champion: false, log: [],
+    heroTimer: 0, enemyTimer: 0, potionCd: 0, cooldowns: {}, buffs: [], slow: 0, dead: 0, retreated: false, champion: false, log: [],
   };
 }
 
@@ -36,7 +36,7 @@ const LIFETIME_STATS: (keyof Stats)[] = [
 /**
  * A brand-new run. When `prev` is given (ascension), everything permanent carries over:
  * ascension tree, stones, achievements, proficiency, lifetime stats, settings and belt layout —
- * plus spells (Arcane Memory) and equipped gear (Heirloom Armory) if those perks are owned.
+ * the Hall of Masters, plus spells (Arcane Memory), equipped gear (Heirloom Armory) and apprentices (Loyal Apprentices) if owned.
  */
 export function newState(prev?: GameState): GameState {
   const s: GameState = {
@@ -75,6 +75,7 @@ export function newState(prev?: GameState): GameState {
     dungeons: {},
     event: null,
     eventTimer: 180,
+    staff: { hired: [], candidates: [], refresh: 0, masters: [], nextId: 1, repush: 0 },
     lastTick: Date.now(),
   };
   if (prev) {
@@ -87,6 +88,9 @@ export function newState(prev?: GameState): GameState {
     s.stats.bestRunGold = Math.max(prev.stats.bestRunGold, prev.stats.runGold);
     for (const k of LIFETIME_STATS) s.stats[k] = prev.stats[k];
     s.gold += startGoldFor(s.asc.nodes['head_start'] ?? 0);
+    s.staff.masters = prev.staff.masters;
+    s.staff.nextId = prev.staff.nextId;
+    if (s.asc.nodes['loyal']) s.staff.hired = prev.staff.hired;
     if (s.asc.nodes['arcane_memory']) {
       s.spells = prev.spells;
       s.spellSlots = prev.spellSlots;

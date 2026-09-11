@@ -29,12 +29,15 @@ export interface Mods {
   expSlots: number;
   skillPoints: number;
   startGold: number;
-  // Automation flags (> 0 means unlocked)
+  // Automation capacity: plots / cauldrons / parties / potion types / rituals handled automatically.
+  // Only counts while at least one apprentice of the matching role is working (see computeMods).
   autoHarvest: number;
   autoBrew: number;
   autoSell: number;
   autoScav: number;
   autoRitual: number;
+  apprenticeSlots: number;
+  apprenticeXp: number;
   // Combat (flat values add to the hero's level-based stats; *Mult values multiply the total)
   attack: number;
   attackMult: number;
@@ -190,6 +193,7 @@ export interface CombatState {
   buffs: CombatBuff[];
   slow: number;
   dead: number; // seconds until recovered
+  retreated: boolean; // dropped a floor after a defeat (a Squire will push again)
   champion: boolean; // a Wandering Champion is waiting to spawn
   log: string[];
 }
@@ -198,6 +202,37 @@ export interface EventState {
   id: string;
   remaining: number;
   progress: number;
+}
+
+// ── Apprentices ──────────────────────────────────────────────
+export type RoleId = 'gardener' | 'brewer' | 'scout' | 'shopkeeper' | 'squire' | 'scribe';
+
+export interface Apprentice {
+  id: string;
+  name: string;
+  icon: string;
+  talent: number; // index into TALENTS
+  traits: string[];
+  role: RoleId | null;
+  mode: 'work' | 'train';
+  level: number;
+  xp: number;
+}
+
+export interface MasterRecord {
+  name: string;
+  icon: string;
+  role: RoleId;
+  talent: number;
+}
+
+export interface StaffState {
+  hired: Apprentice[];
+  candidates: Apprentice[];
+  refresh: number; // seconds until new candidates arrive
+  masters: MasterRecord[]; // graduates — permanent bonuses
+  nextId: number;
+  repush: number; // Squire timer
 }
 
 export interface GameState {
@@ -239,5 +274,7 @@ export interface GameState {
   // Events
   event: EventState | null;
   eventTimer: number;
+  // Apprentices
+  staff: StaffState;
   lastTick: number;
 }

@@ -1,6 +1,7 @@
 import type { GameState, ItemStack, Mods } from './types';
 import { computeMods } from './mods';
 import { addGold, addItem, count, gainProf, hasAll, profBonusOf, removeItem, rollAmount, toast } from './engine';
+import { workXp } from './staff';
 import { REAGENTS, SPELL_MAP, type SpellDef } from '../data/spells';
 
 export function manaMax(s: GameState, m: Mods): number {
@@ -82,9 +83,13 @@ export function castRitual(s: GameState, id: string, auto = false): boolean {
 }
 
 export function toggleAutoRitual(s: GameState, id: string): void {
-  if (computeMods(s).autoRitual <= 0) {
-    toast('Learn Ritualist in the Battlemage tree to auto-cast rituals.', 'warn');
-    return;
+  if (!s.autoRituals[id]) {
+    const cap = Math.floor(computeMods(s).autoRitual);
+    const used = Object.values(s.autoRituals).filter(Boolean).length;
+    if (used >= cap) {
+      toast(cap > 0 ? `Your Scribes can keep ${cap} ritual${cap > 1 ? 's' : ''} running — train them or hire another.` : 'Assign a Scribe apprentice to keep rituals running.', 'warn');
+      return;
+    }
   }
   s.autoRituals[id] = !s.autoRituals[id];
 }
@@ -113,9 +118,12 @@ export function tickMagic(s: GameState, m: Mods, dt: number): void {
     for (const b of s.buffs) b.remaining -= dt;
     s.buffs = s.buffs.filter((b) => b.remaining > 0);
   }
-  if (m.autoRitual > 0) {
-    for (const [id, on] of Object.entries(s.autoRituals)) {
-      if (on && !s.buffs.some((b) => b.id === id)) castRitual(s, id, true);
+  // Scribes keep the first N auto-marked rituals running.
+  const cap = Math.floor(m.autoRitual);
+  if (cap > 0) {
+    const marked = Object.keys(s.autoRituals).filter((id) => s.autoRituals[id]).slice(0, cap);
+    for (const id of marked) {
+      if (!s.buffs.some((b) => b.id === id) && castRitual(s, id, true)) workXp(s, m, 'scribe', 0, (SPELL_MAP[id]?.mana ?? 30) / 3);
     }
   }
 }

@@ -14,6 +14,7 @@ import { MILESTONES, PROF_MAP, emptyBonus, profBonus, profLevel, type ProfBonus 
 import { dungeonUnlocked, tickCombat } from './combat';
 import { tickMagic } from './magic';
 import { tickEvents } from './events';
+import { tickStaff, workXp } from './staff';
 
 // ── Notifications ────────────────────────────────────────────
 export type ToastKind = 'info' | 'good' | 'warn' | 'epic';
@@ -251,10 +252,19 @@ function completeBrew(s: GameState, m: Mods, r: Recipe): void {
   gainXp(s, m, r.xp * out);
   gainProf(s, m, r.id);
   if (Math.random() < Math.min(0.75, m.ingredientSave + b.save)) for (const inp of r.inputs) addItem(s, inp.id, inp.qty);
-  if (m.autoSell > 0 && s.autoSell[r.id]) {
+  if (autoSellActive(s, m, r.id)) {
     const extra = count(s, r.id) - s.settings.keepReserve;
-    if (extra > 0) doSell(s, m, r.id, extra);
+    if (extra > 0) {
+      const gold = doSell(s, m, r.id, extra);
+      workXp(s, m, 'shopkeeper', 0, 0.3 + Math.log10(1 + gold) * 0.3);
+    }
   }
+}
+
+/** Shopkeepers handle a limited number of potion types: the first N you marked for auto-sale. */
+export function autoSellActive(s: GameState, m: Mods, id: string): boolean {
+  if (!s.autoSell[id]) return false;
+  return Object.keys(s.autoSell).filter((k) => s.autoSell[k]).indexOf(id) < Math.floor(m.autoSell);
 }
 
 /** Harvest a ripe plot, then replant the same herb if affordable. */
@@ -351,12 +361,15 @@ export function tick(s: GameState, dt: number): void {
   s.stats.playTime += dt;
   s.stats.runTime += dt;
 
-  for (const plot of s.plots) {
+  // Plots below the Gardeners' tending capacity harvest and replant themselves.
+  s.plots.forEach((plot, i) => {
     let t = dt;
     for (let g = 0; plot.plantId && t > 0 && g < GUARD; g++) {
       if (plot.ready) {
-        if (m.autoHarvest <= 0) break;
+        if (i >= m.autoHarvest) break;
+        const time = PLANT_MAP[plot.plantId].time;
         harvestPlot(s, m, plot);
+        workXp(s, m, 'gardener', i, time / 60);
         continue;
       }
       const p = PLANT_MAP[plot.plantId];
@@ -365,9 +378,10 @@ export function tick(s: GameState, dt: number): void {
       if (t >= need) { t -= need; plot.progress = p.time; plot.ready = true; }
       else { plot.progress += t * rate; t = 0; }
     }
-  }
+  });
 
-  for (const c of s.cauldrons) {
+  // Cauldrons tended by a Brewer can repeat.
+  s.cauldrons.forEach((c, ci) => {
     let t = dt;
     for (let g = 0; c.active && c.recipeId && t > 0 && g < GUARD; g++) {
       const r = RECIPE_MAP[c.recipeId];
@@ -378,9 +392,12 @@ export function tick(s: GameState, dt: number): void {
       completeBrew(s, m, r);
       c.active = false;
       c.progress = 0;
-      if (c.repeat && m.autoBrew > 0) startBrew(s, c);
+      if (ci < m.autoBrew) {
+        workXp(s, m, 'brewer', ci, r.time / 40);
+        if (c.repeat) startBrew(s, c);
+      }
     }
-  }
+  });
 
   s.expeditions.forEach((e, i) => {
     let t = dt;
@@ -391,7 +408,8 @@ export function tick(s: GameState, dt: number): void {
       if (t < need) { e.progress += t * m.scavSpeed; t = 0; break; }
       t -= need;
       completeExpedition(s, m, z);
-      if (e.repeat && m.autoScav > 0) e.progress = 0;
+      if (i < m.autoScav) workXp(s, m, 'scout', i, time / 40);
+      if (e.repeat && i < m.autoScav) e.progress = 0;
       else { s.expeditions[i] = null; break; }
     }
   });
@@ -421,6 +439,7 @@ export function tick(s: GameState, dt: number): void {
   tickMagic(s, m, dt);
   tickEvents(s, m, dt);
   tickCombat(s, m, dt);
+  tickStaff(s, m, dt);
 }
 
 export interface OfflineSummary {

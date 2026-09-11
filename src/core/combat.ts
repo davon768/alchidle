@@ -4,6 +4,7 @@ import { computeMods } from './mods';
 import { manaMax } from './magic';
 import { addGear, newGear } from './armory';
 import { onEventKill } from './events';
+import { workXp } from './staff';
 import { fmt } from './format';
 import {
   DUNGEONS, DUNGEON_MAP, FLOOR_GROWTH, FLOOR_KILLS, RANK_MULT, REWARD_GROWTH, floorTier, isBossFloor, type DungeonDef,
@@ -215,6 +216,7 @@ function onKill(s: GameState, m: Mods, d: DungeonDef, e: Enemy): void {
   }
   for (const k of s.guild.contracts) if (k.kind === 'slay' && k.dungeonId === d.id && k.delivered < k.qty) k.delivered++;
   onEventKill(s, m);
+  workXp(s, m, 'squire', 0, 0.3 + c.floor * 0.03);
   log(s, `${e.icon} ${e.name} defeated · +${fmt(e.gold)} gold`);
   c.enemy = null;
   if (e.rank === 'champion') {
@@ -255,6 +257,7 @@ function onDeath(s: GameState, m: Mods, hero: HeroStats): void {
   if (c.floor > 1) {
     c.floor--;
     c.autoAdvance = false;
+    c.retreated = true;
   }
   toast(`☠️ Defeated on floor ${floor}. Retreating to floor ${c.floor} — auto-advance paused.`, 'warn');
   log(s, `☠️ You were defeated on floor ${floor}`);
@@ -368,6 +371,7 @@ export function setFloor(s: GameState, floor: number): void {
 
 export function toggleAutoAdvance(s: GameState): void {
   s.combat.autoAdvance = !s.combat.autoAdvance;
+  s.combat.retreated = false; // a manual choice — Squires won't override it
 }
 
 export function setBeltSlot(s: GameState, i: number, id: string | null): void {
