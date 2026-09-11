@@ -46,6 +46,10 @@ Also added: Battlemage skill tree (14 nodes), Spellblade Order guild, 4 Workshop
 
 **Combat balance** (30-minute auto-battle, hero level held fixed): on arrival with previous-tier gear, you reach about 40–85% of a dungeon's floors. With farmed current-tier gear you clear it or nearly clear it. The Dragon's Lair and Void Citadel expect Battlemage skills and ascension perks.
 
+### Goals (v0.5): the tutorial
+
+28 goals in 7 chapters (Workshop basics, Apprentices, Craft & proficiency, Commerce, Adventure, Magic, The long game) teach every mechanic in the order players meet it. Each goal has a one-line *how*, a short explanation of the mechanic, an optional progress bar, a **Show me** button that opens the right tab, and a one-time reward (gold, or items that help with the next step — for example, the reagent goal pays Rune Chalk and Spell Ink toward learning Firebolt). The banner at the top of every tab shows a claimable goal first, otherwise the next unfinished one; the 🎯 Goals tab lists them all. Goals are checked every second, stay done once reached, and survive ascension, so each reward pays out only once. Content lives in `src/data/goals.ts` — add a goal whenever a new system is added.
+
 ### Apprentices (v0.4): replace bought automation
 
 The Workshop's Garden Gnome, Everburning Coal, Trained Falcon and Shop Clerk are gone. Automation now comes from people you hire in the 👥 Apprentices tab (from level 3).

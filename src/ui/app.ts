@@ -3,7 +3,7 @@ import { keyed } from 'lit-html/directives/keyed.js';
 import type { GameState, Mods } from '../core/types';
 import { game } from '../core/game';
 import { computeMods, describeEffects } from '../core/mods';
-import { count, onGain, onToast, skillPointsFree, type Gain, type OfflineSummary, type ToastKind } from '../core/engine';
+import { onGain, onToast, skillPointsFree, type Gain, type OfflineSummary, type ToastKind } from '../core/engine';
 import { manaMax } from '../core/magic';
 import { xpToNext } from '../core/state';
 import { fmt, fmtTime } from '../core/format';
@@ -32,6 +32,8 @@ import { ascendView } from './views/ascend';
 import { journalView } from './views/journal';
 import { proficiencyView } from './views/proficiency';
 import { staffView } from './views/apprentices';
+import { goalBanner, goalsView } from './views/goals';
+import { GOALS } from '../data/goals';
 import { apprenticeCap } from '../data/apprentices';
 
 interface TabDef {
@@ -61,6 +63,7 @@ const TABS: TabDef[] = [
   { id: 'trade', icon: '🐪', label: 'Trading Post', unlocked: (s) => s.level >= 6 },
   { id: 'guild', icon: '🛡️', label: 'Guilds', unlocked: (s) => s.level >= GUILD_UNLOCK_LEVEL },
   { id: 'ascend', icon: '🌟', label: 'Magnum Opus', unlocked: (s) => s.asc.count > 0 || s.stats.runGold >= ASC_MIN_GOLD * 0.2 },
+  { id: 'goals', icon: '🎯', label: 'Goals', unlocked: () => true, dot: (s) => GOALS.some((g) => s.goals[g.id] === 'done') },
   { id: 'journal', icon: '📓', label: 'Journal', unlocked: () => true },
 ];
 
@@ -105,12 +108,8 @@ function popsTemplate(): TemplateResult {
 }
 
 // ── Guidance ─────────────────────────────────────────────────
-function nextGoal(s: GameState): string | null {
-  if (s.stats.harvested === 0) return 'Plant Sunleaf in the 🌱 Garden, then harvest it when it ripens.';
-  if (s.stats.brewed === 0 && count(s, 'clearwater') < 1) return 'Send a party to the Whispering Meadow for 💧 Clearwater (or buy some at the Market).';
-  if (s.stats.brewed === 0) return 'Brew a 🧪 Minor Healing Tonic in your cauldron.';
-  if (s.stats.potionsSold === 0) return 'Sell your potions at the 🏪 Market.';
-  if (s.level >= DUNGEON_UNLOCK_LEVEL && s.stats.kills === 0) return 'Enter the 👺 Goblin Warrens in ⚔️ Dungeons — put Healing Tonics on your potion belt first!';
+/** Shown when every available goal is claimed: what the next level unlocks. */
+function nextUnlock(s: GameState): string | null {
   const unlocks = [
     ...RECIPES.map((r) => ({ lvl: r.level, text: `${r.icon} ${r.name}` })),
     ...PLANTS.map((p) => ({ lvl: p.level, text: `${p.name} seeds` })),
@@ -167,6 +166,7 @@ function viewFor(tab: TabId, s: GameState, m: Mods): TemplateResult {
     case 'workshop': return workshopView(s);
     case 'skills': return skillsView(s, m);
     case 'ascend': return ascendView(s, m);
+    case 'goals': return goalsView(s);
     case 'journal': return journalView(s);
   }
 }
@@ -184,7 +184,8 @@ function appTemplate(): TemplateResult {
   if (!tabs.some((t) => t.id === ui.tab)) ui.tab = 'garden';
   const free = skillPointsFree(s, m);
   const need = xpToNext(s.level);
-  const goal = nextGoal(s);
+  const banner = goalBanner(s);
+  const unlock = banner ? null : nextUnlock(s);
   const mMax = manaMax(s, m);
 
   return html`<div class="shell">
@@ -209,7 +210,7 @@ function appTemplate(): TemplateResult {
       </button>`)}
     </nav>
     <main class="main">
-      ${goal ? html`<div class="view" style="margin-bottom:14px"><div class="goal">🎯 ${goal}</div></div>` : ''}
+      ${banner ?? (unlock ? html`<div class="view" style="margin-bottom:14px"><div class="goal">🔭 ${unlock}</div></div>` : '')}
       ${statusStrip(s)}
       ${viewFor(ui.tab, s, m)}
     </main>

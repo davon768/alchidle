@@ -256,6 +256,7 @@ export interface GameState {
   asc: { stones: number; total: number; count: number; nodes: Record<string, number> };
   stats: Stats;
   achievements: Record<string, boolean>;
+  goals: Record<string, 'done' | 'claimed'>; // tutorial goals (permanent; rewards pay out once ever)
   autoSell: Record<string, boolean>;
   settings: { notation: 'suffix' | 'sci'; keepReserve: number; autoSalvage: number; lootPops: boolean };
   // Magic

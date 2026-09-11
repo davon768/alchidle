@@ -60,6 +60,7 @@ export function newState(prev?: GameState): GameState {
     asc: { stones: 0, total: 0, count: 0, nodes: {} },
     stats: freshStats(),
     achievements: {},
+    goals: {},
     autoSell: {},
     settings: { notation: 'suffix', keepReserve: 10, autoSalvage: 0, lootPops: true },
     mana: 0,
@@ -81,6 +82,7 @@ export function newState(prev?: GameState): GameState {
   if (prev) {
     s.asc = prev.asc;
     s.achievements = prev.achievements;
+    s.goals = prev.goals;
     s.prof = prev.prof;
     s.autoSell = prev.autoSell;
     s.settings = prev.settings;

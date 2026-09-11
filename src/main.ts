@@ -3,6 +3,7 @@ import { game } from './core/game';
 import { loadGame, saveGame } from './core/save';
 import { checkAchievements, simulate, tick } from './core/engine';
 import { computeMods } from './core/mods';
+import { checkGoals } from './core/goals';
 import { setNotation } from './core/format';
 import { mount, showOfflineSummary } from './ui/app';
 
@@ -51,7 +52,10 @@ setInterval(() => {
   else if (dt > 0) tick(game.s, dt);
 }, TICK_MS);
 
-setInterval(() => checkAchievements(game.s), 1000);
+setInterval(() => {
+  checkAchievements(game.s);
+  checkGoals(game.s);
+}, 1000);
 setInterval(() => saveGame(game.s), AUTOSAVE_MS);
 
 let lastRender = 0;

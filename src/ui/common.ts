@@ -6,7 +6,7 @@ import { fmt } from '../core/format';
 
 export type TabId =
   | 'garden' | 'brew' | 'explore' | 'staff' | 'dungeon' | 'market' | 'inventory' | 'proficiency' | 'arcanum' | 'armory'
-  | 'trade' | 'guild' | 'workshop' | 'skills' | 'ascend' | 'journal';
+  | 'trade' | 'guild' | 'workshop' | 'skills' | 'ascend' | 'goals' | 'journal';
 
 export const ui = {
   tab: 'garden' as TabId,
