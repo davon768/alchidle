@@ -9,6 +9,7 @@ export interface Mods {
   doubleBrew: number;
   ingredientSave: number;
   masteryRate: number;
+  brewQuality: number; // raises the odds of Fine / Masterwork / Legendary potions
   // Commerce
   sellPrice: number;
   demandRecovery: number;
@@ -82,6 +83,10 @@ export interface Cauldron {
   progress: number;
   active: boolean;
   repeat: boolean;
+  // Stirring minigame: a one-shot window that opens when you start a brew by hand.
+  stirLeft: number; // seconds remaining in the window; 0 = closed
+  stirTarget: number; // sweet-spot centre, 0–1 across the bar
+  stirQ: number; // quality score banked for the brew in progress
 }
 
 export interface Expedition {
@@ -98,6 +103,7 @@ export interface Contract {
   delivered: number;
   gold: number;
   rep: number;
+  qual?: number; // accumulated quality credit from the potions handed in so far
 }
 
 export interface TradeOffer {
@@ -126,6 +132,7 @@ export interface Stats {
   bestRarity: number;
   spellsCast: number;
   events: number;
+  bestQuality: number; // best potion quality tier ever brewed
 }
 
 // ── Combat & magic ───────────────────────────────────────────
@@ -239,6 +246,8 @@ export interface GameState {
   version: number;
   gold: number;
   items: Record<string, number>;
+  /** Per-quality-tier counts for potions: qual[id][tier]. Sums to items[id]; see data/quality.ts. */
+  qual: Record<string, number[]>;
   level: number;
   xp: number;
   skills: Record<string, number>;

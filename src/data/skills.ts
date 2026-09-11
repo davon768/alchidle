@@ -60,12 +60,14 @@ export const SKILLS: SkillNode[] = [
   n('alch', 'mastery_focus', 'Focused Practice', '🎯', 1, 10, 1, [{ stat: 'masteryRate', value: 0.1 }], [{ id: 'apprentice_study', rank: 3 }]),
   n('alch', 'alembic', 'Alembic Mastery', '🏺', 2, 3, 2, [{ stat: 'cauldrons', value: 1 }], [{ id: 'steady_hand', rank: 3 }]),
   n('alch', 'double_distill', 'Double Distillation', '⚗️', 2, 10, 1, [{ stat: 'doubleBrew', value: 0.03 }], [{ id: 'precise_measure', rank: 3 }]),
+  n('alch', 'refined_palate', 'Refined Palate', '👅', 2, 10, 1, [{ stat: 'brewQuality', value: 0.04 }], [{ id: 'mastery_focus', rank: 3 }],
+    'Better odds of Fine, Masterwork and Legendary potions.'),
   n('alch', 'perpetual_flame', 'Perpetual Flame', '🕯️', 3, 1, 2, [{ stat: 'autoBrew', value: 1 }], [{ id: 'alembic', rank: 1 }],
     'Your Brewers can tend 1 more cauldron.'),
   n('alch', 'volatile_catalyst', 'Volatile Catalyst', '💥', 3, 5, 2, [{ stat: 'brewSpeed', value: 0.12 }], [{ id: 'steady_hand', rank: 8 }]),
   n('alch', 'quintessence', 'Quintessence', '💫', 4, 5, 2, [{ stat: 'doubleBrew', value: 0.05 }], [{ id: 'double_distill', rank: 5 }]),
   n('alch', 'grand_athanor', 'Grand Athanor', '🔥', 5, 2, 4, [{ stat: 'cauldrons', value: 1 }], [{ id: 'volatile_catalyst', rank: 3 }, { id: 'alembic', rank: 3 }]),
-  n('alch', 'endless_distill', 'Endless Distillation', '♾️', 6, 0, 2, [{ stat: 'brewSpeed', value: 0.03 }, { stat: 'masteryRate', value: 0.02 }], [{ id: 'grand_athanor', rank: 1 }],
+  n('alch', 'endless_distill', 'Endless Distillation', '♾️', 6, 0, 2, [{ stat: 'brewSpeed', value: 0.03 }, { stat: 'masteryRate', value: 0.02 }, { stat: 'brewQuality', value: 0.01 }], [{ id: 'grand_athanor', rank: 1 }],
     'Infinite rank.'),
 
   // ── Commerce ──────────────────────────────────────────────

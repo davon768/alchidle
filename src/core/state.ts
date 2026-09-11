@@ -1,7 +1,7 @@
 import type { CombatState, GameState, Stats } from './types';
 import { startGoldFor } from '../data/ascension';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export function xpToNext(level: number): number {
   return Math.floor(25 * 1.21 ** (level - 1) + 15 * level);
@@ -16,7 +16,7 @@ function freshStats(): Stats {
   return {
     runGold: 0, totalGold: 0, bestRunGold: 0, brewed: 0, harvested: 0, expeditions: 0,
     potionsSold: 0, contracts: 0, trades: 0, playTime: 0, runTime: 0,
-    kills: 0, bosses: 0, deaths: 0, gearFound: 0, bestRarity: 0, spellsCast: 0, events: 0,
+    kills: 0, bosses: 0, deaths: 0, gearFound: 0, bestRarity: 0, spellsCast: 0, events: 0, bestQuality: 0,
   };
 }
 
@@ -30,7 +30,7 @@ export function freshCombat(): CombatState {
 /** Stats that survive ascension (everything except the per-run counters). */
 const LIFETIME_STATS: (keyof Stats)[] = [
   'totalGold', 'brewed', 'harvested', 'expeditions', 'potionsSold', 'contracts', 'trades', 'playTime',
-  'kills', 'bosses', 'deaths', 'gearFound', 'bestRarity', 'spellsCast', 'events',
+  'kills', 'bosses', 'deaths', 'gearFound', 'bestRarity', 'spellsCast', 'events', 'bestQuality',
 ];
 
 /**
@@ -43,6 +43,7 @@ export function newState(prev?: GameState): GameState {
     version: SAVE_VERSION,
     gold: 20,
     items: { clearwater: 6 },
+    qual: {},
     level: 1,
     xp: 0,
     skills: {},

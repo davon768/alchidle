@@ -19,6 +19,7 @@ export interface ProfBonus {
   minRarity: number; // raises the forge's guaranteed rarity
   potency: number; // +x combat effect of this potion
   market: number; // +x market depth (demand falls slower when selling)
+  quality: number; // +x potion quality score (odds of Fine / Masterwork / Legendary)
 }
 
 export interface Milestone {
@@ -53,14 +54,14 @@ export const MILESTONES: Record<ProfKind, Milestone[]> = {
   potion: [
     M(10, '10% faster brewing', { speed: 0.1 }),
     M(20, '+15% sell value', { value: 0.15 }),
-    M(30, '10% chance of an extra potion', { double: 0.1 }),
+    M(30, '10% chance of an extra potion, finer brews', { double: 0.1, quality: 0.1 }),
     M(40, '15% faster brewing, wider market', { speed: 0.15, market: 0.5 }),
     M(50, '+1 potion per brew', { yield: 1 }),
-    M(60, '+25% value, +15% combat potency', { value: 0.25, potency: 0.15 }),
+    M(60, '+25% value, +15% potency, finer brews', { value: 0.25, potency: 0.15, quality: 0.15 }),
     M(70, '20% faster brewing', { speed: 0.2 }),
     M(80, '15% chance ingredients are refunded', { save: 0.15 }),
-    M(90, '+35% value, much wider market', { value: 0.35, market: 1 }),
-    M(100, 'Perfected: +1 potion per brew, +25% potency', { yield: 1, potency: 0.25 }),
+    M(90, '+35% value, much wider market, finer brews', { value: 0.35, market: 1, quality: 0.1 }),
+    M(100, 'Perfected: +1 potion per brew, +25% potency, far finer brews', { yield: 1, potency: 0.25, quality: 0.15 }),
   ],
   reagent: [
     M(10, '10% chance of a bonus reagent', { double: 0.1 }),
@@ -133,7 +134,7 @@ export function profProgress(xp: number): { level: number; into: number; need: n
 }
 
 export function emptyBonus(): ProfBonus {
-  return { speed: 0, yield: 0, double: 0, value: 0, save: 0, cost: 0, luck: 0, minRarity: 0, potency: 0, market: 0 };
+  return { speed: 0, yield: 0, double: 0, value: 0, save: 0, cost: 0, luck: 0, minRarity: 0, potency: 0, market: 0, quality: 0 };
 }
 
 export function profBonus(kind: ProfKind, level: number): ProfBonus {
@@ -162,5 +163,6 @@ export function describeBonus(b: ProfBonus): string {
   if (b.minRarity) parts.push(`+${b.minRarity} min rarity`);
   if (b.potency) parts.push(`+${pct(b.potency)} potency`);
   if (b.market) parts.push(`+${pct(b.market)} market depth`);
+  if (b.quality) parts.push(`+${pct(b.quality)} quality`);
   return parts.join(', ') || 'No bonuses yet — first milestone at level 10';
 }

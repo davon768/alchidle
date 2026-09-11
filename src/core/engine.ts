@@ -11,6 +11,7 @@ import { ACHIEVEMENTS } from '../data/achievements';
 import { CONTRACT_COUNT } from '../data/guilds';
 import { DUNGEONS, REWARD_GROWTH } from '../data/combat';
 import { MILESTONES, PROF_MAP, emptyBonus, profBonus, profLevel, type ProfBonus } from '../data/proficiency';
+import { QUAL_MAX, quality, qualityName, rollQuality, rollStirTarget, STIR_WINDOW } from '../data/quality';
 import { dungeonUnlocked, tickCombat } from './combat';
 import { tickMagic } from './magic';
 import { tickEvents } from './events';
@@ -66,15 +67,73 @@ function pick<T>(arr: T[]): T {
 export function count(s: GameState, id: string): number {
   return s.items[id] ?? 0;
 }
-export function addItem(s: GameState, id: string, qty: number): void {
+
+// ── Potion quality bookkeeping ───────────────────────────────
+// `items[id]` is the total; `qual[id][tier]` is the breakdown. These two must agree, so every write
+// goes through addItem/removeItem. Anything that predates quality (old saves, hand-edited state)
+// reconciles into Common the first time it is read.
+const isPotion = (id: string): boolean => item(id).kind === 'potion';
+
+/** Per-tier counts for a potion, reconciled against the total so drift always lands in Common. */
+export function qualCounts(s: GameState, id: string): number[] {
+  const tiers = s.qual[id] ?? (s.qual[id] = []);
+  for (let t = 0; t <= QUAL_MAX; t++) tiers[t] = tiers[t] ?? 0;
+  tiers.length = QUAL_MAX + 1;
+  const total = count(s, id);
+  const sum = tiers.reduce((a, b) => a + b, 0);
+  if (Math.abs(sum - total) > 1e-6) tiers[0] = Math.max(0, tiers[0] + total - sum);
+  return tiers;
+}
+
+/** Highest tier the player currently holds any of, or 0. */
+export function bestTier(s: GameState, id: string): number {
+  if (!isPotion(id)) return 0;
+  const tiers = qualCounts(s, id);
+  for (let t = QUAL_MAX; t > 0; t--) if (tiers[t] >= 1) return t;
+  return 0;
+}
+
+export function addItem(s: GameState, id: string, qty: number, tier = 0): void {
+  // Reconcile the tiers against the *old* total before changing it — qualCounts treats any
+  // mismatch as untiered stock and folds it into Common, which would double-count this add.
+  if (isPotion(id)) {
+    const tiers = qualCounts(s, id);
+    const t = Math.max(0, Math.min(QUAL_MAX, Math.floor(tier)));
+    tiers[t] = Math.max(0, tiers[t] + qty);
+  }
   s.items[id] = (s.items[id] ?? 0) + qty;
   if (qty > 0 && !quiet) {
     const d = item(id);
-    emitGain({ key: id, icon: d.icon, name: d.name, qty });
+    const q = quality(tier);
+    emitGain({ key: tier > 0 ? `${id}#${tier}` : id, icon: d.icon, name: qualityName(tier, d.name), qty, color: tier > 0 ? q.color : undefined });
   }
 }
-export function removeItem(s: GameState, id: string, qty: number): void {
-  s.items[id] = Math.max(0, (s.items[id] ?? 0) - qty);
+
+/**
+ * Take `qty` of an item. For potions, `from` picks which end of the quality range is spent:
+ * 'low' (selling, crafting, anything routine) preserves your best bottles, 'high' (combat) drinks them.
+ * Returns how many of each tier were actually taken.
+ */
+export function removeItem(s: GameState, id: string, qty: number, from: 'low' | 'high' = 'low'): number[] {
+  const taken = new Array(QUAL_MAX + 1).fill(0);
+  const have = count(s, id);
+  qty = Math.min(qty, have);
+  if (qty <= 0) return taken;
+  // Spend the tiers first, while `items[id]` still matches them (see addItem).
+  if (isPotion(id)) {
+    const tiers = qualCounts(s, id);
+    let left = qty;
+    const order = from === 'low' ? [0, 1, 2, 3] : [3, 2, 1, 0];
+    for (const t of order) {
+      if (left <= 0) break;
+      const take = Math.min(left, tiers[t]);
+      tiers[t] -= take;
+      taken[t] += take;
+      left -= take;
+    }
+  }
+  s.items[id] = have - qty;
+  return taken;
 }
 export function hasAll(s: GameState, stacks: ItemStack[], times = 1): boolean {
   return stacks.every((st) => (st.id === 'gold' ? s.gold : count(s, st.id)) >= st.qty * times);
@@ -135,9 +194,15 @@ export function gainProf(s: GameState, m: Mods, id: string, times = 1): void {
     if (ms.level > before && ms.level <= after) toast(`🎖️ ${d.icon} ${d.name} proficiency ${ms.level}: ${ms.label}!`, 'epic');
   }
 }
-/** Combat potion strength for a specific potion (global potion power × that potion's proficiency potency). */
-export function potionPotency(s: GameState, m: Mods, id: string): number {
-  return m.potionPower * (1 + profBonusOf(s, id).potency);
+/** Combat potion strength (global potion power × that potion's proficiency potency × its quality tier). */
+export function potionPotency(s: GameState, m: Mods, id: string, tier = 0): number {
+  return m.potionPower * (1 + profBonusOf(s, id).potency) * quality(tier).potency;
+}
+
+/** The tier actually taken by a removeItem call — the highest one it drew from. */
+export function takenTier(taken: number[]): number {
+  for (let t = QUAL_MAX; t > 0; t--) if (taken[t] > 0) return t;
+  return 0;
 }
 
 // ── Economy ──────────────────────────────────────────────────
@@ -163,11 +228,28 @@ export function buyUnitPrice(id: string): number {
   return item(id).value * 2;
 }
 
+/**
+ * Average quality multiplier across the `qty` bottles a sale would take (lowest tiers first,
+ * matching removeItem). Anything beyond what's in stock is priced as Common.
+ */
+export function qualityMixMult(s: GameState, id: string, qty: number): number {
+  if (qty <= 0 || !isPotion(id)) return 1;
+  const tiers = qualCounts(s, id);
+  let left = qty;
+  let sum = 0;
+  for (let t = 0; t <= QUAL_MAX && left > 0; t++) {
+    const take = Math.min(left, tiers[t]);
+    sum += take * quality(t).value;
+    left -= take;
+  }
+  return (sum + left) / qty;
+}
+
 /** Total gold for selling `qty` of an item; potion prices slide down as demand drops with each unit. */
 export function sellValue(s: GameState, m: Mods, id: string, qty: number): number {
   if (qty <= 0) return 0;
   if (item(id).kind !== 'potion') return ingredientUnitPrice(s, m, id) * qty;
-  const base = potionBasePrice(s, m, id);
+  const base = potionBasePrice(s, m, id) * qualityMixMult(s, id, qty);
   const d = demandOf(s, id);
   const step = demandDrop(s, id);
   if (d <= DEMAND_FLOOR) return base * DEMAND_FLOOR * qty;
@@ -230,26 +312,52 @@ export function syncSlots(s: GameState, m: Mods): void {
     if (arr.length > n) arr.length = n;
   };
   fit<Plot>(s.plots, Math.floor(m.plots), () => ({ plantId: null, progress: 0, ready: false }));
-  fit<Cauldron>(s.cauldrons, Math.floor(m.cauldrons), () => ({ recipeId: null, progress: 0, active: false, repeat: false }));
+  fit<Cauldron>(s.cauldrons, Math.floor(m.cauldrons), () => ({ recipeId: null, progress: 0, active: false, repeat: false, stirLeft: 0, stirTarget: 0.5, stirQ: 0 }));
   fit(s.expeditions, Math.floor(m.expSlots), () => null);
   while (s.belt.length < Math.floor(m.potionSlots)) s.belt.push(null);
 }
 
-export function startBrew(s: GameState, c: Cauldron): boolean {
+/**
+ * Consume a recipe's inputs and start the brew.
+ * `byHand` opens the stirring window; apprentice-repeated brews skip it and roll quality from skill alone.
+ */
+export function startBrew(s: GameState, c: Cauldron, byHand = false): boolean {
   const r = c.recipeId ? RECIPE_MAP[c.recipeId] : null;
   if (!r || !hasAll(s, r.inputs)) return false;
-  for (const inp of r.inputs) removeItem(s, inp.id, inp.qty);
+  // Brewing a potion out of better potions carries some of that quality into the result.
+  let carry = 0;
+  let carried = 0;
+  for (const inp of r.inputs) {
+    const taken = removeItem(s, inp.id, inp.qty);
+    for (let t = 1; t <= QUAL_MAX; t++) {
+      carry += taken[t] * t * 0.12;
+      carried += taken[t];
+    }
+  }
   c.active = true;
   c.progress = 0;
+  c.stirQ = carried > 0 ? carry / Math.max(1, carried) : 0;
+  c.stirLeft = byHand ? STIR_WINDOW : 0;
+  c.stirTarget = rollStirTarget();
   return true;
 }
 
-function completeBrew(s: GameState, m: Mods, r: Recipe): void {
+/** Quality score for a brew about to finish: standing bonuses + proficiency + whatever the cauldron banked. */
+export function brewQualityScore(s: GameState, m: Mods, recipeId: string, banked = 0): number {
+  return Math.max(0, m.brewQuality + profBonusOf(s, recipeId).quality + banked);
+}
+
+function completeBrew(s: GameState, m: Mods, r: Recipe, banked: number): void {
   const b = profBonusOf(s, r.id);
   const out = 1 + b.yield + (Math.random() < Math.min(1, m.doubleBrew + b.double) ? 1 : 0);
-  addItem(s, r.id, out);
+  const tier = rollQuality(brewQualityScore(s, m, r.id, banked));
+  addItem(s, r.id, out, tier);
   s.stats.brewed += out;
-  gainXp(s, m, r.xp * out);
+  if (tier > 0) {
+    s.stats.bestQuality = Math.max(s.stats.bestQuality ?? 0, tier);
+    if (tier >= 2) toast(`${r.icon} ${qualityName(tier, r.name)} — a ${quality(tier).name} brew!`, 'epic');
+  }
+  gainXp(s, m, r.xp * out * (1 + tier * 0.15));
   gainProf(s, m, r.id);
   if (Math.random() < Math.min(0.75, m.ingredientSave + b.save)) for (const inp of r.inputs) addItem(s, inp.id, inp.qty);
   if (autoSellActive(s, m, r.id)) {
@@ -382,6 +490,7 @@ export function tick(s: GameState, dt: number): void {
 
   // Cauldrons tended by a Brewer can repeat.
   s.cauldrons.forEach((c, ci) => {
+    if (c.stirLeft > 0) c.stirLeft = Math.max(0, c.stirLeft - dt);
     let t = dt;
     for (let g = 0; c.active && c.recipeId && t > 0 && g < GUARD; g++) {
       const r = RECIPE_MAP[c.recipeId];
@@ -389,9 +498,11 @@ export function tick(s: GameState, dt: number): void {
       const need = (r.time - c.progress) / rate;
       if (t < need) { c.progress += t * rate; t = 0; break; }
       t -= need;
-      completeBrew(s, m, r);
+      completeBrew(s, m, r, c.stirQ);
       c.active = false;
       c.progress = 0;
+      c.stirLeft = 0;
+      c.stirQ = 0;
       if (ci < m.autoBrew) {
         workXp(s, m, 'brewer', ci, r.time / 40);
         if (c.repeat) startBrew(s, c);

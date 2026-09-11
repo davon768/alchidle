@@ -14,7 +14,7 @@ import { fmt } from './format';
 export function baseMods(): Mods {
   return {
     growSpeed: 1, harvestYield: 1, seedDiscount: 0,
-    brewSpeed: 1, doubleBrew: 0, ingredientSave: 0, masteryRate: 1,
+    brewSpeed: 1, doubleBrew: 0, ingredientSave: 0, masteryRate: 1, brewQuality: 0,
     sellPrice: 1, demandRecovery: 1, tradeBonus: 1, contractReward: 1, repGain: 1,
     scavSpeed: 1, scavYield: 1, rareFind: 1,
     xpGain: 1, stoneGain: 1, offlineHours: 8,
@@ -107,6 +107,7 @@ export const STAT_INFO: Record<StatKey, { label: string; fmt: StatFormat }> = {
   doubleBrew: { label: 'double-brew chance', fmt: 'pct' },
   ingredientSave: { label: 'ingredient save chance', fmt: 'pct' },
   masteryRate: { label: 'proficiency gain', fmt: 'pct' },
+  brewQuality: { label: 'potion quality', fmt: 'pct' },
   sellPrice: { label: 'sell price', fmt: 'pct' },
   demandRecovery: { label: 'demand recovery', fmt: 'pct' },
   tradeBonus: { label: 'trade rewards', fmt: 'pct' },

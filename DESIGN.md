@@ -18,7 +18,7 @@ Early game is hands-on (click to plant, brew, sell). Automation comes from **app
 | System | What it does | How it keeps going forever |
 |---|---|---|
 | **Garden** | 7 herbs, plots grow on a timer, harvest replants automatically | Infinite yield/speed upgrades; "Endless Growth" skill |
-| **Brewing** | 23 recipes, including combat potions; late recipes use earlier *potions* as ingredients | **Proficiency** 1–100 for each potion (see below) |
+| **Brewing** | 23 recipes, including combat potions; late recipes use earlier *potions* as ingredients. Every brew rolls a **quality tier** | **Proficiency** 1–100 for each potion (see below); quality milestones at 30/60/90/100 |
 | **Market** | Selling lowers that potion's demand, which recovers over time. Random "hot seller" events | Potion proficiency milestones widen each potion's market; demand recovery scales |
 | **Expeditions** | 7 zones with drop tables, rare finds and parallel parties | **The Endless Rift**: every run goes one level deeper (+12% rewards, +4% time) |
 | **Trading Post** | Rotating caravans: barter, bulk potion orders, exotic imports, herb buyers | Offers scale with your unlocks; trade bonus stat |
@@ -45,6 +45,38 @@ Also added: Battlemage skill tree (14 nodes), Spellblade Order guild, 4 Workshop
 **Combat math:** damage = A²/(A+D), so it never hits zero. Enemies scale ×1.10 per floor and rewards ×1.08. Hero stats = (level base + flat gear) × multipliers.
 
 **Combat balance** (30-minute auto-battle, hero level held fixed): on arrival with previous-tier gear, you reach about 40–85% of a dungeon's floors. With farmed current-tier gear you clear it or nearly clear it. The Dragon's Lair and Void Citadel expect Battlemage skills and ascension perks.
+
+### Potion quality (v0.6)
+
+Every brew rolls one of four tiers — Common, ✦ Fine, ✦✦ Masterwork, ★ Legendary — multiplying that bottle's
+sell value (×1 / ×1.6 / ×2.8 / ×6) and its combat potency (×1 / ×1.25 / ×1.6 / ×2.2). Quality must be earned:
+a fresh brewer with no proficiency, no quality bonuses and no stirring rolls Common every time, so first-ascension
+pacing is unchanged.
+
+The **quality score** feeding the roll is the sum of:
+
+- the `brewQuality` stat — Alchemy skills *Refined Palate* (10 ranks × 0.04) and *Endless Distillation* (0.01/rank)
+- that potion's brewing proficiency — milestones at 30, 60, 90 and 100 total +0.5
+- the **stirring minigame** on manual brews (below), up to +0.7
+- carry-over when a recipe consumes higher-quality potions as ingredients (+0.12 per tier, averaged)
+
+Chances are `fine = min(0.9, q×0.55)`, `master = fine × min(0.5, q×0.25)`, `legend = master × min(0.3, q×0.12)`,
+so top tiers stay rare. Expected sale-value multiplier: ×1.00 for a fresh player, ×1.21 at proficiency 100,
+×1.47 with the skill node maxed — and ×1.33 on a perfectly stirred manual brew.
+
+**Stirring** is a one-shot window: pressing Brew by hand opens a 3-second sweep bar, and one tap inside the
+glowing band banks a bonus for that brew (dead centre pays double the band floor). A miss costs nothing and the
+brew proceeds normally, so it never punishes idling; apprentice-repeated brews skip the window entirely and roll
+from proficiency and skills alone. This is the game's only active-play minigame — deliberately a single tap at
+brew start rather than prompts during the brew, so a 10-minute Panacea never asks to be babysat.
+
+**Interlocks.** Quality raises market price, contract payouts (the guild pays half the quality value on top),
+combat potency, and the quality of potions brewed *from* other potions. Combat drinks the best bottle on the
+belt; selling, crafting and contracts spend the plainest first, so a Legendary is never consumed by accident.
+
+**Storage.** `items[id]` stays the total and `qual[id][tier]` holds the breakdown, kept in step by
+`engine.addItem` / `removeItem`. Systems that only care about totals (demand, auto-sell, recipe inputs) needed
+no changes, and pre-quality saves reconcile into Common on first read.
 
 ### Goals (v0.5): the tutorial
 
@@ -136,26 +168,25 @@ The UI is already mobile-ready: bottom tab bar under 760 px, safe-area insets, t
 
 ## 6. Recommended additions (prioritized)
 
+*Shipped since this list was written: potion quality tiers (v0.6, §2), events (v0.2) and the scripted balance bot.*
+
 ### High impact, fits the current design
-1. **Potion quality tiers** (Common → Fine → Masterwork → Legendary): a small optional stirring/timing minigame on manual brews rolls quality, adding active play on top of idle. Auto-brews roll quality from a skill-based chance.
-2. **Research Library**: a long-timer queue (minutes to days) that unlocks recipes, new plants and system upgrades. It is the classic idle "come back later" hook and gives skill points something to compete with.
-3. **Plant cross-breeding and mutations**: plant two herbs side by side for a chance at mutated seeds with new traits (fast, bountiful, glowing). This gives endless collection depth.
-4. **Familiars**: collectible companions (cat, raven, salamander, homunculus) found on expeditions, leveled with potions, each with a passive buff. Equip 1–3.
-5. **Adventurer parties**: hire heroes with classes for expeditions; brewed potions equip them for deeper Rift runs; Rift **bosses** every 10 depths drop unique relics.
+1. **Research Library**: a long-timer queue (minutes to days) that unlocks recipes, new plants and system upgrades. It is the classic idle "come back later" hook and gives skill points something to compete with.
+2. **Plant cross-breeding and mutations**: plant two herbs side by side for a chance at mutated seeds with new traits (fast, bountiful, glowing). This gives endless collection depth.
+3. **Familiars**: collectible companions (cat, raven, salamander, homunculus) found on expeditions, leveled with potions, each with a passive buff. Equip 1–3.
+4. **Adventurer parties**: hire heroes with classes for expeditions; brewed potions equip them for deeper Rift runs; Rift **bosses** every 10 depths drop unique relics.
 
 ### Long-term retention
-6. **Second prestige layer, "Transcendence"**: reset ascensions for *Aether*, which opens a new tree, new recipe tier and new zone. It keeps the endless curve fresh after 50+ ascensions.
-7. **Challenges**: ascension runs with restrictions (no garden, market prices halved, one cauldron) that grant permanent unique rewards.
-8. **Day/night and seasons**: real-time cycles that boost certain herbs and potions (Moonpetal at night, Emberroot in summer).
-9. **Events**: Harvest Festival, Blood Moon and Starfall weekends with limited recipes and cosmetic rewards.
-10. **Daily quests and weekly guild goals**, kept light with no punishing streaks.
+5. **Second prestige layer, "Transcendence"**: reset ascensions for *Aether*, which opens a new tree, new recipe tier and new zone. It keeps the endless curve fresh after 50+ ascensions.
+6. **Challenges**: ascension runs with restrictions (no garden, market prices halved, one cauldron) that grant permanent unique rewards.
+7. **Day/night and seasons**: real-time cycles that boost certain herbs and potions (Moonpetal at night, Emberroot in summer).
+8. **Daily quests and weekly guild goals**, kept light with no punishing streaks.
 
 ### Polish
-11. **Art pass**: replace emoji with a consistent pixel-art or painted icon set; animate cauldrons and plants.
-12. **Audio**: bubbling ambience, harvest pops and level-up chimes (Howler.js), with a mute toggle.
-13. **Stats and graphs**: gold/hour chart, per-system breakdown, "what's my bottleneck" hints.
-14. **Buy-max / bulk buttons** and hotkeys on desktop.
-15. **Balancing harness**: a headless bot (the dev `__alchemy` hook already allows this) that plays N hours and logs level, gold and time-to-ascend, so pacing changes can be measured.
+9. **Art pass**: replace emoji with a consistent pixel-art or painted icon set; animate cauldrons and plants.
+10. **Audio**: bubbling ambience, harvest pops and level-up chimes (Howler.js), with a mute toggle.
+11. **Stats and graphs**: gold/hour chart, per-system breakdown, "what's my bottleneck" hints.
+12. **Buy-max / bulk buttons** and hotkeys on desktop.
 
 ### Monetization (if you publish)
 Stay ethical and optional: rewarded ad for 2× offline gains, a one-time "supporter pack" (cosmetic cauldrons, extra save slot), cosmetic skins. Avoid energy systems and pay-to-skip in an idle game, where they break the genre's trust.

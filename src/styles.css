@@ -331,3 +331,15 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .ms-row { display: flex; gap: 4px; flex-wrap: wrap; }
 .ms-pip { width: 28px; height: 20px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; background: #150f22; border: 1px solid var(--border); color: var(--dim); cursor: help; }
 .ms-pip.on { background: var(--pip, var(--accent)); border-color: var(--pip, var(--accent)); color: #140d20; }
+
+/* ── Potion quality ─────────────────────────────────────── */
+.qual-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.qual-chip { font-size: 11px; padding: 1px 6px; border-radius: 8px; color: var(--q); border: 1px solid var(--q); background: color-mix(in srgb, var(--q) 14%, transparent); white-space: nowrap; }
+.qual-odds { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* The one-shot stirring minigame on manual brews */
+.stir { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.stir-track { position: relative; flex: 1; height: 18px; border-radius: 9px; background: #0d0915; border: 1px solid #4a3c6a; overflow: hidden; }
+.stir-band { position: absolute; top: 0; bottom: 0; background: linear-gradient(180deg, #5fd06855, #5fd068aa); border-left: 1px solid #5fd068; border-right: 1px solid #5fd068; }
+.stir-marker { position: absolute; top: -2px; bottom: -2px; width: 3px; margin-left: -1.5px; background: #ffe27a; box-shadow: 0 0 6px 2px #ffe27a88; }
+.stir-btn { white-space: nowrap; }

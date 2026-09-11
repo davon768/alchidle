@@ -1,5 +1,6 @@
 import type { CombatEffect, Enemy, EnemyRank, GameState, Mods } from './types';
-import { addGold, addItem, count, gainXp, isQuiet, potionPotency, randInt, removeItem, rollAmount, toast } from './engine';
+import { addGold, addItem, count, gainXp, isQuiet, potionPotency, randInt, removeItem, rollAmount, takenTier, toast } from './engine';
+import { qualityName } from '../data/quality';
 import { computeMods } from './mods';
 import { manaMax } from './magic';
 import { addGear, newGear } from './armory';
@@ -135,19 +136,20 @@ function usePotion(s: GameState, m: Mods, hero: HeroStats, e: Enemy): boolean {
       : first.type === 'bomb' ? e.rank !== 'normal' && e.hp > e.maxHp * 0.2
       : false;
     if (!want) continue;
-    removeItem(s, id, 1);
+    // In a fight you reach for the best bottle on the belt.
+    const tier = takenTier(removeItem(s, id, 1, 'high'));
     let buffed = false;
-    for (const f of fx) buffed = applyPotion(s, m, hero, e, id, f, mana) || buffed;
+    for (const f of fx) buffed = applyPotion(s, m, hero, e, id, f, mana, tier) || buffed;
     c.potionCd = POTION_CD;
-    log(s, `${RECIPE_MAP[id].icon} Used ${RECIPE_MAP[id].name}`);
+    log(s, `${RECIPE_MAP[id].icon} Used ${qualityName(tier, RECIPE_MAP[id].name)}`);
     return buffed;
   }
   return false;
 }
 
-function applyPotion(s: GameState, m: Mods, hero: HeroStats, e: Enemy, source: string, f: CombatEffect, mana: number): boolean {
+function applyPotion(s: GameState, m: Mods, hero: HeroStats, e: Enemy, source: string, f: CombatEffect, mana: number, tier = 0): boolean {
   const c = s.combat;
-  const pp = potionPotency(s, m, source);
+  const pp = potionPotency(s, m, source, tier);
   switch (f.type) {
     case 'heal': c.hp = Math.min(hero.maxHp, c.hp + hero.maxHp * f.value * pp); return false;
     case 'mana': s.mana = Math.min(mana, s.mana + mana * f.value * pp); return false;
@@ -242,9 +244,9 @@ function onDeath(s: GameState, m: Mods, hero: HeroStats): void {
   const reviveId = s.belt.slice(0, Math.floor(m.potionSlots)).find((id) => id && count(s, id) >= 1 && RECIPE_MAP[id]?.combat?.[0]?.type === 'revive');
   if (reviveId) {
     const fx = RECIPE_MAP[reviveId].combat![0];
-    removeItem(s, reviveId, 1);
-    c.hp = hero.maxHp * Math.min(1, fx.value * potionPotency(s, m, reviveId));
-    log(s, `${RECIPE_MAP[reviveId].icon} Revived by ${RECIPE_MAP[reviveId].name}!`);
+    const tier = takenTier(removeItem(s, reviveId, 1, 'high'));
+    c.hp = hero.maxHp * Math.min(1, fx.value * potionPotency(s, m, reviveId, tier));
+    log(s, `${RECIPE_MAP[reviveId].icon} Revived by ${qualityName(tier, RECIPE_MAP[reviveId].name)}!`);
     return;
   }
   s.stats.deaths++;

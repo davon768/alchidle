@@ -80,6 +80,10 @@ export const GOALS: GoalDef[] = [
     how: 'Keep growing or brewing the same thing, and watch 🎖️ Proficiency.',
     about: 'Everything you grow, brew, craft and forge has its own proficiency, from 1 to 100. Every 10 levels unlocks a milestone: faster, more output, higher value.',
     check: (s) => bestProf(s) >= 10, progress: (s) => [Math.min(10, bestProf(s)), 10], reward: { gold: 400 } },
+  { id: 'stir', chapter: 'Craft & proficiency', title: 'Stir a finer potion', level: 2, tab: 'brew',
+    how: 'Press Brew by hand, then tap 🥄 Stir while the marker is inside the glowing band.',
+    about: 'Every brew rolls a quality: Common, ✦ Fine, ✦✦ Masterwork or ★ Legendary. Better bottles sell for more and hit harder in a fight. Stirring is optional — a miss costs nothing — and apprentices roll quality from brewing proficiency alone.',
+    check: (s) => (s.stats.bestQuality ?? 0) >= 1, reward: { gold: 300 } },
 
   // ── Commerce ───────────────────────────────────────────────
   { id: 'trade', chapter: 'Commerce', title: 'Strike a deal', level: 6, tab: 'trade',

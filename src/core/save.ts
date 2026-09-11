@@ -39,6 +39,8 @@ function migrate(raw: LegacySave): GameState {
     delete s.upgrades[upgrade];
     s.staff.hired.push(createApprentice(`a${s.staff.nextId++}`, name, icon, 0, [], role, 10));
   }
+  // v3 → v4: potion quality. `qual` starts empty and engine.qualCounts reconciles each potion's
+  // total into Common the first time it is touched, so pre-quality stock simply becomes Common.
   if (s.asc.nodes['automata']) {
     s.asc.nodes['loyal'] = s.asc.nodes['automata'];
     delete s.asc.nodes['automata'];

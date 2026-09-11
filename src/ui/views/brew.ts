@@ -2,10 +2,35 @@ import { html, type TemplateResult } from 'lit-html';
 import type { GameState, Mods } from '../../core/types';
 import { RECIPES, RECIPE_MAP } from '../../data/recipes';
 import { profProgress } from '../../data/proficiency';
-import { brewRate, count, hasAll, potionBasePrice, profLevelOf, unlockedRecipes } from '../../core/engine';
-import { brew, cancelBrew, selectRecipe, toggleRepeat } from '../../core/actions';
+import { QUALITIES, STIR_BAND, qualityChances, stirPos } from '../../data/quality';
+import { brewQualityScore, brewRate, count, hasAll, potionBasePrice, profLevelOf, unlockedRecipes } from '../../core/engine';
+import { brew, cancelBrew, selectRecipe, stir, toggleRepeat } from '../../core/actions';
 import { fmt, fmtTime } from '../../core/format';
-import { act, bar, chip, gold, sectionTitle } from '../common';
+import { act, bar, chip, gold, qualityChips, sectionTitle } from '../common';
+
+/** The one-shot stirring minigame: a marker sweeps the bar, tapping inside the glowing band banks quality. */
+function stirBar(ci: number, target: number, left: number): TemplateResult {
+  const pos = stirPos(left) * 100;
+  const band = STIR_BAND * 100;
+  return html`<div class="stir" @click=${act((st) => stir(st, ci))} title="Tap while the marker is in the glowing band">
+    <div class="stir-track">
+      <div class="stir-band" style="left:${Math.max(0, target * 100 - band)}%;width:${band * 2}%"></div>
+      <div class="stir-marker" style="left:${pos}%"></div>
+    </div>
+    <button class="btn small primary stir-btn">🥄 Stir · ${left.toFixed(1)}s</button>
+  </div>`;
+}
+
+/** Current odds of each quality tier for a recipe, including anything the cauldron has already banked. */
+function qualityOdds(s: GameState, m: Mods, recipeId: string, banked: number): TemplateResult {
+  const c = qualityChances(brewQualityScore(s, m, recipeId, banked));
+  const pct = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`;
+  if (c.fine <= 0) return html`<div class="small muted">Always Common — raise brewing proficiency or stir to improve quality.</div>`;
+  return html`<div class="small muted qual-odds">
+    ${QUALITIES.slice(1).map((q, i) => html`<span style="color:${q.color}">${q.mark} ${pct([c.fine, c.master, c.legend][i])}</span>`)}
+    ${banked > 0 ? html`<span class="good">· stirred</span>` : ''}
+  </div>`;
+}
 
 export function brewView(s: GameState, m: Mods): TemplateResult {
   const recipes = unlockedRecipes(s);
@@ -34,6 +59,7 @@ export function brewView(s: GameState, m: Mods): TemplateResult {
           </select>
           ${r ? html`
             <div class="row">${r.inputs.map((inp) => chip(inp, count(s, inp.id)))} <span class="muted">→</span> ${chip({ id: r.id, qty: 1 })}</div>
+            ${c.stirLeft > 0 ? stirBar(i, c.stirTarget, c.stirLeft) : qualityOdds(s, m, r.id, c.active ? c.stirQ : 0)}
             <div class="row between small muted">
               <span>⏱ ${c.active ? fmtTime((r.time - c.progress) / rate) : fmtTime(r.time / rate)}</span>
               <span>Sells ~${gold(potionBasePrice(s, m, r.id))}</span>
@@ -62,7 +88,7 @@ export function brewView(s: GameState, m: Mods): TemplateResult {
             <td>${fmtTime(r.time / brewRate(s, m, r.id))}</td>
             <td>${gold(potionBasePrice(s, m, r.id))}</td>
             <td style="min-width:110px"><b>${pr.level}</b><span class="dim">/100</span>${bar(pr.into / pr.need, '#b57bff', undefined, 'small')}</td>
-            <td>${fmt(Math.floor(count(s, r.id)))}</td>
+            <td>${fmt(Math.floor(count(s, r.id)))}${qualityChips(s, r.id)}</td>
           </tr>`;
         })}
       </table>

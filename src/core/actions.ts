@@ -5,6 +5,10 @@ import {
   addGold, addItem, buyUnitPrice, count, doSell, generateContract, generateOffers, hasAll, harvestPlot, plantCost,
   removeItem, offerGetQty, gainXp, skillPointsFree, startBrew, toast,
 } from './engine';
+import { STIR_MAX, quality, stirBonus, stirPos } from '../data/quality';
+
+/** How much of a potion's quality value the guild pays on top of a contract. */
+const CONTRACT_QUALITY_WEIGHT = 0.5;
 import { PLANT_MAP } from '../data/plants';
 import { RECIPE_MAP } from '../data/recipes';
 import { ZONE_MAP } from '../data/zones';
@@ -58,7 +62,21 @@ export function selectRecipe(s: GameState, ci: number, recipeId: string): void {
 
 export function brew(s: GameState, ci: number): void {
   const c = s.cauldrons[ci];
-  if (c && !c.active && !startBrew(s, c)) toast('Missing ingredients.', 'warn');
+  if (c && !c.active && !startBrew(s, c, true)) toast('Missing ingredients.', 'warn');
+}
+
+/** Tap the stir bar. Landing in the sweet spot banks a quality bonus for the brew in progress; a miss costs nothing. */
+export function stir(s: GameState, ci: number): void {
+  const c = s.cauldrons[ci];
+  if (!c?.active || c.stirLeft <= 0) return;
+  const bonus = stirBonus(stirPos(c.stirLeft), c.stirTarget);
+  c.stirLeft = 0;
+  if (bonus <= 0) {
+    toast('The brew clouds for a moment — no quality bonus.', 'warn');
+    return;
+  }
+  c.stirQ += bonus;
+  toast(bonus >= STIR_MAX * 0.9 ? '🥄 A perfect stir! The mixture gleams.' : '🥄 A good stir.', 'good');
 }
 
 export function cancelBrew(s: GameState, ci: number): void {
@@ -68,6 +86,8 @@ export function cancelBrew(s: GameState, ci: number): void {
   c.active = false;
   c.progress = 0;
   c.repeat = false;
+  c.stirLeft = 0;
+  c.stirQ = 0;
 }
 
 export function toggleRepeat(s: GameState, ci: number): void {
@@ -250,19 +270,23 @@ export function deliver(s: GameState, idx: number): void {
       toast('You have none of that potion to deliver.', 'warn');
       return;
     }
-    removeItem(s, c.recipeId, n);
+    // Hand over the plainest bottles first, so a contract never silently eats a Legendary you were
+    // saving. A genuinely high-quality stock still pays: the guild credits what it receives.
+    const taken = removeItem(s, c.recipeId, n);
+    c.qual = (c.qual ?? 0) + taken.reduce((a, cnt, t) => a + cnt * (quality(t).value - 1) * CONTRACT_QUALITY_WEIGHT, 0);
     c.delivered += n;
     if (c.delivered < c.qty) return;
   }
 
   const m = computeMods(s);
   const before = rankFor(s.guild.rep);
-  addGold(s, c.gold * m.contractReward);
-  s.guild.rep += c.rep * m.repGain;
+  const qMult = 1 + (c.qual ?? 0) / Math.max(1, c.qty);
+  addGold(s, c.gold * m.contractReward * qMult);
+  s.guild.rep += c.rep * m.repGain * qMult;
   gainXp(s, m, c.kind === 'slay' ? c.rep : RECIPE_MAP[c.recipeId].xp * c.qty * 0.5);
   s.stats.contracts++;
   s.guild.contracts[idx] = generateContract(s);
-  toast('📜 Contract fulfilled!', 'good');
+  toast(qMult > 1.01 ? `📜 Contract fulfilled — the guild paid ${Math.round((qMult - 1) * 100)}% extra for the quality!` : '📜 Contract fulfilled!', 'good');
   const after = rankFor(s.guild.rep);
   if (after > before) toast(`🛡️ Guild rank up: ${rankName(after)}!`, 'epic');
 }

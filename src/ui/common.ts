@@ -2,6 +2,8 @@ import { html, nothing, type TemplateResult } from 'lit-html';
 import type { GameState, GearSlot, ItemStack } from '../core/types';
 import { game } from '../core/game';
 import { item, type ItemKind } from '../data/items';
+import { qualCounts } from '../core/engine';
+import { quality } from '../data/quality';
 import { fmt } from '../core/format';
 
 export type TabId =
@@ -62,6 +64,20 @@ export function chip(st: ItemStack, have?: number): TemplateResult {
 /** Chips for a cost list, showing what you have (gold compared against your purse). */
 export function costChips(s: GameState, stacks: ItemStack[], times = 1): TemplateResult {
   return html`${stacks.map((st) => chip({ id: st.id, qty: st.qty * times }, st.id === 'gold' ? s.gold : s.items[st.id] ?? 0))}`;
+}
+
+/**
+ * Per-tier breakdown for a potion, e.g. "✦ 3 · ✦✦ 1". Renders nothing when everything on hand is Common,
+ * so plain inventories stay uncluttered.
+ */
+export function qualityChips(s: GameState, id: string): TemplateResult | typeof nothing {
+  if (item(id).kind !== 'potion') return nothing;
+  const tiers = qualCounts(s, id);
+  const parts = tiers.map((n, t) => ({ n: Math.floor(n), t })).filter((x) => x.t > 0 && x.n > 0);
+  if (!parts.length) return nothing;
+  return html`<div class="qual-row">${parts.map(
+    (x) => html`<span class="qual-chip" style="--q:${quality(x.t).color}" title=${`${quality(x.t).name}: ×${quality(x.t).value} value, ×${quality(x.t).potency} potency`}>${quality(x.t).mark} ${fmt(x.n)}</span>`,
+  )}</div>`;
 }
 
 export function bar(frac: number, color?: string, label?: string, cls = ''): TemplateResult {
