@@ -2,6 +2,8 @@
 
 A browser-first alchemist idle game: grow herbs, scavenge for rare materials, brew potions, sell and trade them, rise through a guild, and perform the **Magnum Opus** to ascend and start again stronger. Built so the same code can ship as an Android app.
 
+**▶ Play it:** https://davon768.github.io/alchidle/ (deployed automatically from `main` by GitHub Actions — see [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)).
+
 ## Run it
 
 ```bash
