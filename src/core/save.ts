@@ -1,0 +1,75 @@
+import type { GameState } from './types';
+import { newState, SAVE_VERSION } from './state';
+import { PROF_MAP } from '../data/proficiency';
+
+const KEY = 'alchemy-idle-save';
+
+/** Fill in any fields missing from an older save using fresh defaults, so adding new systems never breaks old saves. */
+function mergeDefaults<T>(defaults: T, loaded: unknown): T {
+  if (loaded === undefined || loaded === null) return defaults;
+  if (typeof defaults !== 'object' || defaults === null || Array.isArray(defaults)) return loaded as T;
+  if (typeof loaded !== 'object' || Array.isArray(loaded)) return defaults;
+  const out: Record<string, unknown> = { ...(loaded as Record<string, unknown>) };
+  for (const [k, v] of Object.entries(defaults as Record<string, unknown>)) {
+    out[k] = mergeDefaults(v, (loaded as Record<string, unknown>)[k]);
+  }
+  return out as T;
+}
+
+type LegacySave = Partial<GameState> & { mastery?: Record<string, number> };
+
+function migrate(raw: LegacySave): GameState {
+  const s = mergeDefaults(newState(), raw) as GameState & { mastery?: Record<string, number> };
+  // v1 → v2: recipe mastery (units brewed) becomes brewing proficiency XP at the normal per-brew rate.
+  if (raw.mastery && Object.keys(s.prof).length === 0) {
+    for (const [id, units] of Object.entries(raw.mastery)) {
+      const d = PROF_MAP[id];
+      if (d) s.prof[id] = units * d.xp;
+    }
+  }
+  delete s.mastery;
+  s.version = SAVE_VERSION;
+  return s;
+}
+
+export function saveGame(s: GameState): boolean {
+  try {
+    s.lastTick = Date.now();
+    localStorage.setItem(KEY, JSON.stringify(s));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function loadGame(): GameState | null {
+  try {
+    const txt = localStorage.getItem(KEY);
+    if (!txt) return null;
+    return migrate(JSON.parse(txt));
+  } catch {
+    return null;
+  }
+}
+
+export function wipeSave(): void {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+export function exportSave(s: GameState): string {
+  s.lastTick = Date.now();
+  const bytes = new TextEncoder().encode(JSON.stringify(s));
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+export function importSave(code: string): GameState {
+  const bin = atob(code.trim());
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  return migrate(JSON.parse(new TextDecoder().decode(bytes)));
+}
