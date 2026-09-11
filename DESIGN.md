@@ -23,6 +23,8 @@ Early game is hands-on (click to plant, brew, sell). Automation comes from **app
 | **Expeditions** | 7 zones with drop tables, rare finds and parallel parties | **The Endless Rift**: every run goes one level deeper (+12% rewards, +4% time) |
 | **Trading Post** | Rotating caravans: barter, bulk potion orders, exotic imports, herb buyers | Offers scale with your unlocks; trade bonus stat |
 | **Guilds** | 4 guilds with per-rank perks and milestone unlocks; contracts give gold and reputation | Legend ranks I, II, III… continue forever (×3 reputation each) |
+| **Research Library** | Long-timer studies (3 min – 12 h) bought with gold and materials, granting permanent bonuses | Two endless projects whose cost and time grow 1.8×/2.1× per repeat |
+| **Cross-breeding** | Ripe plots beside a *different* herb throw mutated seeds with one of 4 traits | A seed catalogue of every plant × trait pair, each paying +1% growth and yield forever |
 | **Workshop** | 16 gold upgrades: capacity, infinite multipliers, automation | Infinite-level upgrades with exponential cost |
 | **Skill trees** | 5 trees, 52 nodes, row gating (4 points per row), prerequisites, respec | One infinite-rank node per tree absorbs unlimited skill points |
 | **Ascension** | Magnum Opus resets the run for Philosopher's Stones (√ of gold earned) | 12 eternal perks, 4 of them infinite; "stone resonance" gives +2% sell price per lifetime stone |
@@ -77,6 +79,34 @@ belt; selling, crafting and contracts spend the plainest first, so a Legendary i
 **Storage.** `items[id]` stays the total and `qual[id][tier]` holds the breakdown, kept in step by
 `engine.addItem` / `removeItem`. Systems that only care about totals (demand, auto-sell, recipe inputs) needed
 no changes, and pre-quality saves reconcile into Common on first read.
+
+### Research Library (v0.7)
+
+The game's "come back later" hook: every other system pays out in seconds to minutes, so the Library is the
+only place a timer runs for hours. 15 studies across four tiers (3 minutes at level 4, up to 12 hours late),
+each paid for up front in gold and materials, each granting permanent `Effect[]` through `computeMods` exactly
+like upgrades. Studies keep running while the tab is closed and complete correctly during offline catch-up,
+and both the queue and the ledger survive ascension — a study begun on one run finishes on the next.
+
+Desks (`researchSlots`) start at 1; *Build the Annex* and *The Scriptorium* each add one, so three studies can
+eventually run at once. Two projects (*Continuing Studies*, *Refinement Without End*) are endless, with cost and
+time growing 1.8× and 2.1× per completion.
+
+It interlocks with quality in both directions: several studies grant `brewQuality`, and **paying a study's cost
+in higher-quality potions shortens it** — up to 35% off, 18% for an all-Legendary payment — which gives
+Masterworks a use other than the market.
+
+### Cross-breeding (v0.7)
+
+Harvesting a plot whose neighbour holds a *different* herb has a 2% chance (`mutationChance` scales it) of
+throwing a mutated seed: the same herb carrying one of four traits — Swift (×1.4 growth), Bountiful (+2 herbs),
+Radiant (35% bonus herb) or Hardy (free to sow, and its replant is free too). Seeds are consumable and a trait
+lasts only for the planting it was sown from, so they stay a flow rather than a permanent upgrade.
+
+The permanence lives in the **seed catalogue**: every plant × trait pair ever discovered is recorded forever and
+pays +1% growth and +1% harvest yield. With 9 plants × 4 traits that is a +36% ceiling on a collection grind
+that only advances when the player deliberately mixes herbs across neighbouring plots — planting one herb
+everywhere, as the balance bot does, never crosses at all.
 
 ### Goals (v0.5): the tutorial
 
@@ -168,25 +198,23 @@ The UI is already mobile-ready: bottom tab bar under 760 px, safe-area insets, t
 
 ## 6. Recommended additions (prioritized)
 
-*Shipped since this list was written: potion quality tiers (v0.6, §2), events (v0.2) and the scripted balance bot.*
+*Shipped since this list was written: potion quality tiers (v0.6), the Research Library and cross-breeding (v0.7), events (v0.2) and the scripted balance bot — all documented in §2.*
 
 ### High impact, fits the current design
-1. **Research Library**: a long-timer queue (minutes to days) that unlocks recipes, new plants and system upgrades. It is the classic idle "come back later" hook and gives skill points something to compete with.
-2. **Plant cross-breeding and mutations**: plant two herbs side by side for a chance at mutated seeds with new traits (fast, bountiful, glowing). This gives endless collection depth.
-3. **Familiars**: collectible companions (cat, raven, salamander, homunculus) found on expeditions, leveled with potions, each with a passive buff. Equip 1–3.
-4. **Adventurer parties**: hire heroes with classes for expeditions; brewed potions equip them for deeper Rift runs; Rift **bosses** every 10 depths drop unique relics.
+1. **Familiars**: collectible companions (cat, raven, salamander, homunculus) found on expeditions, leveled with potions, each with a passive buff. Equip 1–3.
+2. **Adventurer parties**: hire heroes with classes for expeditions; brewed potions equip them for deeper Rift runs; Rift **bosses** every 10 depths drop unique relics.
 
 ### Long-term retention
-5. **Second prestige layer, "Transcendence"**: reset ascensions for *Aether*, which opens a new tree, new recipe tier and new zone. It keeps the endless curve fresh after 50+ ascensions.
-6. **Challenges**: ascension runs with restrictions (no garden, market prices halved, one cauldron) that grant permanent unique rewards.
-7. **Day/night and seasons**: real-time cycles that boost certain herbs and potions (Moonpetal at night, Emberroot in summer).
-8. **Daily quests and weekly guild goals**, kept light with no punishing streaks.
+3. **Second prestige layer, "Transcendence"**: reset ascensions for *Aether*, which opens a new tree, new recipe tier and new zone. It keeps the endless curve fresh after 50+ ascensions.
+4. **Challenges**: ascension runs with restrictions (no garden, market prices halved, one cauldron) that grant permanent unique rewards.
+5. **Day/night and seasons**: real-time cycles that boost certain herbs and potions (Moonpetal at night, Emberroot in summer).
+6. **Daily quests and weekly guild goals**, kept light with no punishing streaks.
 
 ### Polish
-9. **Art pass**: replace emoji with a consistent pixel-art or painted icon set; animate cauldrons and plants.
-10. **Audio**: bubbling ambience, harvest pops and level-up chimes (Howler.js), with a mute toggle.
-11. **Stats and graphs**: gold/hour chart, per-system breakdown, "what's my bottleneck" hints.
-12. **Buy-max / bulk buttons** and hotkeys on desktop.
+7. **Art pass**: replace emoji with a consistent pixel-art or painted icon set; animate cauldrons and plants.
+8. **Audio**: bubbling ambience, harvest pops and level-up chimes (Howler.js), with a mute toggle.
+9. **Stats and graphs**: gold/hour chart, per-system breakdown, "what's my bottleneck" hints.
+10. **Buy-max / bulk buttons** and hotkeys on desktop.
 
 ### Monetization (if you publish)
 Stay ethical and optional: rewarded ad for 2× offline gains, a one-time "supporter pack" (cosmetic cauldrons, extra save slot), cosmetic skins. Avoid energy systems and pay-to-skip in an idle game, where they break the genre's trust.

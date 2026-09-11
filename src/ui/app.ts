@@ -27,6 +27,7 @@ import { armoryView } from './views/armory';
 import { tradeView } from './views/trade';
 import { guildView } from './views/guild';
 import { workshopView } from './views/workshop';
+import { libraryView } from './views/library';
 import { skillsView } from './views/skills';
 import { ascendView } from './views/ascend';
 import { journalView } from './views/journal';
@@ -34,6 +35,7 @@ import { proficiencyView } from './views/proficiency';
 import { staffView } from './views/apprentices';
 import { goalBanner, goalsView } from './views/goals';
 import { GOALS } from '../data/goals';
+import { RESEARCH_UNLOCK_LEVEL } from '../data/research';
 import { apprenticeCap } from '../data/apprentices';
 
 interface TabDef {
@@ -60,6 +62,8 @@ const TABS: TabDef[] = [
   { id: 'armory', icon: '🗡️', label: 'Armory', unlocked: (s) => combatOpen(s) || s.gear.length > 0 },
   { id: 'workshop', icon: '🔨', label: 'Workshop', unlocked: (s) => s.level >= 2 || s.stats.runGold >= 20 || s.asc.count > 0 },
   { id: 'skills', icon: '📜', label: 'Skills', unlocked: (s) => s.level >= 2, dot: (s, m) => skillPointsFree(s, m) > 0 },
+  { id: 'library', icon: '📚', label: 'Library', unlocked: (s) => s.level >= RESEARCH_UNLOCK_LEVEL || Object.keys(s.research.done).length > 0,
+    dot: (s, m) => s.research.queue.length < Math.floor(m.researchSlots) },
   { id: 'trade', icon: '🐪', label: 'Trading Post', unlocked: (s) => s.level >= 6 },
   { id: 'guild', icon: '🛡️', label: 'Guilds', unlocked: (s) => s.level >= GUILD_UNLOCK_LEVEL },
   { id: 'ascend', icon: '🌟', label: 'Magnum Opus', unlocked: (s) => s.asc.count > 0 || s.stats.runGold >= ASC_MIN_GOLD * 0.2 },
@@ -187,6 +191,7 @@ function viewFor(tab: TabId, s: GameState, m: Mods): TemplateResult {
     case 'trade': return tradeView(s, m);
     case 'guild': return guildView(s, m);
     case 'workshop': return workshopView(s);
+    case 'library': return libraryView(s, m);
     case 'skills': return skillsView(s, m);
     case 'ascend': return ascendView(s, m);
     case 'goals': return goalsView(s);

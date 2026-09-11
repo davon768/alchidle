@@ -2,6 +2,8 @@ import type { GameState } from './types';
 import { newState, SAVE_VERSION } from './state';
 import type { RoleId } from './types';
 import { PROF_MAP } from '../data/proficiency';
+import { RESEARCH_MAP } from '../data/research';
+import { TRAIT_MAP, parseSeed } from '../data/mutations';
 import { createApprentice } from '../data/apprentices';
 
 const KEY = 'alchemy-idle-save';
@@ -45,6 +47,13 @@ function migrate(raw: LegacySave): GameState {
     s.asc.nodes['loyal'] = s.asc.nodes['automata'];
     delete s.asc.nodes['automata'];
   }
+  // v4 → v5: the Research Library. mergeDefaults supplies an empty queue and ledger, so older saves
+  // simply start with nothing researched; drop any study whose project no longer exists.
+  s.research.queue = s.research.queue.filter((q) => RESEARCH_MAP[q.id]);
+  // v5 → v6: cross-breeding. Older plots have no `trait` field; mergeDefaults cannot reach inside the
+  // array, so normalise them here and drop seeds for traits that no longer exist.
+  for (const plot of s.plots) if (plot.trait === undefined) plot.trait = null;
+  for (const key of Object.keys(s.seeds)) if (!TRAIT_MAP[parseSeed(key).trait]) delete s.seeds[key];
   s.version = SAVE_VERSION;
   return s;
 }

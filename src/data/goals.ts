@@ -85,6 +85,15 @@ export const GOALS: GoalDef[] = [
     about: 'Every brew rolls a quality: Common, ✦ Fine, ✦✦ Masterwork or ★ Legendary. Better bottles sell for more and hit harder in a fight. Stirring is optional — a miss costs nothing — and apprentices roll quality from brewing proficiency alone.',
     check: (s) => (s.stats.bestQuality ?? 0) >= 1, reward: { gold: 300 } },
 
+  { id: 'crossbreed', chapter: 'Craft & proficiency', title: 'Breed a new strain', level: 3, tab: 'garden',
+    how: 'Grow two different herbs in neighbouring plots, then harvest them.',
+    about: 'A ripe plot beside a different herb can throw a mutated seed — Swift, Bountiful, Radiant or Hardy. Seeds are consumable, but every strain you discover is recorded in the catalogue, and the catalogue pays +1% growth and yield for each one, forever.',
+    check: (s) => Object.keys(s.catalogue).length > 0, reward: { gold: 200 } },
+  { id: 'research', chapter: 'Craft & proficiency', title: 'Begin a study', level: 4, tab: 'library',
+    how: 'Start any study in the 📚 Research Library.',
+    about: 'Studies run on their own clock — minutes at first, hours later — and keep going while the game is closed. They are the one thing that competes with the market for your materials, and their bonuses are permanent: they survive ascension.',
+    check: (s) => Object.keys(s.research.done).length > 0 || s.research.queue.length > 0, reward: { gold: 500 } },
+
   // ── Commerce ───────────────────────────────────────────────
   { id: 'trade', chapter: 'Commerce', title: 'Strike a deal', level: 6, tab: 'trade',
     how: 'Accept an offer at the 🐪 Trading Post.',

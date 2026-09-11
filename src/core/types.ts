@@ -4,6 +4,7 @@ export interface Mods {
   growSpeed: number;
   harvestYield: number;
   seedDiscount: number;
+  mutationChance: number; // multiplies the cross-breeding chance
   // Brewing
   brewSpeed: number;
   doubleBrew: number;
@@ -39,6 +40,9 @@ export interface Mods {
   autoRitual: number;
   apprenticeSlots: number;
   apprenticeXp: number;
+  // Research Library
+  researchSlots: number; // studies that can run at once
+  researchSpeed: number;
   // Combat (flat values add to the hero's level-based stats; *Mult values multiply the total)
   attack: number;
   attackMult: number;
@@ -76,6 +80,7 @@ export interface Plot {
   plantId: string | null;
   progress: number;
   ready: boolean;
+  trait: string | null; // mutation sown into this plot, from data/mutations.ts
 }
 
 export interface Cauldron {
@@ -205,6 +210,18 @@ export interface CombatState {
   log: string[];
 }
 
+/** A study in progress at the Library. */
+export interface Study {
+  id: string; // research id
+  progress: number; // seconds of research done
+  time: number; // total seconds this study needs (cost/time grow for repeatable projects)
+}
+
+export interface ResearchState {
+  queue: Study[]; // running studies, one per slot
+  done: Record<string, number>; // research id -> times completed
+}
+
 export interface EventState {
   id: string;
   remaining: number;
@@ -248,6 +265,8 @@ export interface GameState {
   items: Record<string, number>;
   /** Per-quality-tier counts for potions: qual[id][tier]. Sums to items[id]; see data/quality.ts. */
   qual: Record<string, number[]>;
+  seeds: Record<string, number>; // mutated seeds on hand, keyed `plantId:trait`
+  catalogue: Record<string, true>; // every plant × trait pair ever discovered (permanent)
   level: number;
   xp: number;
   skills: Record<string, number>;
@@ -284,6 +303,8 @@ export interface GameState {
   // Events
   event: EventState | null;
   eventTimer: number;
+  // Research Library
+  research: ResearchState;
   // Apprentices
   staff: StaffState;
   lastTick: number;

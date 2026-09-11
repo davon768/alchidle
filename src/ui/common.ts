@@ -8,7 +8,7 @@ import { fmt } from '../core/format';
 
 export type TabId =
   | 'garden' | 'brew' | 'explore' | 'staff' | 'dungeon' | 'market' | 'inventory' | 'proficiency' | 'arcanum' | 'armory'
-  | 'trade' | 'guild' | 'workshop' | 'skills' | 'ascend' | 'goals' | 'journal';
+  | 'trade' | 'guild' | 'workshop' | 'library' | 'skills' | 'ascend' | 'goals' | 'journal';
 
 export const ui = {
   tab: 'garden' as TabId,

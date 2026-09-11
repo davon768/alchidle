@@ -343,3 +343,8 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .stir-band { position: absolute; top: 0; bottom: 0; background: linear-gradient(180deg, #5fd06855, #5fd068aa); border-left: 1px solid #5fd068; border-right: 1px solid #5fd068; }
 .stir-marker { position: absolute; top: -2px; bottom: -2px; width: 3px; margin-left: -1.5px; background: #ffe27a; box-shadow: 0 0 6px 2px #ffe27a88; }
 .stir-btn { white-space: nowrap; }
+
+/* ── Cross-breeding ─────────────────────────────────────── */
+.trait-badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; color: var(--t); border: 1px solid var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); }
+.seed-chip { border-color: var(--t) !important; color: var(--t); }
+.row.wrap { flex-wrap: wrap; }

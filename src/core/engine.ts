@@ -12,6 +12,8 @@ import { CONTRACT_COUNT } from '../data/guilds';
 import { DUNGEONS, REWARD_GROWTH } from '../data/combat';
 import { MILESTONES, PROF_MAP, emptyBonus, profBonus, profLevel, type ProfBonus } from '../data/proficiency';
 import { QUAL_MAX, quality, qualityName, rollQuality, rollStirTarget, STIR_WINDOW } from '../data/quality';
+import { RESEARCH_MAP } from '../data/research';
+import { CROSS_CHANCE, TRAITS, seedKey, traitEffect } from '../data/mutations';
 import { dungeonUnlocked, tickCombat } from './combat';
 import { tickMagic } from './magic';
 import { tickEvents } from './events';
@@ -295,8 +297,8 @@ export function availableIngredients(s: GameState, levelBonus = 0): ItemDef[] {
 export function plantCost(s: GameState, m: Mods, p: PlantDef): number {
   return p.cost * (1 - m.seedDiscount) * (1 - profBonusOf(s, p.id).cost);
 }
-export function growRate(s: GameState, m: Mods, plantId: string): number {
-  return m.growSpeed * (1 + profBonusOf(s, plantId).speed);
+export function growRate(s: GameState, m: Mods, plantId: string, trait: string | null = null): number {
+  return m.growSpeed * (1 + profBonusOf(s, plantId).speed) * traitEffect(trait).speed;
 }
 export function brewRate(s: GameState, m: Mods, recipeId: string): number {
   return m.brewSpeed * (1 + profBonusOf(s, recipeId).speed);
@@ -311,7 +313,7 @@ export function syncSlots(s: GameState, m: Mods): void {
     while (arr.length < n) arr.push(make());
     if (arr.length > n) arr.length = n;
   };
-  fit<Plot>(s.plots, Math.floor(m.plots), () => ({ plantId: null, progress: 0, ready: false }));
+  fit<Plot>(s.plots, Math.floor(m.plots), () => ({ plantId: null, progress: 0, ready: false, trait: null }));
   fit<Cauldron>(s.cauldrons, Math.floor(m.cauldrons), () => ({ recipeId: null, progress: 0, active: false, repeat: false, stirLeft: 0, stirTarget: 0.5, stirQ: 0 }));
   fit(s.expeditions, Math.floor(m.expSlots), () => null);
   while (s.belt.length < Math.floor(m.potionSlots)) s.belt.push(null);
@@ -376,17 +378,38 @@ export function autoSellActive(s: GameState, m: Mods, id: string): boolean {
 }
 
 /** Harvest a ripe plot, then replant the same herb if affordable. */
-export function harvestPlot(s: GameState, m: Mods, plot: Plot): void {
+/** A ripe plot beside a different herb can throw a mutated seed. Returns the seed key if one appeared. */
+function rollCrossBreed(s: GameState, m: Mods, idx: number): string | null {
+  const plot = s.plots[idx];
+  if (!plot?.plantId) return null;
+  const neighbours = [s.plots[idx - 1], s.plots[idx + 1]];
+  if (!neighbours.some((n) => n?.plantId && n.plantId !== plot.plantId)) return null;
+  if (Math.random() >= CROSS_CHANCE * m.mutationChance) return null;
+  const trait = TRAITS[Math.floor(Math.random() * TRAITS.length)];
+  const key = seedKey(plot.plantId, trait.id);
+  s.seeds[key] = (s.seeds[key] ?? 0) + 1;
+  const fresh = !s.catalogue[key];
+  if (fresh) s.catalogue[key] = true;
+  const name = `${trait.icon} ${trait.name} ${PLANT_MAP[plot.plantId].name}`;
+  toast(fresh ? `🌾 New strain discovered: ${name}! The seed catalogue pays a little more.` : `🌾 A ${name} seed!`, fresh ? 'epic' : 'good');
+  return key;
+}
+
+export function harvestPlot(s: GameState, m: Mods, plot: Plot, idx = -1): void {
   if (!plot.plantId || !plot.ready) return;
   const p = PLANT_MAP[plot.plantId];
   const b = profBonusOf(s, p.id);
-  addItem(s, p.herb, rollAmount(p.yield * m.harvestYield) + b.yield + (Math.random() < b.double ? 1 : 0));
+  const tr = traitEffect(plot.trait);
+  addItem(s, p.herb, rollAmount(p.yield * m.harvestYield) + b.yield + tr.yield + (Math.random() < b.double + tr.double ? 1 : 0));
   s.stats.harvested++;
   gainXp(s, m, 1 + p.level * 0.2);
   gainProf(s, m, p.id);
+  if (idx >= 0) rollCrossBreed(s, m, idx);
   plot.ready = false;
   plot.progress = 0;
-  const cost = plantCost(s, m, p);
+  // A sown trait lasts for its own planting: the automatic replant puts back an ordinary herb.
+  plot.trait = null;
+  const cost = tr.free ? 0 : plantCost(s, m, p);
   if (s.gold >= cost) addGold(s, -cost, false);
   else plot.plantId = null;
 }
@@ -460,6 +483,43 @@ export function generateContract(s: GameState): Contract {
   return { kind: 'deliver', recipeId: r.id, qty, delivered: 0, gold: Math.round(r.value * qty * 1.8), rep: Math.round(qty * Math.sqrt(r.value) * 3) };
 }
 
+// ── Research Library ─────────────────────────────────────────
+/** Studies advance on their own, including while the tab is closed and during offline catch-up. */
+export function tickResearch(s: GameState, m: Mods, dt: number): void {
+  if (!s.research?.queue.length) return;
+  const rate = m.researchSpeed;
+  for (let i = s.research.queue.length - 1; i >= 0; i--) {
+    const st = s.research.queue[i];
+    st.progress += dt * rate;
+    if (st.progress < st.time) continue;
+    s.research.queue.splice(i, 1);
+    s.research.done[st.id] = (s.research.done[st.id] ?? 0) + 1;
+    const def = RESEARCH_MAP[st.id];
+    if (def) toast(`📚 Research complete: ${def.icon} ${def.name}!`, 'epic');
+  }
+}
+
+/** Studies already finished (repeatables count their completions). */
+export function researchDone(s: GameState, id: string): number {
+  return s.research?.done[id] ?? 0;
+}
+export function researchActive(s: GameState, id: string): boolean {
+  return !!s.research?.queue.some((q) => q.id === id);
+}
+/** Whether a project can be started right now, and why not. */
+export function researchStatus(s: GameState, m: Mods, id: string): { ok: boolean; reason: string } {
+  const def = RESEARCH_MAP[id];
+  if (!def) return { ok: false, reason: 'Unknown study' };
+  if (def.level > s.level) return { ok: false, reason: `Unlocks at level ${def.level}` };
+  if (researchActive(s, id)) return { ok: false, reason: 'Already being researched' };
+  if (!def.repeat && researchDone(s, id)) return { ok: false, reason: 'Already researched' };
+  for (const r of def.req ?? []) {
+    if (!researchDone(s, r)) return { ok: false, reason: `Needs ${RESEARCH_MAP[r]?.name ?? r}` };
+  }
+  if ((s.research?.queue.length ?? 0) >= Math.floor(m.researchSlots)) return { ok: false, reason: 'Every desk is busy' };
+  return { ok: true, reason: '' };
+}
+
 // ── Main tick ────────────────────────────────────────────────
 const GUARD = 20000;
 
@@ -476,12 +536,12 @@ export function tick(s: GameState, dt: number): void {
       if (plot.ready) {
         if (i >= m.autoHarvest) break;
         const time = PLANT_MAP[plot.plantId].time;
-        harvestPlot(s, m, plot);
+        harvestPlot(s, m, plot, i);
         workXp(s, m, 'gardener', i, time / 60);
         continue;
       }
       const p = PLANT_MAP[plot.plantId];
-      const rate = growRate(s, m, p.id);
+      const rate = growRate(s, m, p.id, plot.trait);
       const need = (p.time - plot.progress) / rate;
       if (t >= need) { t -= need; plot.progress = p.time; plot.ready = true; }
       else { plot.progress += t * rate; t = 0; }
@@ -547,6 +607,7 @@ export function tick(s: GameState, dt: number): void {
 
   if (s.guild.id) while (s.guild.contracts.length < CONTRACT_COUNT) s.guild.contracts.push(generateContract(s));
 
+  tickResearch(s, m, dt);
   tickMagic(s, m, dt);
   tickEvents(s, m, dt);
   tickCombat(s, m, dt);

@@ -1,11 +1,39 @@
 import { html, type TemplateResult } from 'lit-html';
 import type { GameState, Mods } from '../../core/types';
 import { PLANT_MAP } from '../../data/plants';
+import { TRAITS, TRAIT_MAP, parseSeed } from '../../data/mutations';
 import { item } from '../../data/items';
 import { growRate, plantCost, profBonusOf, profLevelOf, unlockedPlants } from '../../core/engine';
-import { clearPlot, harvest, harvestAll, plant, plantAll } from '../../core/actions';
+import { clearPlot, harvest, harvestAll, plant, plantAll, plantSeed } from '../../core/actions';
 import { fmt, fmtTime } from '../../core/format';
 import { act, bar, gold, sectionTitle, ui } from '../common';
+
+/** Mutated seeds on hand, plus how much of the catalogue has been filled in. */
+function seedTray(s: GameState): TemplateResult | string {
+  const held = Object.entries(s.seeds).filter(([, n]) => n > 0);
+  const found = Object.keys(s.catalogue).length;
+  const total = unlockedPlants(s).length * TRAITS.length;
+  if (!held.length && !found) return '';
+  return html`<div class="card">
+    <div class="row between">
+      <b>🌾 Seed Tray</b>
+      <span class="dim" title="Every strain you discover pays +1% growth and +1% yield, forever">
+        Catalogue ${found}/${total} strains · +${found}% growth and yield</span>
+    </div>
+    ${held.length
+      ? html`<div class="row wrap">${held.map(([key, n]) => {
+          const { plantId, trait } = parseSeed(key);
+          const t = TRAIT_MAP[trait];
+          const pl = PLANT_MAP[plantId];
+          if (!t || !pl) return '';
+          return html`<button class="btn small seed-chip" style="--t:${t.color}" title=${`${t.desc} — click to sow in the first empty plot`}
+            @click=${act((st) => { const i = st.plots.findIndex((q) => !q.plantId); if (i >= 0) plantSeed(st, i, key); })}>
+            ${t.icon} ${t.name} ${pl.name} <span class="dim">×${n}</span>
+          </button>`;
+        })}</div>`
+      : html`<div class="dim">No seeds on hand. Grow two different herbs side by side and a mutation may turn up at harvest.</div>`}
+  </div>`;
+}
 
 export function gardenView(s: GameState, m: Mods): TemplateResult {
   const plants = unlockedPlants(s);
@@ -35,6 +63,8 @@ export function gardenView(s: GameState, m: Mods): TemplateResult {
       </div>
     </div>
 
+    ${seedTray(s)}
+
     <div class="plots">
       ${s.plots.map((plot, i) => {
         if (!plot.plantId) {
@@ -51,9 +81,10 @@ export function gardenView(s: GameState, m: Mods): TemplateResult {
           ${i < m.autoHarvest ? html`<span class="tend-badge" title="Tended by your Gardeners">🧑‍🌾</span>` : ''}
           <div class="sprout" style="transform:scale(${plot.ready ? 1.15 : 0.6 + frac * 0.5})">${icon}</div>
           <div class="small">${p.name} <span class="dim">Lv ${profLevelOf(s, p.id)}</span></div>
+          ${plot.trait ? html`<div class="trait-badge" style="--t:${TRAIT_MAP[plot.trait].color}" title=${TRAIT_MAP[plot.trait].desc}>${TRAIT_MAP[plot.trait].icon} ${TRAIT_MAP[plot.trait].name}</div>` : ''}
           ${plot.ready
             ? html`<button class="btn small primary">Harvest</button>`
-            : html`${bar(frac, '#5fd068')}<span class="dim">${fmtTime((p.time - plot.progress) / growRate(s, m, p.id))}</span>`}
+            : html`${bar(frac, plot.trait ? TRAIT_MAP[plot.trait].color : '#5fd068')}<span class="dim">${fmtTime((p.time - plot.progress) / growRate(s, m, p.id, plot.trait))}</span>`}
           <button class="plot-clear" title="Clear plot (no refund)" @click=${act((st) => clearPlot(st, i))}>✕</button>
         </div>`;
       })}

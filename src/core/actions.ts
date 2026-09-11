@@ -3,13 +3,15 @@ import { computeMods } from './mods';
 import { newState } from './state';
 import {
   addGold, addItem, buyUnitPrice, count, doSell, generateContract, generateOffers, hasAll, harvestPlot, plantCost,
-  removeItem, offerGetQty, gainXp, skillPointsFree, startBrew, toast,
+  removeItem, offerGetQty, gainXp, researchDone, researchStatus, skillPointsFree, startBrew, toast,
 } from './engine';
 import { STIR_MAX, quality, stirBonus, stirPos } from '../data/quality';
+import { QUALITY_RESEARCH_BOOST, RESEARCH_MAP, researchCost, researchTime } from '../data/research';
 
 /** How much of a potion's quality value the guild pays on top of a contract. */
 const CONTRACT_QUALITY_WEIGHT = 0.5;
 import { PLANT_MAP } from '../data/plants';
+import { TRAIT_MAP, parseSeed, traitEffect } from '../data/mutations';
 import { RECIPE_MAP } from '../data/recipes';
 import { ZONE_MAP } from '../data/zones';
 import { item } from '../data/items';
@@ -17,6 +19,43 @@ import { UPGRADE_MAP, upgradeCost } from '../data/upgrades';
 import { ROW_POINTS, SKILL_MAP, skillRankCost, type SkillNode } from '../data/skills';
 import { GUILD_MAP, GUILD_UNLOCK_LEVEL, rankFor, rankName } from '../data/guilds';
 import { ASC_MAP, ascCost, stonesFor } from '../data/ascension';
+
+// ── Research Library ─────────────────────────────────────────
+/**
+ * Start a study. Costs are paid up front; spending higher-quality potions on it shortens the work,
+ * which gives Masterworks a use other than the market.
+ */
+export function startResearch(s: GameState, id: string): void {
+  const m = computeMods(s);
+  const def = RESEARCH_MAP[id];
+  const status = researchStatus(s, m, id);
+  if (!def || !status.ok) {
+    if (status.reason) toast(status.reason, 'warn');
+    return;
+  }
+  const done = researchDone(s, id);
+  const cost = researchCost(def, done);
+  if (!hasAll(s, cost)) {
+    toast('You cannot cover the cost of that study.', 'warn');
+    return;
+  }
+  let qualityCredit = 0;
+  let potions = 0;
+  for (const c of cost) {
+    if (c.id === 'gold') { addGold(s, -c.qty, false); continue; }
+    const taken = removeItem(s, c.id, c.qty);
+    for (let t = 1; t <= 3; t++) { qualityCredit += taken[t] * t; potions += taken[t]; }
+    potions += taken[0];
+  }
+  const cut = potions > 0 ? Math.min(0.35, (qualityCredit / potions) * QUALITY_RESEARCH_BOOST) : 0;
+  s.research.queue.push({ id, progress: 0, time: researchTime(def, done) * (1 - cut) });
+  toast(cut > 0.01 ? `📚 Study begun — fine reagents cut ${Math.round(cut * 100)}% off the work.` : '📚 Study begun.', 'good');
+}
+
+/** Abandon a study. The time is lost; the materials are not refunded. */
+export function cancelResearch(s: GameState, idx: number): void {
+  if (s.research.queue[idx]) s.research.queue.splice(idx, 1);
+}
 
 // ── Garden ───────────────────────────────────────────────────
 export function plant(s: GameState, idx: number, plantId: string): boolean {
@@ -31,6 +70,28 @@ export function plant(s: GameState, idx: number, plantId: string): boolean {
   }
   addGold(s, -cost, false);
   plot.plantId = plantId;
+  plot.trait = null; // an ordinary sowing never inherits a previous mutation
+  plot.progress = 0;
+  plot.ready = false;
+  return true;
+}
+
+/** Sow a mutated seed into an empty plot. The seed is consumed; the trait lasts for this planting. */
+export function plantSeed(s: GameState, idx: number, key: string): boolean {
+  const plot = s.plots[idx];
+  const { plantId, trait } = parseSeed(key);
+  const p = PLANT_MAP[plantId];
+  if (!plot || plot.plantId || !p || (s.seeds[key] ?? 0) < 1 || !TRAIT_MAP[trait]) return false;
+  const cost = traitEffect(trait).free ? 0 : plantCost(s, computeMods(s), p);
+  if (s.gold < cost) {
+    toast('Not enough gold to sow that seed.', 'warn');
+    return false;
+  }
+  addGold(s, -cost, false);
+  s.seeds[key] -= 1;
+  if (s.seeds[key] <= 0) delete s.seeds[key];
+  plot.plantId = plantId;
+  plot.trait = trait;
   plot.progress = 0;
   plot.ready = false;
   return true;
@@ -51,7 +112,7 @@ export function harvestAll(s: GameState): void {
 
 export function clearPlot(s: GameState, idx: number): void {
   const plot = s.plots[idx];
-  if (plot) Object.assign(plot, { plantId: null, progress: 0, ready: false });
+  if (plot) Object.assign(plot, { plantId: null, progress: 0, ready: false, trait: null });
 }
 
 // ── Brewing ──────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import type { CombatState, GameState, Stats } from './types';
 import { startGoldFor } from '../data/ascension';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 6;
 
 export function xpToNext(level: number): number {
   return Math.floor(25 * 1.21 ** (level - 1) + 15 * level);
@@ -44,6 +44,8 @@ export function newState(prev?: GameState): GameState {
     gold: 20,
     items: { clearwater: 6 },
     qual: {},
+    seeds: {},
+    catalogue: {},
     level: 1,
     xp: 0,
     skills: {},
@@ -77,6 +79,7 @@ export function newState(prev?: GameState): GameState {
     dungeons: {},
     event: null,
     eventTimer: 180,
+    research: { queue: [], done: {} },
     staff: { hired: [], candidates: [], refresh: 0, masters: [], nextId: 1, repush: 0 },
     lastTick: Date.now(),
   };
@@ -91,6 +94,8 @@ export function newState(prev?: GameState): GameState {
     s.stats.bestRunGold = Math.max(prev.stats.bestRunGold, prev.stats.runGold);
     for (const k of LIFETIME_STATS) s.stats[k] = prev.stats[k];
     s.gold += startGoldFor(s.asc.nodes['head_start'] ?? 0);
+    s.research = prev.research; // studies and their bonuses are permanent, like proficiency
+    s.catalogue = prev.catalogue; // the seed catalogue is a lifetime record
     s.staff.masters = prev.staff.masters;
     s.staff.nextId = prev.staff.nextId;
     if (s.asc.nodes['loyal']) s.staff.hired = prev.staff.hired;
