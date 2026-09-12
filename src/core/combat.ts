@@ -72,6 +72,8 @@ export interface Forecast {
   killSeconds: number; // time to drop the current enemy
   dieSeconds: number | null; // time until the hero falls, or null if they out-heal the damage
   winning: boolean;
+  swingsToKill: number; // swings needed for a *fresh* enemy of this kind
+  killsPerMin: number; // sustained clear rate, floored by the swing timer
 }
 
 export function forecast(s: GameState, hero: HeroStats, e: Enemy): Forecast {
@@ -84,8 +86,12 @@ export function forecast(s: GameState, hero: HeroStats, e: Enemy): Forecast {
   const netIncoming = enemyDps - regen;
   const killSeconds = heroDps > 0 ? Math.max(0, e.hp) / heroDps : Infinity;
   const dieSeconds = netIncoming > 0 ? (Math.max(0, c.hp) + c.shield) / netIncoming : null;
+  // You cannot kill faster than you swing, so the clear rate is floored by the swing timer rather
+  // than by raw DPS — which is the whole story once one hit is enough.
+  const swingsToKill = Math.max(1, Math.ceil(e.maxHp / Math.max(1e-9, heroHit)));
+  const killsPerMin = 60 / (swingsToKill * HERO_SWING);
   return { heroHit, heroDps, enemyHit, enemyDps, regen, netIncoming, killSeconds, dieSeconds,
-    winning: dieSeconds === null || killSeconds < dieSeconds };
+    winning: dieSeconds === null || killSeconds < dieSeconds, swingsToKill, killsPerMin };
 }
 
 /** Hero stats as they would be with nothing equipped — the baseline the gear panel compares against. */
@@ -374,6 +380,15 @@ export function tickCombat(s: GameState, m: Mods, dt: number): void {
         break;
       }
     }
+  }
+  // Line up the next foe before returning. A sub-step that ends on a kill used to leave combat.enemy
+  // null until the next one began, which is every sub-step once you out-level a dungeon — the arena
+  // and the battle readout then had nothing to show. The next sub-step would have spawned this same
+  // enemy and reset the same timers, so bringing it forward changes nothing but what is on screen.
+  if (c.dungeonId && c.dead <= 0 && !c.enemy) {
+    c.enemy = spawnEnemy(s, m, d, c.floor);
+    c.enemyTimer = 0;
+    c.heroTimer = 0;
   }
 }
 

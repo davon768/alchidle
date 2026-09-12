@@ -97,10 +97,13 @@ function telemetryPanel(s: GameState, hero: HeroStats, e: Enemy): TemplateResult
       <div><b>${fmt(f.enemyDps)}</b><span class="dim">incoming DPS</span></div>
       <div><b>${fmt(f.regen)}</b><span class="dim">regen / s</span></div>
       <div><b>${secs(f.killSeconds)}</b><span class="dim">to kill</span></div>
+      <div><b>${f.killsPerMin >= 10 ? Math.round(f.killsPerMin) : f.killsPerMin.toFixed(1)}</b><span class="dim">kills / min</span></div>
       <div><b>${f.dieSeconds === null ? 'never' : secs(f.dieSeconds)}</b><span class="dim">to fall</span></div>
-      <div class="verdict">${f.dieSeconds === null
-        ? '✅ You out-heal this enemy'
-        : f.winning ? '✅ Winning this one' : '⚠️ Losing — better gear, potions, or drop a floor'}</div>
+      <div class="verdict">${f.swingsToKill <= 1
+        ? `💥 One hit each — clearing this floor as fast as you can swing`
+        : f.dieSeconds === null
+          ? '✅ You out-heal this enemy'
+          : f.winning ? '✅ Winning this one' : '⚠️ Losing — better gear, potions, or drop a floor'}</div>
     </div>
   </div>`;
 }
