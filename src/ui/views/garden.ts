@@ -75,16 +75,18 @@ export function gardenView(s: GameState, m: Mods): TemplateResult {
           </div>`;
         }
         const p = PLANT_MAP[plot.plantId];
+        if (!p) return html`<div class="plot empty" @click=${act((st) => clearPlot(st, i))}><div class="sprout">❓</div><div class="small">Unknown plant — click to clear</div></div>`;
+        const trait = plot.trait ? TRAIT_MAP[plot.trait] : undefined;
         const frac = plot.progress / p.time;
         const icon = plot.ready ? item(p.herb).icon : frac < 0.5 ? '🌱' : '🌿';
         return html`<div class="plot ${plot.ready ? 'ready' : ''}" @click=${act((st) => harvest(st, i))}>
           ${i < m.autoHarvest ? html`<span class="tend-badge" title="Tended by your Gardeners">🧑‍🌾</span>` : ''}
           <div class="sprout" style="transform:scale(${plot.ready ? 1.15 : 0.6 + frac * 0.5})">${icon}</div>
           <div class="small">${p.name} <span class="dim">Lv ${profLevelOf(s, p.id)}</span></div>
-          ${plot.trait ? html`<div class="trait-badge" style="--t:${TRAIT_MAP[plot.trait].color}" title=${TRAIT_MAP[plot.trait].desc}>${TRAIT_MAP[plot.trait].icon} ${TRAIT_MAP[plot.trait].name}</div>` : ''}
+          ${trait ? html`<div class="trait-badge" style="--t:${trait.color}" title=${trait.desc}>${trait.icon} ${trait.name}</div>` : ''}
           ${plot.ready
             ? html`<button class="btn small primary">Harvest</button>`
-            : html`${bar(frac, plot.trait ? TRAIT_MAP[plot.trait].color : '#5fd068')}<span class="dim">${fmtTime((p.time - plot.progress) / growRate(s, m, p.id, plot.trait))}</span>`}
+            : html`${bar(frac, trait ? trait.color : '#5fd068')}<span class="dim">${fmtTime((p.time - plot.progress) / growRate(s, m, p.id, plot.trait))}</span>`}
           <button class="plot-clear" title="Clear plot (no refund)" @click=${act((st) => clearPlot(st, i))}>✕</button>
         </div>`;
       })}

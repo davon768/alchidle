@@ -17,7 +17,11 @@ import { rollRarity } from '../data/gear';
 
 const STEP = 0.25; // combat resolution in seconds
 const RECOVER_TIME = 20;
-const POTION_CD = 2;
+export const POTION_CD = 2;
+/** Seconds between the hero's swings. The enemy's own rate is its `speed`, halved again while slowed. */
+export const HERO_SWING = 1;
+/** Hero regeneration, as a fraction of max HP per second. */
+export const HERO_REGEN = 0.01;
 const CHAMPION = { name: 'Wandering Champion', icon: '🏆' };
 
 export interface HeroStats {
@@ -52,6 +56,44 @@ export function heroStats(s: GameState, m: Mods): HeroStats {
   };
 }
 
+/** Seconds between this enemy's swings, including any slow currently on it. */
+export function enemySwingSeconds(e: Enemy, slow: number): number {
+  return 1 / Math.max(0.0001, e.speed * (slow > 0 ? 0.6 : 1));
+}
+
+/** Everything the battle HUD needs to say how a fight is actually going. Averages out the ±10% roll. */
+export interface Forecast {
+  heroHit: number; // average damage per swing, crits included
+  heroDps: number;
+  enemyHit: number; // average damage taken per enemy swing, dodge included
+  enemyDps: number;
+  regen: number; // HP per second the hero recovers
+  netIncoming: number; // enemy DPS minus regeneration
+  killSeconds: number; // time to drop the current enemy
+  dieSeconds: number | null; // time until the hero falls, or null if they out-heal the damage
+  winning: boolean;
+}
+
+export function forecast(s: GameState, hero: HeroStats, e: Enemy): Forecast {
+  const c = s.combat;
+  const heroHit = dmgFormula(hero.atk, e.def) * (1 + hero.crit * (hero.critDmg - 1));
+  const heroDps = heroHit / HERO_SWING;
+  const enemyHit = dmgFormula(e.atk, hero.def) * (1 - hero.dodge);
+  const enemyDps = enemyHit / enemySwingSeconds(e, c.slow);
+  const regen = hero.maxHp * HERO_REGEN;
+  const netIncoming = enemyDps - regen;
+  const killSeconds = heroDps > 0 ? Math.max(0, e.hp) / heroDps : Infinity;
+  const dieSeconds = netIncoming > 0 ? (Math.max(0, c.hp) + c.shield) / netIncoming : null;
+  return { heroHit, heroDps, enemyHit, enemyDps, regen, netIncoming, killSeconds, dieSeconds,
+    winning: dieSeconds === null || killSeconds < dieSeconds };
+}
+
+/** Hero stats as they would be with nothing equipped — the baseline the gear panel compares against. */
+export function heroStatsBare(s: GameState): HeroStats {
+  const bare = { ...s, equipped: { weapon: null, helm: null, armor: null, trinket: null } } as GameState;
+  return heroStats(bare, computeMods(bare));
+}
+
 export function dungeonUnlocked(s: GameState, d: DungeonDef): boolean {
   if (s.level < d.level) return false;
   const i = DUNGEONS.indexOf(d);
@@ -74,7 +116,7 @@ function log(s: GameState, msg: string): void {
   if (l.length > 8) l.shift();
 }
 
-const dmgFormula = (a: number, d: number) => (a * a) / (a + d);
+export const dmgFormula = (a: number, d: number) => (a * a) / (a + d);
 
 export function spawnEnemy(s: GameState, m: Mods, d: DungeonDef, floor: number): Enemy {
   const c = s.combat;

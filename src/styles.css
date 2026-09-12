@@ -353,3 +353,32 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .trait-badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; color: var(--t); border: 1px solid var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); }
 .seed-chip { border-color: var(--t) !important; color: var(--t); }
 .row.wrap { flex-wrap: wrap; }
+
+/* ── Battle telemetry ───────────────────────────────────── */
+.floor-progress { margin: 6px 0; }
+.floor-progress.boss { padding: 8px 12px; border-radius: 8px; background: #3a2410; border: 1px solid #ff9f43; color: #ffd9a8; }
+
+.telemetry { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: #140f20; }
+.swing-row { display: grid; grid-template-columns: minmax(90px, 150px) 1fr minmax(140px, 230px); align-items: center; gap: 10px; }
+.swing-who { font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.swing-meta { font-size: 11px; color: var(--muted); text-align: right; white-space: nowrap; }
+/* The swing bars refill from zero every swing; a transition would animate the reset backwards. */
+.swing-row .bar .fill { transition: none; }
+
+.forecast { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; margin-top: 4px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); }
+.forecast.is-good { border-color: #2f7a3f; background: #10230f; }
+.forecast.is-bad { border-color: #8a3030; background: #260f10; }
+.forecast > div { display: flex; gap: 5px; align-items: baseline; font-size: 13px; }
+.forecast .dim { font-size: 11px; }
+.forecast .verdict { flex: 1 1 100%; font-size: 12px; font-weight: 600; }
+
+.gear-impact { display: flex; flex-direction: column; gap: 3px; margin: 8px 0; }
+.gi-row { display: grid; grid-template-columns: minmax(96px, 140px) 62px 14px 72px 1fr; align-items: baseline; gap: 8px; font-size: 13px; }
+.gi-label { font-weight: 600; }
+.gi-delta { font-size: 12px; }
+@media (max-width: 620px) {
+  .swing-row { grid-template-columns: 1fr; gap: 2px; }
+  .swing-meta { text-align: left; }
+  .gi-row { grid-template-columns: 1fr auto; }
+  .gi-row .dim:nth-child(2), .gi-row .dim:nth-child(3) { display: none; }
+}

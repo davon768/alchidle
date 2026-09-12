@@ -1,7 +1,7 @@
 import './styles.css';
 import { game } from './core/game';
 import { loadGame, saveGame } from './core/save';
-import { checkAchievements, simulate, tick } from './core/engine';
+import { checkAchievements, simulate, tick, toast } from './core/engine';
 import { computeMods } from './core/mods';
 import { checkGoals } from './core/goals';
 import { setNotation } from './core/format';
@@ -48,23 +48,41 @@ setInterval(() => {
   const now = Date.now();
   const dt = (now - last) / 1000;
   last = now;
-  if (dt > CATCH_UP_SECONDS) catchUp(dt);
-  else if (dt > 0) tick(game.s, dt);
+  try {
+    if (dt > CATCH_UP_SECONDS) catchUp(dt);
+    else if (dt > 0) tick(game.s, dt);
+  } catch (err) {
+    console.error('[alchemy] tick failed:', err);
+  }
 }, TICK_MS);
 
 setInterval(() => {
-  checkAchievements(game.s);
-  checkGoals(game.s);
+  try {
+    checkAchievements(game.s);
+    checkGoals(game.s);
+  } catch (err) {
+    console.error('[alchemy] achievement/goal check failed:', err);
+  }
 }, 1000);
 setInterval(() => saveGame(game.s), AUTOSAVE_MS);
 
 let lastRender = 0;
+let renderErrors = 0;
 function frame(t: number): void {
-  if (t - lastRender >= RENDER_MS) {
-    lastRender = t;
-    rerender();
-  }
+  // Reschedule FIRST. If rerender() throws and the next frame is never requested, the whole UI
+  // freezes for good — every bar stops while the game keeps ticking invisibly behind it.
   requestAnimationFrame(frame);
+  if (t - lastRender < RENDER_MS) return;
+  lastRender = t;
+  try {
+    rerender();
+  } catch (err) {
+    renderErrors++;
+    if (renderErrors <= 3) {
+      console.error('[alchemy] render failed — the game is still running:', err);
+      if (renderErrors === 1) toast('Something went wrong drawing the screen. The game is still running; please report it.', 'warn');
+    }
+  }
 }
 requestAnimationFrame(frame);
 

@@ -52,7 +52,12 @@ function migrate(raw: LegacySave): GameState {
   s.research.queue = s.research.queue.filter((q) => RESEARCH_MAP[q.id]);
   // v5 → v6: cross-breeding. Older plots have no `trait` field; mergeDefaults cannot reach inside the
   // array, so normalise them here and drop seeds for traits that no longer exist.
-  for (const plot of s.plots) if (plot.trait === undefined) plot.trait = null;
+  // Unknown traits are dropped like unknown seeds: a trait with no definition would throw in the
+  // garden view, and a render that throws used to take the whole UI down with it.
+  for (const plot of s.plots) {
+    if (plot.trait === undefined) plot.trait = null;
+    else if (plot.trait !== null && !TRAIT_MAP[plot.trait]) plot.trait = null;
+  }
   // v6 → v7: the stir window became a wall-clock stamp. Old cauldrons carry `stirLeft`; a missing
   // `stirStart` would read as NaN through Date.now() arithmetic, so close every window on load.
   for (const c of s.cauldrons as (typeof s.cauldrons[number] & { stirLeft?: number })[]) {
