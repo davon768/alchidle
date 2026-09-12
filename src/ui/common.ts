@@ -8,7 +8,7 @@ import { fmt } from '../core/format';
 
 export type TabId =
   | 'garden' | 'brew' | 'explore' | 'staff' | 'dungeon' | 'market' | 'inventory' | 'proficiency' | 'arcanum' | 'armory'
-  | 'trade' | 'guild' | 'workshop' | 'library' | 'skills' | 'ascend' | 'goals' | 'journal';
+  | 'trade' | 'guild' | 'workshop' | 'library' | 'familiars' | 'skills' | 'ascend' | 'goals' | 'journal';
 
 export const ui = {
   tab: 'garden' as TabId,
@@ -21,6 +21,8 @@ export const ui = {
   forgeSlot: 'weapon' as GearSlot,
   spellTab: 'combat' as 'combat' | 'ritual',
   profFilter: 'all' as 'all' | 'plant' | 'potion' | 'reagent' | 'forge',
+  /** Potion chosen for feeding familiars; falls back to whatever is on hand. */
+  feedPotion: '' as string,
   /** Item keys gained since the Inventory tab was last open (shows NEW badges). */
   newItems: new Set<string>(),
 };

@@ -1,7 +1,7 @@
 import { html, type TemplateResult } from 'lit-html';
 import type { GameState } from '../../core/types';
 import { UPGRADES, upgradeCost } from '../../data/upgrades';
-import { buyUpgrade } from '../../core/actions';
+import { affordableLevels, buyUpgrade, buyUpgradeMax } from '../../core/actions';
 import { describeEffects } from '../../core/mods';
 import { fmt } from '../../core/format';
 import { act, sectionTitle } from '../common';
@@ -21,9 +21,19 @@ export function workshopView(s: GameState): TemplateResult {
           <div class="muted small">${u.desc}</div>
           <div class="small">${describeEffects(u.effects)}${u.max !== 1 ? ' each' : ''}</div>
           ${owned > 0 && u.max !== 1 ? html`<div class="dim">Total: ${describeEffects(u.effects, owned)}</div>` : ''}
-          <button class="btn ${maxed ? '' : 'gold'}" ?disabled=${maxed || locked || s.gold < cost} @click=${act((st) => buyUpgrade(st, u.id))}>
-            ${maxed ? 'Owned' : locked ? `Level ${u.level}` : `🪙 ${fmt(cost)}`}
-          </button>
+          <div class="row">
+            <button class="btn ${maxed ? '' : 'gold'}" ?disabled=${maxed || locked || s.gold < cost} @click=${act((st) => buyUpgrade(st, u.id))}>
+              ${maxed ? 'Owned' : locked ? `Level ${u.level}` : `🪙 ${fmt(cost)}`}
+            </button>
+            ${(() => {
+              // Infinite-level upgrades are where the clicking piles up, so offer the whole purse at once.
+              const n = maxed || locked ? 0 : affordableLevels(s, u.id);
+              return n > 1
+                ? html`<button class="btn small" title=${`Buy ${n} level${n > 1 ? 's' : ''}`}
+                    @click=${act((st) => buyUpgradeMax(st, u.id))}>Max · +${fmt(n)}</button>`
+                : '';
+            })()}
+          </div>
         </div>`;
       })}
     </div>

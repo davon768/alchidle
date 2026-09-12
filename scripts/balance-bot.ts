@@ -6,6 +6,8 @@
  *   npm run bot -- 12 --runs 5        five 12-hour runs, full length, with a summary
  *   npm run bot -- --single-herb      plant one herb everywhere (never cross-breeds)
  *   npm run bot -- --no-research      never start a study
+ *   npm run bot -- --no-hire          never hire apprentices
+ *   npm run bot -- --hire-ratio 25    hire only when one costs under 1/25th of the purse
  *   npm run bot -- --json             machine-readable output
  *
  * The two toggles exist to isolate a system's contribution: run with and without it and diff the
@@ -23,6 +25,7 @@ import {
   skillStatus, startExpedition, startResearch, toggleRepeat,
 } from '../src/core/actions.ts';
 import { assignRole, hire, hireCost } from '../src/core/staff.ts';
+import { apprenticeCap } from '../src/data/apprentices.ts';
 import { PLANTS } from '../src/data/plants.ts';
 import { ALL_ITEMS } from '../src/data/items.ts';
 import { UPGRADES, upgradeCost } from '../src/data/upgrades.ts';
@@ -41,6 +44,13 @@ export interface BotOptions {
   research: boolean;
   /** Plant a single herb everywhere instead of alternating — cross-breeding needs unlike neighbours. */
   singleHerb: boolean;
+  /**
+   * Hire once an apprentice costs no more than 1/hireRatio of the purse. 1 (the default) means hire
+   * as soon as one is affordable, which measurably wins: the role perks an apprentice earns as it
+   * levels outweigh the gold, and holding out for a comfortable margin means never hiring at all,
+   * because upgrades drain the purse every step. 0 disables hiring entirely.
+   */
+  hireRatio: number;
 }
 
 export interface BotResult {
@@ -59,6 +69,9 @@ export interface BotResult {
   topProficiencies: [string, number][];
   apprentices: number;
   bestApprenticeLevel: number;
+  /** Minutes until any item reaches proficiency 50, and until a hired apprentice first hits its cap. */
+  minutesToProf50: number | null;
+  minutesToApprenticeCap: number | null;
 }
 
 const last = <T>(arr: T[], ok: (x: T) => boolean): T | undefined => arr.filter(ok).slice(-1)[0];
@@ -142,16 +155,13 @@ function spendGold(s: GameState, m: Mods, opts: BotOptions): void {
   }
 }
 
-/**
- * Hire whenever a slot is free and the purse covers it. This runs *before* discretionary spending:
- * apprentices are the only source of automation, so a player who lets upgrades eat the gold first
- * never automates at all — which is exactly what this bot did until the ordering was fixed.
- */
-function tendStaff(s: GameState, m: Mods): void {
+/** Hire when an apprentice is comfortably affordable — see BotOptions.hireRatio for why not sooner. */
+function tendStaff(s: GameState, m: Mods, opts: BotOptions): void {
+  if (opts.hireRatio <= 0) return;
   const slots = Math.floor(m.apprenticeSlots);
   for (let guard = 0; guard < 4; guard++) {
     if (s.staff.hired.length >= slots) break;
-    const i = s.staff.candidates.findIndex((a) => hireCost(s, a) * 1.2 <= s.gold);
+    const i = s.staff.candidates.findIndex((a) => hireCost(s, a) * opts.hireRatio <= s.gold);
     if (i < 0) break;
     const before = s.staff.hired.length;
     hire(s, i);
@@ -168,6 +178,8 @@ export function runBot(opts: BotOptions): BotResult {
   const tiersSold = new Array(QUALITIES.length).fill(0);
   const sold = { w: 0, n: 0 };
   let ascendMinutes: number | null = null;
+  let minutesToProf50: number | null = null;
+  let minutesToApprenticeCap: number | null = null;
 
   for (let t = 0; t < opts.hours * 3600; t += STEP) {
     const m = computeMods(s);
@@ -178,13 +190,19 @@ export function runBot(opts: BotOptions): BotResult {
     const zone = last(unlockedZones(s), () => true);
     if (zone) s.expeditions.forEach((e, i) => { if (!e) startExpedition(s, i, zone.id); });
     sellStock(s, tiersSold, sold);
-    tendStaff(s, m);       // automation first — it compounds, upgrades do not
+    tendStaff(s, m, opts);
     spendGold(s, m, opts);
 
     simulate(s, STEP);
 
     for (const L of [10, 20, 30, 40, 50]) {
       if (levelMinutes[`lvl${L}`] === undefined && s.level >= L) levelMinutes[`lvl${L}`] = +(t / 60).toFixed(1);
+    }
+    if (minutesToProf50 === null && Object.keys(s.prof).some((id) => profLevelOf(s, id) >= 50)) {
+      minutesToProf50 = +(t / 60).toFixed(1);
+    }
+    if (minutesToApprenticeCap === null && s.staff.hired.some((a) => a.level >= apprenticeCap(a))) {
+      minutesToApprenticeCap = +(t / 60).toFixed(1);
     }
     if (ascendMinutes === null && s.stats.runGold >= ASC_MIN_GOLD) {
       ascendMinutes = +(t / 60).toFixed(1);
@@ -211,6 +229,8 @@ export function runBot(opts: BotOptions): BotResult {
       .slice(0, 6),
     apprentices: s.staff.hired.length,
     bestApprenticeLevel: Math.max(0, ...s.staff.hired.map((a) => a.level)),
+    minutesToProf50,
+    minutesToApprenticeCap,
   };
 }
 
@@ -229,6 +249,7 @@ const opts: BotOptions = {
   stopAtAscend: !flag('full'),
   research: !flag('no-research'),
   singleHerb: flag('single-herb'),
+  hireRatio: flag('no-hire') ? 0 : num('hire-ratio', 1),
 };
 
 const results: BotResult[] = [];
@@ -251,9 +272,15 @@ if (flag('json')) {
       + ` · ${r.apprentices} apprentices (best lv ${r.bestApprenticeLevel})`);
   }
   if (asc.length) {
-    console.log(`\nascension: mean ${mean(asc).toFixed(1)} min (target ≈ 70), `
-      + `range ${Math.min(...asc).toFixed(1)}–${Math.max(...asc).toFixed(1)}`);
+    console.log(`\nascension: mean ${mean(asc).toFixed(1)} min, `
+      + `range ${Math.min(...asc).toFixed(1)}–${Math.max(...asc).toFixed(1)} `
+      + `(DESIGN.md §3 baseline: ~98 min under this policy)`);
   }
+  const got = (pick: (r: BotResult) => number | null) => results.map(pick).filter((x): x is number => x !== null);
+  const p50 = got((r) => r.minutesToProf50);
+  const cap = got((r) => r.minutesToApprenticeCap);
+  if (p50.length) console.log(`proficiency 50: mean ${mean(p50).toFixed(0)} min (${p50.length}/${runs} runs reached it)`);
+  if (cap.length) console.log(`apprentice cap: mean ${mean(cap).toFixed(0)} min (${cap.length}/${runs} runs reached it)`);
   console.log(`quality multiplier: mean ×${mean(results.map((r) => r.avgSaleQualityMult)).toFixed(3)}`);
   console.log(`strains found: mean ${mean(results.map((r) => r.strainsFound)).toFixed(1)}`
     + ` · studies: mean ${mean(results.map((r) => r.studiesDone)).toFixed(1)}\n`);

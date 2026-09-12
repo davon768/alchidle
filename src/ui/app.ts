@@ -28,6 +28,7 @@ import { tradeView } from './views/trade';
 import { guildView } from './views/guild';
 import { workshopView } from './views/workshop';
 import { libraryView } from './views/library';
+import { familiarsView } from './views/familiars';
 import { skillsView } from './views/skills';
 import { ascendView } from './views/ascend';
 import { journalView } from './views/journal';
@@ -64,6 +65,8 @@ const TABS: TabDef[] = [
   { id: 'skills', icon: '📜', label: 'Skills', unlocked: (s) => s.level >= 2, dot: (s, m) => skillPointsFree(s, m) > 0 },
   { id: 'library', icon: '📚', label: 'Library', unlocked: (s) => s.level >= RESEARCH_UNLOCK_LEVEL || Object.keys(s.research.done).length > 0,
     dot: (s, m) => s.research.queue.length < Math.floor(m.researchSlots) },
+  { id: 'familiars', icon: '🐾', label: 'Familiars', unlocked: (s) => Object.keys(s.familiars).length > 0,
+    dot: (s, m) => s.equippedFamiliars.length < Math.min(Object.keys(s.familiars).length, Math.floor(m.familiarSlots)) },
   { id: 'trade', icon: '🐪', label: 'Trading Post', unlocked: (s) => s.level >= 6 },
   { id: 'guild', icon: '🛡️', label: 'Guilds', unlocked: (s) => s.level >= GUILD_UNLOCK_LEVEL },
   { id: 'ascend', icon: '🌟', label: 'Magnum Opus', unlocked: (s) => s.asc.count > 0 || s.stats.runGold >= ASC_MIN_GOLD * 0.2 },
@@ -192,6 +195,7 @@ function viewFor(tab: TabId, s: GameState, m: Mods): TemplateResult {
     case 'guild': return guildView(s, m);
     case 'workshop': return workshopView(s);
     case 'library': return libraryView(s, m);
+    case 'familiars': return familiarsView(s, m);
     case 'skills': return skillsView(s, m);
     case 'ascend': return ascendView(s, m);
     case 'goals': return goalsView(s);

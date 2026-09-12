@@ -59,6 +59,10 @@ export const RESEARCH: ResearchDef[] = [
     desc: 'Better maps mean shorter roads and richer hauls.',
     cost: [{ id: 'gold', qty: 12000 }, { id: 'relic', qty: 2 }], req: ['ledger'],
     effects: [{ stat: 'scavSpeed', value: 0.25 }, { stat: 'rareFind', value: 0.3 }] },
+  { id: 'companionship', name: 'Companion Lore', icon: '🐾', level: 11, time: 45 * MIN,
+    desc: 'Learn what they eat, and why a second one tolerates the first.',
+    cost: [{ id: 'gold', qty: 15000 }, { id: 'p_heal', qty: 20 }], req: ['catalog'],
+    effects: [{ stat: 'familiarSlots', value: 1 }] },
   { id: 'grafting', name: 'Grafting and Cuttings', icon: '🌿', level: 13, time: 75 * MIN,
     desc: 'Coax a cutting into taking root, and the strange herbs become growable.',
     cost: [{ id: 'gold', qty: 18000 }, { id: 'mandrake', qty: 12 }], req: ['soil'],
@@ -79,6 +83,10 @@ export const RESEARCH: ResearchDef[] = [
     effects: [{ stat: 'researchSlots', value: 1 }, { stat: 'researchSpeed', value: 0.5 }] },
 
   // ── Tier 4: the long haul, and the endless tail ─────────────
+  { id: 'menagerie', name: 'The Menagerie', icon: '🏛️', level: 24, time: 7 * HOUR,
+    desc: 'Room, board and bickering for a third companion.',
+    cost: [{ id: 'gold', qty: 900000 }, { id: 'crystal', qty: 30 }], req: ['companionship', 'scriptorium'],
+    effects: [{ stat: 'familiarSlots', value: 1 }] },
   { id: 'starcharts', name: 'Star Charts', icon: '🌌', level: 28, time: 12 * HOUR,
     desc: 'Chart what falls, and learn to catch it.',
     cost: [{ id: 'gold', qty: 3000000 }, { id: 'stardust', qty: 40 }], req: ['transmute', 'cartography'],

@@ -14,6 +14,7 @@ import { MILESTONES, PROF_MAP, emptyBonus, profBonus, profLevel, type ProfBonus 
 import { QUAL_MAX, quality, qualityName, rollQuality, rollStirTarget, stirElapsed, STIR_WINDOW } from '../data/quality';
 import { RESEARCH_MAP } from '../data/research';
 import { CROSS_CHANCE, TRAITS, seedKey, traitEffect } from '../data/mutations';
+import { FAMILIAR_MAP, familiarLevel, familiarsOfZone, feedXp, milestonesAt } from '../data/familiars';
 import { dungeonUnlocked, tickCombat } from './combat';
 import { tickMagic } from './magic';
 import { tickEvents } from './events';
@@ -445,6 +446,39 @@ function completeExpedition(s: GameState, m: Mods, z: ZoneDef): void {
   gainXp(s, m, z.xp * Math.sqrt(mult));
   s.stats.expeditions++;
   if (z.endless) s.riftDepth++;
+  rollFamiliar(s, m, z);
+}
+
+/** A zone's familiar can turn up on any completed expedition there — once only; after that it levels. */
+function rollFamiliar(s: GameState, m: Mods, z: ZoneDef): void {
+  for (const def of familiarsOfZone(z.id)) {
+    if (s.familiars[def.id] !== undefined) continue;
+    if (Math.random() >= Math.min(0.5, def.chance * m.rareFind)) continue;
+    s.familiars[def.id] = 0;
+    if (s.equippedFamiliars.length < Math.floor(m.familiarSlots)) s.equippedFamiliars.push(def.id);
+    toast(`${def.icon} A ${def.name} has followed you home!`, 'epic');
+    return; // at most one per expedition, so a lucky run cannot empty the zone
+  }
+}
+
+/** Feed a potion to a familiar. Finer bottles are worth more, which is the point. */
+export function feedFamiliar(s: GameState, id: string, potionId: string, qty: number): number {
+  const def = FAMILIAR_MAP[id];
+  if (!def || s.familiars[id] === undefined || !RECIPE_MAP[potionId]) return 0;
+  qty = Math.min(qty, Math.floor(count(s, potionId)));
+  if (qty <= 0) return 0;
+  const taken = removeItem(s, potionId, qty, 'low');
+  let xp = 0;
+  taken.forEach((n, tier) => { xp += n * feedXp(RECIPE_MAP[potionId].value, quality(tier).value); });
+  const before = familiarLevel(s.familiars[id]);
+  s.familiars[id] += xp;
+  const after = familiarLevel(s.familiars[id]);
+  if (after > before) {
+    const gained = milestonesAt(after) - milestonesAt(before);
+    if (gained > 0) toast(`${def.icon} ${def.name} reached level ${after} — a new bond forms!`, 'epic');
+    else toast(`${def.icon} ${def.name} is now level ${after}.`, 'good');
+  }
+  return xp;
 }
 
 // ── Trade & contracts ────────────────────────────────────────

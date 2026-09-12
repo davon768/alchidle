@@ -3,7 +3,7 @@ import { computeMods } from './mods';
 import { newState } from './state';
 import {
   addGold, addItem, buyUnitPrice, count, doSell, generateContract, generateOffers, hasAll, harvestPlot, plantCost,
-  removeItem, offerGetQty, gainXp, researchDone, researchStatus, skillPointsFree, startBrew, toast,
+  removeItem, offerGetQty, gainXp, feedFamiliar, researchDone, researchStatus, skillPointsFree, startBrew, toast,
 } from './engine';
 import { STIR_MAX, STIR_WINDOW, quality, stirBonus, stirElapsed, stirPos } from '../data/quality';
 import { QUALITY_RESEARCH_BOOST, RESEARCH_MAP, researchCost, researchTime } from '../data/research';
@@ -55,6 +55,26 @@ export function startResearch(s: GameState, id: string): void {
 /** Abandon a study. The time is lost; the materials are not refunded. */
 export function cancelResearch(s: GameState, idx: number): void {
   if (s.research.queue[idx]) s.research.queue.splice(idx, 1);
+}
+
+// ── Familiars ────────────────────────────────────────────────
+export function equipFamiliar(s: GameState, id: string): void {
+  if (s.familiars[id] === undefined || s.equippedFamiliars.includes(id)) return;
+  const slots = Math.floor(computeMods(s).familiarSlots);
+  if (s.equippedFamiliars.length >= slots) {
+    toast(`Only ${slots} familiar${slots === 1 ? '' : 's'} can be out at once — send one home first.`, 'warn');
+    return;
+  }
+  s.equippedFamiliars.push(id);
+}
+
+export function unequipFamiliar(s: GameState, id: string): void {
+  s.equippedFamiliars = s.equippedFamiliars.filter((x) => x !== id);
+}
+
+/** Feed potions to a familiar; returns the XP gained so the caller can report it. */
+export function feed(s: GameState, id: string, potionId: string, qty: number): number {
+  return feedFamiliar(s, id, potionId, qty);
 }
 
 // ── Garden ───────────────────────────────────────────────────
@@ -247,6 +267,45 @@ export function toggleAutoSell(s: GameState, id: string): void {
 }
 
 // ── Workshop ─────────────────────────────────────────────────
+/** How many of a market item the purse covers right now. */
+export function affordableUnits(s: GameState, id: string): number {
+  const unit = buyUnitPrice(id);
+  return unit > 0 ? Math.floor(s.gold / unit) : 0;
+}
+
+/**
+ * Levels of an upgrade the purse covers, walking the cost curve rather than dividing by the current
+ * price — each level costs more than the last, so a flat division would overshoot badly.
+ */
+export function affordableLevels(s: GameState, id: string, cap = 1000): number {
+  const u = UPGRADE_MAP[id];
+  if (!u || u.level > s.level) return 0;
+  const owned = s.upgrades[id] ?? 0;
+  let gold = s.gold;
+  let n = 0;
+  while (n < cap) {
+    if (u.max > 0 && owned + n >= u.max) break;
+    const cost = upgradeCost(u, owned + n);
+    if (cost > gold) break;
+    gold -= cost;
+    n++;
+  }
+  return n;
+}
+
+/** Buy as many levels of an upgrade as the purse allows. Returns how many were bought. */
+export function buyUpgradeMax(s: GameState, id: string, cap = 1000): number {
+  let bought = 0;
+  for (let i = 0; i < cap; i++) {
+    const before = s.upgrades[id] ?? 0;
+    if (affordableLevels(s, id, 1) < 1) break;
+    buyUpgrade(s, id);
+    if ((s.upgrades[id] ?? 0) === before) break; // refused: stop rather than spin
+    bought++;
+  }
+  return bought;
+}
+
 export function buyUpgrade(s: GameState, id: string): void {
   const u = UPGRADE_MAP[id];
   const owned = s.upgrades[id] ?? 0;

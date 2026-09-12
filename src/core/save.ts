@@ -4,6 +4,7 @@ import type { RoleId } from './types';
 import { PROF_MAP } from '../data/proficiency';
 import { RESEARCH_MAP } from '../data/research';
 import { TRAIT_MAP, parseSeed } from '../data/mutations';
+import { FAMILIAR_MAP } from '../data/familiars';
 import { createApprentice } from '../data/apprentices';
 
 const KEY = 'alchemy-idle-save';
@@ -67,6 +68,10 @@ function migrate(raw: LegacySave): GameState {
     if (typeof c.stirQ !== 'number' || !Number.isFinite(c.stirQ)) c.stirQ = 0;
   }
   for (const key of Object.keys(s.seeds)) if (!TRAIT_MAP[parseSeed(key).trait]) delete s.seeds[key];
+  // v7 → v8: familiars. mergeDefaults supplies the empty records; drop anything whose definition is
+  // gone and trim the equipped list so a stale id cannot reach computeMods.
+  for (const id of Object.keys(s.familiars)) if (!FAMILIAR_MAP[id]) delete s.familiars[id];
+  s.equippedFamiliars = s.equippedFamiliars.filter((id) => s.familiars[id] !== undefined);
   s.version = SAVE_VERSION;
   return s;
 }

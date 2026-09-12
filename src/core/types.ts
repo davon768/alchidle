@@ -43,6 +43,7 @@ export interface Mods {
   // Research Library
   researchSlots: number; // studies that can run at once
   researchSpeed: number;
+  familiarSlots: number; // familiars that can be equipped at once
   // Combat (flat values add to the hero's level-based stats; *Mult values multiply the total)
   attack: number;
   attackMult: number;
@@ -306,6 +307,9 @@ export interface GameState {
   eventTimer: number;
   // Research Library
   research: ResearchState;
+  /** Familiars found so far, by id, with the XP fed into each. */
+  familiars: Record<string, number>;
+  equippedFamiliars: string[];
   // Apprentices
   staff: StaffState;
   lastTick: number;

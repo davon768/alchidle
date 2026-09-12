@@ -2,7 +2,7 @@ import { html, type TemplateResult } from 'lit-html';
 import type { GameState, Mods } from '../../core/types';
 import { ALL_ITEMS, item } from '../../data/items';
 import { buyUnitPrice, count, demandOf, qualCounts, sellValue } from '../../core/engine';
-import { buy, sell, sellAllPotions, sellTier, toggleAutoSell } from '../../core/actions';
+import { affordableUnits, buy, sell, sellAllPotions, sellTier, toggleAutoSell } from '../../core/actions';
 import { quality } from '../../data/quality';
 import { fmt, fmtPct } from '../../core/format';
 import { act, gold, sectionTitle, ui } from '../common';
@@ -85,6 +85,12 @@ export function marketView(s: GameState, m: Mods): TemplateResult {
         <div class="row">
           ${[1, 10, 100].map((q) => html`<button class="btn small" ?disabled=${s.gold < buyUnitPrice(i.id) * q} @click=${act((st) => buy(st, i.id, q))}>
             +${q} · 🪙${fmt(buyUnitPrice(i.id) * q)}</button>`)}
+          ${(() => {
+            const max = affordableUnits(s, i.id);
+            return html`<button class="btn small gold" ?disabled=${max < 1}
+              title=${max < 1 ? 'Not enough gold' : `Buy ${fmt(max)} for ${fmt(max * buyUnitPrice(i.id))}`}
+              @click=${act((st) => buy(st, i.id, affordableUnits(st, i.id)))}>Max${max >= 1 ? ` · ${fmt(max)}` : ''}</button>`;
+          })()}
         </div>
       </div>`)}
     </div>

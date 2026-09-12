@@ -9,6 +9,7 @@ import { SPELL_MAP, ritualEffects } from '../data/spells';
 import { EVENT_MAP } from '../data/events';
 import { RESEARCH_MAP } from '../data/research';
 import { CATALOGUE_BONUS } from '../data/mutations';
+import { FAMILIAR_MAP, familiarEffects, familiarLevel } from '../data/familiars';
 import { MASTER_XP, ROLE_MAP, TALENTS, apprenticeCapacity } from '../data/apprentices';
 import type { RoleId } from './types';
 import { fmt } from './format';
@@ -22,7 +23,7 @@ export function baseMods(): Mods {
     xpGain: 1, stoneGain: 1, offlineHours: 8,
     plots: 2, cauldrons: 1, expSlots: 1, skillPoints: 0, startGold: 0,
     autoHarvest: 0, autoBrew: 0, autoSell: 0, autoScav: 0, autoRitual: 0, apprenticeSlots: 2, apprenticeXp: 1,
-    researchSlots: 1, researchSpeed: 1,
+    researchSlots: 1, researchSpeed: 1, familiarSlots: 1,
     attack: 0, attackMult: 1, defense: 0, defenseMult: 1, maxHp: 0, hpMult: 1,
     spellPower: 0, spellMult: 1, critChance: 0.05, critDamage: 1.5, dodge: 0,
     maxMana: 0, manaRegen: 0, potionPower: 1, lootFind: 1, enemyPower: 1,
@@ -60,6 +61,10 @@ export function computeMods(s: GameState): Mods {
     if (r?.effects) apply(m, r.effects, times);
   }
   apply(m, CATALOGUE_BONUS, Object.keys(s.catalogue ?? {}).length);
+  for (const id of (s.equippedFamiliars ?? []).slice(0, Math.floor(m.familiarSlots))) {
+    const def = FAMILIAR_MAP[id];
+    if (def) apply(m, familiarEffects(def, familiarLevel(s.familiars?.[id] ?? 0)), 1);
+  }
   for (const a of ACHIEVEMENTS) if (s.achievements[a.id]) apply(m, a.reward, 1);
   for (const uid of Object.values(s.equipped)) {
     const it = uid ? s.gear.find((g) => g.uid === uid) : undefined;
@@ -119,6 +124,7 @@ export const STAT_INFO: Record<StatKey, { label: string; fmt: StatFormat }> = {
   mutationChance: { label: 'cross-breeding chance', fmt: 'pct' },
   researchSlots: { label: 'research desks', fmt: 'flat' },
   researchSpeed: { label: 'research speed', fmt: 'pct' },
+  familiarSlots: { label: 'familiars equipped', fmt: 'flat' },
   sellPrice: { label: 'sell price', fmt: 'pct' },
   demandRecovery: { label: 'demand recovery', fmt: 'pct' },
   tradeBonus: { label: 'trade rewards', fmt: 'pct' },

@@ -25,6 +25,7 @@ Early game is hands-on (click to plant, brew, sell). Automation comes from **app
 | **Guilds** | 4 guilds with per-rank perks and milestone unlocks; contracts give gold and reputation | Legend ranks I, II, III… continue forever (×3 reputation each) |
 | **Research Library** | Long-timer studies (3 min – 12 h) bought with gold and materials, granting permanent bonuses | Two endless projects whose cost and time grow 1.8×/2.1× per repeat |
 | **Cross-breeding** | Ripe plots beside a *different* herb throw mutated seeds with one of 4 traits | A seed catalogue of every plant × trait pair, each paying +1% growth and yield forever |
+| **Familiars** | 7 companions, one per zone, found on expeditions and levelled by feeding them potions | Level 50 each with a bond every 5 levels; slots go 1 → 3 through the Library |
 | **Workshop** | 16 gold upgrades: capacity, infinite multipliers, automation | Infinite-level upgrades with exponential cost |
 | **Skill trees** | 5 trees, 52 nodes, row gating (4 points per row), prerequisites, respec | One infinite-rank node per tree absorbs unlimited skill points |
 | **Ascension** | Magnum Opus resets the run for Philosopher's Stones (√ of gold earned) | 12 eternal perks, 4 of them infinite; "stone resonance" gives +2% sell price per lifetime stone |
@@ -108,6 +109,22 @@ pays +1% growth and +1% harvest yield. With 9 plants × 4 traits that is a +36% 
 that only advances when the player deliberately mixes herbs across neighbouring plots — planting one herb
 everywhere, as the balance bot does, never crosses at all.
 
+### Familiars (v0.8)
+
+Seven companions, one per zone, each turning up on a completed expedition there (2–4% a run, scaled by
+`rareFind`) and never twice. Feeding them potions levels them to 50, and every 5 levels forms a **bond**:
+a permanent `Effect[]` applied through `computeMods` while that familiar is out with you. A fully bonded
+Hearth Cat is +50% brew speed and +20% quality; the Garden Sprite pushes cross-breeding odds; the Archive
+Owl speeds research.
+
+The point is the sink rather than the bonus. Familiars sit between three systems that already exist —
+exploration finds them, brewing feeds them, `computeMods` carries their effect — and **feed value scales
+with potion quality**, so a ★ Legendary is worth six Commons down a familiar's throat. That gives quality
+a use that competes directly with the market, which it previously lacked.
+
+Slots start at 1 and reach 3 through the Library (*Companion Lore*, *The Menagerie*), so which companion
+is out is a real choice for most of a run. Familiars and their levels survive ascension.
+
 ### Goals (v0.5): the tutorial
 
 28 goals in 7 chapters (Workshop basics, Apprentices, Craft & proficiency, Commerce, Adventure, Magic, The long game) teach every mechanic in the order players meet it. Each goal has a one-line *how*, a short explanation of the mechanic, an optional progress bar, a **Show me** button that opens the right tab, and a one-time reward (gold, or items that help with the next step — for example, the reagent goal pays Rune Chalk and Spell Ink toward learning Firebolt). The banner at the top of every tab shows a claimable goal first, otherwise the next unfinished one; the 🎯 Goals tab lists them all. Goals are checked every second, stay done once reached, and survive ascension, so each reward pays out only once. Content lives in `src/data/goals.ts` — add a goal whenever a new system is added.
@@ -162,7 +179,27 @@ Stones and eternal perks, proficiency, achievements, lifetime stats, settings an
 
 Pacing targets: first ascension at about 2–4 hours of active play, the Panacea recipe (level 60) around the 3rd–5th ascension, and Rift depth plus infinite nodes as the post-content grind.
 
-Measured with `npm run bot` (a perfectly attentive player; real players are roughly 2× slower). Its absolute numbers move with the bot's own spending policy, so use it to compare configurations rather than to certify a single figure: level 10 at 14 min, level 30 at ~66 min, level 40 at ~3 h on the first run. The second run reaches each milestone about twice as fast.
+Measured with `npm run bot`, 8 runs of 6 simulated hours under its default policy (hire an apprentice
+as soon as one is affordable, alternate two herbs so cross-breeding can happen, keep every research desk
+busy, buy the cheapest affordable upgrade and skill each step):
+
+| Milestone | Bot | Human (~2× slower) |
+|---|---|---|
+| Level 10 | ~12 min | ~25 min |
+| Level 20 | ~30 min | ~1 h |
+| First ascension | **98 min** (range 90–112) | **~3.3 h** |
+| An item reaches proficiency 50 | ~158 min | ~5 h |
+| An apprentice reaches its cap | ~146 min | ~5 h |
+
+That lands first ascension inside the 2–4 hour design target above. An earlier note in this file put the
+bot at ~70 minutes; that figure came from a bot whose policy was not recorded and could not be
+reproduced, so it has been replaced rather than chased. **These numbers are only meaningful with the
+policy attached** — changing nothing but the order in which the bot hires apprentices moved first
+ascension by 30 minutes. Compare configurations with `--single-herb`, `--no-research` and `--no-hire`
+rather than reading a single figure as truth.
+
+Cross-breeding and the Research Library were each measured on and off against this policy and land
+within run-to-run noise (96–101 minutes across all four combinations), so neither disturbs early pacing.
 
 ## 4. Architecture notes
 
@@ -198,23 +235,21 @@ The UI is already mobile-ready: bottom tab bar under 760 px, safe-area insets, t
 
 ## 6. Recommended additions (prioritized)
 
-*Shipped since this list was written: potion quality tiers (v0.6), the Research Library and cross-breeding (v0.7), events (v0.2) and the scripted balance bot — all documented in §2.*
+*Shipped since this list was written: potion quality tiers (v0.6), the Research Library and cross-breeding (v0.7), familiars and bulk buying (v0.8), events (v0.2) and the scripted balance bot — all documented in §2.*
 
 ### High impact, fits the current design
-1. **Familiars**: collectible companions (cat, raven, salamander, homunculus) found on expeditions, leveled with potions, each with a passive buff. Equip 1–3.
-2. **Adventurer parties**: hire heroes with classes for expeditions; brewed potions equip them for deeper Rift runs; Rift **bosses** every 10 depths drop unique relics.
+1. **Adventurer parties**: hire heroes with classes for expeditions; brewed potions equip them for deeper Rift runs; Rift **bosses** every 10 depths drop unique relics.
 
 ### Long-term retention
-3. **Second prestige layer, "Transcendence"**: reset ascensions for *Aether*, which opens a new tree, new recipe tier and new zone. It keeps the endless curve fresh after 50+ ascensions.
-4. **Challenges**: ascension runs with restrictions (no garden, market prices halved, one cauldron) that grant permanent unique rewards.
-5. **Day/night and seasons**: real-time cycles that boost certain herbs and potions (Moonpetal at night, Emberroot in summer).
-6. **Daily quests and weekly guild goals**, kept light with no punishing streaks.
+2. **Second prestige layer, "Transcendence"**: reset ascensions for *Aether*, which opens a new tree, new recipe tier and new zone. It keeps the endless curve fresh after 50+ ascensions.
+3. **Challenges**: ascension runs with restrictions (no garden, market prices halved, one cauldron) that grant permanent unique rewards.
+4. **Day/night and seasons**: real-time cycles that boost certain herbs and potions (Moonpetal at night, Emberroot in summer).
+5. **Daily quests and weekly guild goals**, kept light with no punishing streaks.
 
 ### Polish
-7. **Art pass**: replace emoji with a consistent pixel-art or painted icon set; animate cauldrons and plants.
-8. **Audio**: bubbling ambience, harvest pops and level-up chimes (Howler.js), with a mute toggle.
-9. **Stats and graphs**: gold/hour chart, per-system breakdown, "what's my bottleneck" hints.
-10. **Buy-max / bulk buttons** and hotkeys on desktop.
+6. **Art pass**: replace emoji with a consistent pixel-art or painted icon set; animate cauldrons and plants.
+7. **Audio**: bubbling ambience, harvest pops and level-up chimes (Howler.js), with a mute toggle.
+8. **Stats and graphs**: gold/hour chart, per-system breakdown, "what's my bottleneck" hints.
 
 ### Monetization (if you publish)
 Stay ethical and optional: rewarded ad for 2× offline gains, a one-time "supporter pack" (cosmetic cauldrons, extra save slot), cosmetic skins. Avoid energy systems and pay-to-skip in an idle game, where they break the genre's trust.
