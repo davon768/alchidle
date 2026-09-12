@@ -5,7 +5,7 @@ import {
   addGold, addItem, buyUnitPrice, count, doSell, generateContract, generateOffers, hasAll, harvestPlot, plantCost,
   removeItem, offerGetQty, gainXp, researchDone, researchStatus, skillPointsFree, startBrew, toast,
 } from './engine';
-import { STIR_MAX, quality, stirBonus, stirPos } from '../data/quality';
+import { STIR_MAX, STIR_WINDOW, quality, stirBonus, stirElapsed, stirPos } from '../data/quality';
 import { QUALITY_RESEARCH_BOOST, RESEARCH_MAP, researchCost, researchTime } from '../data/research';
 
 /** How much of a potion's quality value the guild pays on top of a contract. */
@@ -102,12 +102,14 @@ export function plantAll(s: GameState, plantId: string): void {
 }
 
 export function harvest(s: GameState, idx: number): void {
-  harvestPlot(s, computeMods(s), s.plots[idx]);
+  // The index matters: cross-breeding looks at the plot's neighbours, so harvesting by hand must
+  // roll for mutations exactly as an apprentice-tended harvest does.
+  harvestPlot(s, computeMods(s), s.plots[idx], idx);
 }
 
 export function harvestAll(s: GameState): void {
   const m = computeMods(s);
-  for (const p of s.plots) harvestPlot(s, m, p);
+  s.plots.forEach((p, i) => harvestPlot(s, m, p, i));
 }
 
 export function clearPlot(s: GameState, idx: number): void {
@@ -126,12 +128,24 @@ export function brew(s: GameState, ci: number): void {
   if (c && !c.active && !startBrew(s, c, true)) toast('Missing ingredients.', 'warn');
 }
 
-/** Tap the stir bar. Landing in the sweet spot banks a quality bonus for the brew in progress; a miss costs nothing. */
-export function stir(s: GameState, ci: number): void {
+/**
+ * Tap the stir bar. Landing in the sweet spot banks a quality bonus for the brew in progress; a miss
+ * costs nothing.
+ *
+ * `pos` is where the marker actually was on screen, measured from the DOM by the caller. The bar is
+ * animated by CSS on the document timeline, which is not the same clock as `Date.now()` — it pauses
+ * while the tab is hidden — so scoring a position derived from the wall clock could differ from what
+ * the player saw. Taking the observed position makes the hit test true by construction. It falls back
+ * to the wall clock only when the caller cannot measure (no DOM, tests).
+ */
+export function stir(s: GameState, ci: number, pos?: number): void {
   const c = s.cauldrons[ci];
-  if (!c?.active || c.stirLeft <= 0) return;
-  const bonus = stirBonus(stirPos(c.stirLeft), c.stirTarget);
-  c.stirLeft = 0;
+  if (!c?.active || c.stirStart <= 0) return;
+  const elapsed = stirElapsed(c.stirStart);
+  if (elapsed >= STIR_WINDOW) { c.stirStart = 0; return; }
+  const at = pos === undefined || !Number.isFinite(pos) ? stirPos(elapsed) : Math.max(0, Math.min(1, pos));
+  const bonus = stirBonus(at, c.stirTarget);
+  c.stirStart = 0;
   if (bonus <= 0) {
     toast('The brew clouds for a moment — no quality bonus.', 'warn');
     return;
@@ -147,7 +161,7 @@ export function cancelBrew(s: GameState, ci: number): void {
   c.active = false;
   c.progress = 0;
   c.repeat = false;
-  c.stirLeft = 0;
+  c.stirStart = 0;
   c.stirQ = 0;
 }
 

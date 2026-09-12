@@ -162,7 +162,7 @@ Stones and eternal perks, proficiency, achievements, lifetime stats, settings an
 
 Pacing targets: first ascension at about 2–4 hours of active play, the Panacea recipe (level 60) around the 3rd–5th ascension, and Rift depth plus infinite nodes as the post-content grind.
 
-Measured with the scripted bot (a perfectly attentive player; real players are roughly 2× slower): level 10 at 14 min, level 30 at ~66 min, level 40 at ~3 h on the first run. The second run reaches each milestone about twice as fast.
+Measured with `npm run bot` (a perfectly attentive player; real players are roughly 2× slower). Its absolute numbers move with the bot's own spending policy, so use it to compare configurations rather than to certify a single figure: level 10 at 14 min, level 30 at ~66 min, level 40 at ~3 h on the first run. The second run reaches each milestone about twice as fast.
 
 ## 4. Architecture notes
 

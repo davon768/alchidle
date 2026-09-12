@@ -53,6 +53,14 @@ function migrate(raw: LegacySave): GameState {
   // v5 → v6: cross-breeding. Older plots have no `trait` field; mergeDefaults cannot reach inside the
   // array, so normalise them here and drop seeds for traits that no longer exist.
   for (const plot of s.plots) if (plot.trait === undefined) plot.trait = null;
+  // v6 → v7: the stir window became a wall-clock stamp. Old cauldrons carry `stirLeft`; a missing
+  // `stirStart` would read as NaN through Date.now() arithmetic, so close every window on load.
+  for (const c of s.cauldrons as (typeof s.cauldrons[number] & { stirLeft?: number })[]) {
+    delete c.stirLeft;
+    if (typeof c.stirStart !== 'number' || !Number.isFinite(c.stirStart)) c.stirStart = 0;
+    if (typeof c.stirTarget !== 'number' || !Number.isFinite(c.stirTarget)) c.stirTarget = 0.5;
+    if (typeof c.stirQ !== 'number' || !Number.isFinite(c.stirQ)) c.stirQ = 0;
+  }
   for (const key of Object.keys(s.seeds)) if (!TRAIT_MAP[parseSeed(key).trait]) delete s.seeds[key];
   s.version = SAVE_VERSION;
   return s;

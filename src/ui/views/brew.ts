@@ -2,22 +2,45 @@ import { html, type TemplateResult } from 'lit-html';
 import type { GameState, Mods } from '../../core/types';
 import { RECIPES, RECIPE_MAP } from '../../data/recipes';
 import { profProgress } from '../../data/proficiency';
-import { QUALITIES, STIR_BAND, qualityChances, stirPos } from '../../data/quality';
+import { QUALITIES, STIR_BAND, STIR_WINDOW, qualityChances, stirElapsed } from '../../data/quality';
 import { brewQualityScore, brewRate, count, hasAll, potionBasePrice, profLevelOf, unlockedRecipes } from '../../core/engine';
 import { brew, cancelBrew, selectRecipe, stir, toggleRepeat } from '../../core/actions';
 import { fmt, fmtTime } from '../../core/format';
 import { act, bar, chip, gold, qualityChips, sectionTitle } from '../common';
 
-/** The one-shot stirring minigame: a marker sweeps the bar, tapping inside the glowing band banks quality. */
-function stirBar(ci: number, target: number, left: number): TemplateResult {
-  const pos = stirPos(left) * 100;
+/**
+ * Where the marker is right now, as a fraction of the track, read straight off the laid-out DOM.
+ * Returns undefined if it cannot be measured, and stir() falls back to its own clock.
+ */
+function markerPosition(el: HTMLElement): number | undefined {
+  const track = el.closest('.stir')?.querySelector('.stir-track');
+  const marker = track?.querySelector('.stir-marker');
+  if (!track || !marker) return undefined;
+  const t = track.getBoundingClientRect();
+  const m = marker.getBoundingClientRect();
+  if (!t.width) return undefined;
+  return (m.left + m.width / 2 - t.left) / t.width;
+}
+
+/**
+ * The one-shot stirring minigame. The marker is animated entirely in CSS (`stir-sweep`) rather than by
+ * binding its position each render: the app re-renders at only ~10 Hz, which made the marker jump in
+ * visible steps — further per frame than the sweet spot is wide — and left it out of step with the hit
+ * test. CSS animates it on the compositor at the display's refresh rate, and the click reports the
+ * marker's measured position, so what you see is what you hit.
+ */
+function stirBar(ci: number, target: number, remaining: number): TemplateResult {
   const band = STIR_BAND * 100;
-  return html`<div class="stir" @click=${act((st) => stir(st, ci))} title="Tap while the marker is in the glowing band">
+  const onStir = (e: Event) => {
+    const pos = markerPosition(e.currentTarget as HTMLElement);
+    act((st) => stir(st, ci, pos))(e);
+  };
+  return html`<div class="stir" @click=${onStir} title="Tap while the marker is in the glowing band">
     <div class="stir-track">
-      <div class="stir-band" style="left:${Math.max(0, target * 100 - band)}%;width:${band * 2}%"></div>
-      <div class="stir-marker" style="left:${pos}%"></div>
+      <div class="stir-band" style="left:${(target - STIR_BAND) * 100}%;width:${band * 2}%"></div>
+      <div class="stir-marker"></div>
     </div>
-    <button class="btn small primary stir-btn">🥄 Stir · ${left.toFixed(1)}s</button>
+    <button class="btn small primary stir-btn">🥄 Stir · ${remaining.toFixed(1)}s</button>
   </div>`;
 }
 
@@ -59,7 +82,7 @@ export function brewView(s: GameState, m: Mods): TemplateResult {
           </select>
           ${r ? html`
             <div class="row">${r.inputs.map((inp) => chip(inp, count(s, inp.id)))} <span class="muted">→</span> ${chip({ id: r.id, qty: 1 })}</div>
-            ${c.stirLeft > 0 ? stirBar(i, c.stirTarget, c.stirLeft) : qualityOdds(s, m, r.id, c.active ? c.stirQ : 0)}
+            ${c.stirStart > 0 ? stirBar(i, c.stirTarget, Math.max(0, STIR_WINDOW - stirElapsed(c.stirStart))) : qualityOdds(s, m, r.id, c.active ? c.stirQ : 0)}
             <div class="row between small muted">
               <span>⏱ ${c.active ? fmtTime((r.time - c.progress) / rate) : fmtTime(r.time / rate)}</span>
               <span>Sells ~${gold(potionBasePrice(s, m, r.id))}</span>

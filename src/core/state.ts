@@ -1,7 +1,7 @@
 import type { CombatState, GameState, Stats } from './types';
 import { startGoldFor } from '../data/ascension';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export function xpToNext(level: number): number {
   return Math.floor(25 * 1.21 ** (level - 1) + 15 * level);

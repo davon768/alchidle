@@ -11,7 +11,8 @@
     "setup": "npm install && node scripts/claude-sync.mjs setup",
     "sync:status": "node scripts/claude-sync.mjs status",
     "sync:pull": "node scripts/claude-sync.mjs pull",
-    "sync:push": "node scripts/claude-sync.mjs push"
+    "sync:push": "node scripts/claude-sync.mjs push",
+    "bot": "node --experimental-strip-types --disable-warning=ExperimentalWarning --import ./scripts/register-ts.mjs scripts/balance-bot.ts"
   },
   "dependencies": {
     "lit-html": "^3.3.3"

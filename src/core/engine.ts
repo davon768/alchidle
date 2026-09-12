@@ -11,7 +11,7 @@ import { ACHIEVEMENTS } from '../data/achievements';
 import { CONTRACT_COUNT } from '../data/guilds';
 import { DUNGEONS, REWARD_GROWTH } from '../data/combat';
 import { MILESTONES, PROF_MAP, emptyBonus, profBonus, profLevel, type ProfBonus } from '../data/proficiency';
-import { QUAL_MAX, quality, qualityName, rollQuality, rollStirTarget, STIR_WINDOW } from '../data/quality';
+import { QUAL_MAX, quality, qualityName, rollQuality, rollStirTarget, stirElapsed, STIR_WINDOW } from '../data/quality';
 import { RESEARCH_MAP } from '../data/research';
 import { CROSS_CHANCE, TRAITS, seedKey, traitEffect } from '../data/mutations';
 import { dungeonUnlocked, tickCombat } from './combat';
@@ -314,7 +314,7 @@ export function syncSlots(s: GameState, m: Mods): void {
     if (arr.length > n) arr.length = n;
   };
   fit<Plot>(s.plots, Math.floor(m.plots), () => ({ plantId: null, progress: 0, ready: false, trait: null }));
-  fit<Cauldron>(s.cauldrons, Math.floor(m.cauldrons), () => ({ recipeId: null, progress: 0, active: false, repeat: false, stirLeft: 0, stirTarget: 0.5, stirQ: 0 }));
+  fit<Cauldron>(s.cauldrons, Math.floor(m.cauldrons), () => ({ recipeId: null, progress: 0, active: false, repeat: false, stirStart: 0, stirTarget: 0.5, stirQ: 0 }));
   fit(s.expeditions, Math.floor(m.expSlots), () => null);
   while (s.belt.length < Math.floor(m.potionSlots)) s.belt.push(null);
 }
@@ -339,7 +339,7 @@ export function startBrew(s: GameState, c: Cauldron, byHand = false): boolean {
   c.active = true;
   c.progress = 0;
   c.stirQ = carried > 0 ? carry / Math.max(1, carried) : 0;
-  c.stirLeft = byHand ? STIR_WINDOW : 0;
+  c.stirStart = byHand ? Date.now() : 0;
   c.stirTarget = rollStirTarget();
   return true;
 }
@@ -395,7 +395,8 @@ function rollCrossBreed(s: GameState, m: Mods, idx: number): string | null {
   return key;
 }
 
-export function harvestPlot(s: GameState, m: Mods, plot: Plot, idx = -1): void {
+/** `idx` is required: cross-breeding inspects the plot's neighbours, and a defaulted index silently disabled it. */
+export function harvestPlot(s: GameState, m: Mods, plot: Plot, idx: number): void {
   if (!plot.plantId || !plot.ready) return;
   const p = PLANT_MAP[plot.plantId];
   const b = profBonusOf(s, p.id);
@@ -404,7 +405,7 @@ export function harvestPlot(s: GameState, m: Mods, plot: Plot, idx = -1): void {
   s.stats.harvested++;
   gainXp(s, m, 1 + p.level * 0.2);
   gainProf(s, m, p.id);
-  if (idx >= 0) rollCrossBreed(s, m, idx);
+  rollCrossBreed(s, m, idx);
   plot.ready = false;
   plot.progress = 0;
   // A sown trait lasts for its own planting: the automatic replant puts back an ordinary herb.
@@ -550,7 +551,9 @@ export function tick(s: GameState, dt: number): void {
 
   // Cauldrons tended by a Brewer can repeat.
   s.cauldrons.forEach((c, ci) => {
-    if (c.stirLeft > 0) c.stirLeft = Math.max(0, c.stirLeft - dt);
+    // The stir window runs on the wall clock, not on dt, so it closes on time regardless of tick size
+    // (and is already closed by the time an offline catch-up finishes).
+    if (c.stirStart > 0 && stirElapsed(c.stirStart) >= STIR_WINDOW) c.stirStart = 0;
     let t = dt;
     for (let g = 0; c.active && c.recipeId && t > 0 && g < GUARD; g++) {
       const r = RECIPE_MAP[c.recipeId];
@@ -561,7 +564,7 @@ export function tick(s: GameState, dt: number): void {
       completeBrew(s, m, r, c.stirQ);
       c.active = false;
       c.progress = 0;
-      c.stirLeft = 0;
+      c.stirStart = 0;
       c.stirQ = 0;
       if (ci < m.autoBrew) {
         workXp(s, m, 'brewer', ci, r.time / 40);

@@ -60,18 +60,24 @@ export function rollQuality(q: number): number {
 
 // ── The stirring minigame ────────────────────────────────────
 /** Seconds the stir window stays open after a manual brew starts. */
-export const STIR_WINDOW = 3;
-/** Full sweeps of the marker across the bar during one window. */
-export const STIR_SWEEPS = 2.6;
+export const STIR_WINDOW = 3.5;
+/** Seconds for one left→right traverse of the bar. One full there-and-back cycle is twice this. */
+export const STIR_TRAVERSE = 1.1;
 /** Half-width of the sweet spot, as a fraction of the bar. */
-export const STIR_BAND = 0.1;
+export const STIR_BAND = 0.12;
 /** Quality score awarded by a dead-centre stir. */
 export const STIR_MAX = 0.7;
 
-/** Marker position 0–1, bouncing left↔right. Derived from the window timer, so it needs no extra state. */
-export function stirPos(remaining: number): number {
-  const elapsed = Math.max(0, STIR_WINDOW - remaining);
-  const phase = ((elapsed / STIR_WINDOW) * STIR_SWEEPS * 2) % 2;
+/**
+ * Marker position 0–1, bouncing left↔right, as a function of seconds since the window opened.
+ *
+ * This takes wall-clock elapsed time rather than the ticked countdown on purpose: the engine ticks at
+ * 10 Hz, so a tick-derived marker moved in visible jumps *and* disagreed with what the player clicked on.
+ * The CSS animation in styles.css (`stir-sweep`) is the same function — alternate direction, period
+ * STIR_TRAVERSE — so the bar renders at 60 fps and the hit test still matches what is on screen.
+ */
+export function stirPos(elapsed: number): number {
+  const phase = (Math.max(0, elapsed) / STIR_TRAVERSE) % 2;
   return phase <= 1 ? phase : 2 - phase;
 }
 
@@ -85,7 +91,12 @@ export function stirBonus(pos: number, target: number): number {
   return STIR_MAX * (0.45 + 0.55 * (1 - d / STIR_BAND));
 }
 
-/** Where the sweet spot sits for a brew. Kept away from the edges so it is always reachable. */
+/** Where the sweet spot sits for a brew. Kept far enough from the edges that the band always fits. */
 export function rollStirTarget(): number {
-  return 0.15 + Math.random() * 0.7;
+  return STIR_BAND + Math.random() * (1 - 2 * STIR_BAND);
+}
+
+/** Seconds a stir window has been open, from the wall-clock stamp taken when the brew started. */
+export function stirElapsed(stirStart: number, now = Date.now()): number {
+  return (now - stirStart) / 1000;
 }
