@@ -1,8 +1,9 @@
 import { html, type TemplateResult } from 'lit-html';
 import type { GameState, Mods } from '../../core/types';
 import { ALL_ITEMS, item } from '../../data/items';
-import { buyUnitPrice, count, demandOf, sellValue } from '../../core/engine';
-import { buy, sell, sellAllPotions, toggleAutoSell } from '../../core/actions';
+import { buyUnitPrice, count, demandOf, qualCounts, sellValue } from '../../core/engine';
+import { buy, sell, sellAllPotions, sellTier, toggleAutoSell } from '../../core/actions';
+import { quality } from '../../data/quality';
 import { fmt, fmtPct } from '../../core/format';
 import { act, gold, sectionTitle, ui } from '../common';
 
@@ -12,7 +13,7 @@ export function marketView(s: GameState, m: Mods): TemplateResult {
   const hot = s.hotPotion && (s.demand[s.hotPotion] ?? 1) > 1 ? item(s.hotPotion) : null;
 
   return html`<div class="view">
-    ${sectionTitle('🏪 Market', 'Selling lots of one potion lowers its price — demand recovers over time')}
+    ${sectionTitle('🏪 Market', 'Selling lots of one potion lowers its price — demand recovers over time. Finer bottles sell for more, and can be sold on their own.')}
     ${hot ? html`<div class="goal">📣 Hot seller: <b>${hot.icon} ${hot.name}</b> at ${fmtPct(demandOf(s, hot.id))} demand!</div>` : ''}
 
     <div class="card">
@@ -35,18 +36,38 @@ export function marketView(s: GameState, m: Mods): TemplateResult {
           ${owned.length === 0 ? html`<tr><td colspan="6" class="dim">Nothing to sell here yet.</td></tr>` : ''}
           ${owned.map((i) => {
             const have = Math.floor(count(s, i.id));
+            const isPotion = i.kind === 'potion';
+            // Each quality is really a different good at a different price, so once you hold more
+            // than one, give each its own row instead of hiding them behind a single total.
+            const tiers = isPotion
+              ? qualCounts(s, i.id).map((n, t) => ({ t, n: Math.floor(n) })).filter((x) => x.n > 0)
+              : [];
+            const split = tiers.length > 1;
             return html`<tr>
-              <td>${i.icon} ${i.name}</td>
+              <td>${i.icon} ${i.name}${isPotion && !split && tiers[0]?.t > 0
+                ? html` <span class="qual-chip" style="--q:${quality(tiers[0].t).color}">${quality(tiers[0].t).mark} ${quality(tiers[0].t).name}</span>` : ''}</td>
               <td>${fmt(have)}</td>
               <td>${gold(sellValue(s, m, i.id, 1))}</td>
-              ${i.kind === 'potion' ? html`<td class=${demandOf(s, i.id) < 0.6 ? 'warn' : demandOf(s, i.id) > 1 ? 'good' : ''}>${fmtPct(demandOf(s, i.id))}</td>` : ''}
+              ${isPotion ? html`<td class=${demandOf(s, i.id) < 0.6 ? 'warn' : demandOf(s, i.id) > 1 ? 'good' : ''}>${fmtPct(demandOf(s, i.id))}</td>` : ''}
               <td><div class="row">
                 <button class="btn small" @click=${act((st) => sell(st, i.id, 1))}>1</button>
                 <button class="btn small" ?disabled=${have < 10} @click=${act((st) => sell(st, i.id, 10))}>10</button>
                 <button class="btn small gold" title=${`All for ~${fmt(sellValue(s, m, i.id, have))}`} @click=${act((st) => sell(st, i.id, have))}>All</button>
               </div></td>
-              ${i.kind === 'potion' && m.autoSell > 0 ? html`<td><button class="btn small ${s.autoSell[i.id] ? 'on' : ''}" @click=${act((st) => toggleAutoSell(st, i.id))}>${s.autoSell[i.id] ? 'ON' : 'OFF'}</button></td>` : ''}
-            </tr>`;
+              ${isPotion && m.autoSell > 0 ? html`<td><button class="btn small ${s.autoSell[i.id] ? 'on' : ''}" @click=${act((st) => toggleAutoSell(st, i.id))}>${s.autoSell[i.id] ? 'ON' : 'OFF'}</button></td>` : ''}
+            </tr>
+            ${split ? tiers.map(({ t, n }) => html`<tr class="qual-subrow">
+              <td><span class="qual-chip" style="--q:${quality(t).color}">${quality(t).mark || '·'} ${quality(t).name}</span></td>
+              <td>${fmt(n)}</td>
+              <td>${gold(sellValue(s, m, i.id, 1, t))}</td>
+              <td class="dim">×${quality(t).value} value</td>
+              <td><div class="row">
+                <button class="btn small" @click=${act((st) => sellTier(st, i.id, t, 1))}>1</button>
+                <button class="btn small gold" title=${`All ${quality(t).name} for ~${fmt(sellValue(s, m, i.id, n, t))}`}
+                  @click=${act((st) => sellTier(st, i.id, t, n))}>All ${n}</button>
+              </div></td>
+              ${m.autoSell > 0 ? html`<td></td>` : ''}
+            </tr>`) : ''}`;
           })}
         </table>
       </div>

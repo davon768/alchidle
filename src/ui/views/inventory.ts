@@ -61,7 +61,7 @@ export function inventoryView(s: GameState, m: Mods): TemplateResult {
                 <span class="inv-icon">${i.icon}</span>
                 <div class="col" style="gap:0"><b>${i.name}</b><span class="inv-qty">${fmt(Math.floor(count(s, i.id)))}</span></div>
               </div>
-              ${qualityChips(s, i.id)}
+              ${qualityChips(s, i.id, true)}
               <div class="dim">${KIND_LABEL[i.kind]} · sells ~${fmt(sellValue(s, m, i.id, 1))} each${PROF_MAP[i.id] ? ` · 🎖️ Lv ${profLevelOf(s, i.id)}` : ''}</div>
               ${fx ? html`<div class="small good">${fx.map((f) => describeCombatEffect(f, potionPotency(s, m, i.id))).join(' · ')}</div>` : ''}
               ${list.length ? html`<div class="dim">Used in: ${list.slice(0, 4).join(', ')}${list.length > 4 ? ` +${list.length - 4} more` : ''}</div>` : ''}

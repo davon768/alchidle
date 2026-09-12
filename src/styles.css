@@ -393,3 +393,6 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
   .gi-row { grid-template-columns: 1fr auto; }
   .gi-row .dim:nth-child(2), .gi-row .dim:nth-child(3) { display: none; }
 }
+
+.qual-subrow > td { background: #170f28; border-top: none; }
+.qual-subrow > td:first-child { padding-left: 22px; }

@@ -70,13 +70,13 @@ export function costChips(s: GameState, stacks: ItemStack[], times = 1): Templat
  * Per-tier breakdown for a potion, e.g. "✦ 3 · ✦✦ 1". Renders nothing when everything on hand is Common,
  * so plain inventories stay uncluttered.
  */
-export function qualityChips(s: GameState, id: string): TemplateResult | typeof nothing {
+export function qualityChips(s: GameState, id: string, includeCommon = false): TemplateResult | typeof nothing {
   if (item(id).kind !== 'potion') return nothing;
   const tiers = qualCounts(s, id);
-  const parts = tiers.map((n, t) => ({ n: Math.floor(n), t })).filter((x) => x.t > 0 && x.n > 0);
+  const parts = tiers.map((n, t) => ({ n: Math.floor(n), t })).filter((x) => x.n > 0 && (includeCommon || x.t > 0));
   if (!parts.length) return nothing;
   return html`<div class="qual-row">${parts.map(
-    (x) => html`<span class="qual-chip" style="--q:${quality(x.t).color}" title=${`${quality(x.t).name}: ×${quality(x.t).value} value, ×${quality(x.t).potency} potency`}>${quality(x.t).mark} ${fmt(x.n)}</span>`,
+    (x) => html`<span class="qual-chip" style="--q:${quality(x.t).color}" title=${`${quality(x.t).name}: ×${quality(x.t).value} value, ×${quality(x.t).potency} combat potency`}>${quality(x.t).mark || quality(x.t).name} ${fmt(x.n)}</span>`,
   )}</div>`;
 }
 

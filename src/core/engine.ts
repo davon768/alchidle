@@ -247,11 +247,15 @@ export function qualityMixMult(s: GameState, id: string, qty: number): number {
   return (sum + left) / qty;
 }
 
-/** Total gold for selling `qty` of an item; potion prices slide down as demand drops with each unit. */
-export function sellValue(s: GameState, m: Mods, id: string, qty: number): number {
+/**
+ * Total gold for selling `qty` of an item; potion prices slide down as demand drops with each unit.
+ * Pass `tier` to price that quality specifically, rather than the mix a lowest-first sale would take.
+ */
+export function sellValue(s: GameState, m: Mods, id: string, qty: number, tier?: number): number {
   if (qty <= 0) return 0;
   if (item(id).kind !== 'potion') return ingredientUnitPrice(s, m, id) * qty;
-  const base = potionBasePrice(s, m, id) * qualityMixMult(s, id, qty);
+  const mult = tier === undefined ? qualityMixMult(s, id, qty) : quality(tier).value;
+  const base = potionBasePrice(s, m, id) * mult;
   const d = demandOf(s, id);
   const step = demandDrop(s, id);
   if (d <= DEMAND_FLOOR) return base * DEMAND_FLOOR * qty;
@@ -260,11 +264,24 @@ export function sellValue(s: GameState, m: Mods, id: string, qty: number): numbe
   return base * (sliding + (qty - aboveFloor) * DEMAND_FLOOR);
 }
 
-export function doSell(s: GameState, m: Mods, id: string, qty: number): number {
-  qty = Math.min(qty, count(s, id));
+/** Take exactly `qty` bottles from one quality tier. Returns how many were actually taken. */
+export function removeTier(s: GameState, id: string, tier: number, qty: number): number {
+  if (!isPotion(id)) return 0;
+  const tiers = qualCounts(s, id);
+  const t = Math.max(0, Math.min(QUAL_MAX, Math.floor(tier)));
+  const take = Math.min(qty, tiers[t]);
+  if (take <= 0) return 0;
+  tiers[t] -= take;
+  s.items[id] = count(s, id) - take;
+  return take;
+}
+
+export function doSell(s: GameState, m: Mods, id: string, qty: number, tier?: number): number {
+  qty = Math.min(qty, tier === undefined ? count(s, id) : qualCounts(s, id)[Math.max(0, Math.min(QUAL_MAX, Math.floor(tier)))]);
   if (qty <= 0) return 0;
-  const gold = sellValue(s, m, id, qty);
-  removeItem(s, id, qty);
+  const gold = sellValue(s, m, id, qty, tier);
+  if (tier === undefined) removeItem(s, id, qty);
+  else removeTier(s, id, tier, qty);
   addGold(s, gold);
   if (item(id).kind === 'potion') {
     s.demand[id] = Math.max(DEMAND_FLOOR, demandOf(s, id) - demandDrop(s, id) * qty);

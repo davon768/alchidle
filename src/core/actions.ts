@@ -202,6 +202,11 @@ export function toggleExpRepeat(s: GameState, slot: number): void {
 }
 
 // ── Market ───────────────────────────────────────────────────
+/** Sell bottles of one specific quality, rather than letting a lowest-first sale pick for you. */
+export function sellTier(s: GameState, id: string, tier: number, qty: number): number {
+  return doSell(s, computeMods(s), id, qty, tier);
+}
+
 export function sell(s: GameState, id: string, qty: number): number {
   return doSell(s, computeMods(s), id, qty);
 }
