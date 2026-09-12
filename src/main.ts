@@ -6,6 +6,7 @@ import { computeMods } from './core/mods';
 import { checkGoals } from './core/goals';
 import { setNotation } from './core/format';
 import { mount, showOfflineSummary } from './ui/app';
+import { runtime } from './core/diagnostics';
 
 const TICK_MS = 100;
 const RENDER_MS = 100;
@@ -74,10 +75,13 @@ function frame(t: number): void {
   requestAnimationFrame(frame);
   if (t - lastRender < RENDER_MS) return;
   lastRender = t;
+  runtime.renders++;
   try {
     rerender();
   } catch (err) {
     renderErrors++;
+    runtime.renderErrors = renderErrors;
+    runtime.lastError = String(err);
     if (renderErrors <= 3) {
       console.error('[alchemy] render failed — the game is still running:', err);
       if (renderErrors === 1) toast('Something went wrong drawing the screen. The game is still running; please report it.', 'warn');

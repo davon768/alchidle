@@ -8,6 +8,7 @@ import { game } from '../../core/game';
 import { toast } from '../../core/engine';
 import { fmt, fmtTime, setNotation } from '../../core/format';
 import { act, closeModal, openModal, refresh, sectionTitle } from '../common';
+import { domNodes, heapMB, rendersPerSecond, runtime } from '../../core/diagnostics';
 
 function showExport(): void {
   const code = exportSave(game.s);
@@ -80,6 +81,20 @@ export function journalView(s: GameState): TemplateResult {
 
     ${sectionTitle('📊 Statistics')}
     <div class="card table-wrap"><table class="table">${rows.map(([k, v]) => html`<tr><td class="muted">${k}</td><td><b>${v}</b></td></tr>`)}</table></div>
+
+    ${sectionTitle('🩺 Diagnostics', 'Useful if the game ever feels slow or the tab crashes — quote these numbers in a bug report')}
+    <div class="card">
+      <div class="stat-grid">
+        <div>⏱ ${fmtTime((Date.now() - runtime.started) / 1000)} this session</div>
+        <div>🖼 ${rendersPerSecond().toFixed(1)} draws/sec</div>
+        <div>🧩 ${fmt(domNodes())} elements (peak ${fmt(runtime.peakNodes)})</div>
+        <div>💾 ${fmt(Math.round(exportSave(game.s).length / 1024))} KB save</div>
+        <div>🧠 ${heapMB() === null ? 'n/a in this browser' : `${heapMB()} MB heap`}</div>
+        <div class=${runtime.renderErrors > 0 ? 'warn' : ''}>⚠️ ${runtime.renderErrors} draw error${runtime.renderErrors === 1 ? '' : 's'}</div>
+      </div>
+      ${runtime.lastError ? html`<div class="small warn">Last error: ${runtime.lastError}</div>` : ''}
+      <div class="dim">Elements should settle at a few hundred and stay there. A peak that keeps climbing the longer you play is the signature of a leak — that is the number worth reporting.</div>
+    </div>
 
     ${sectionTitle('⚙️ Settings & Save')}
     <div class="card">

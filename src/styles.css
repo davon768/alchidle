@@ -25,12 +25,23 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
-  background: radial-gradient(ellipse at top, #2a1b45 0%, var(--bg) 60%) fixed, var(--bg);
+  background: var(--bg);
   color: var(--text);
   font: 14px/1.45 var(--font-body);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
   user-select: none;
+}
+/* The page backdrop lives on its own fixed layer rather than using `background-attachment: fixed`,
+   which makes Firefox repaint the entire viewport whenever a scrolling pane moves — and this app has
+   three scrolling panes and redraws about ten times a second on top of that. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at top, #2a1b45 0%, var(--bg) 60%);
 }
 h1, h2, h3 { font-family: var(--font-head); letter-spacing: 0.02em; margin: 0; }
 button { font: inherit; color: inherit; }
