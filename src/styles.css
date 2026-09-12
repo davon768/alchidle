@@ -6,7 +6,7 @@
   --border: #3d3060;
   --text: #f1ebff;
   --muted: #a99dc8;
-  --dim: #6f6590;
+  --dim: #9489bd;
   --gold: #f5c542;
   --accent: #b57bff;
   --accent2: #7f5af0;
@@ -140,6 +140,8 @@ button { font: inherit; color: inherit; }
 .btn.primary { background: linear-gradient(180deg, #8d63f5, #6a45d8); border-color: #9d7bff; color: #fff; }
 .btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, #9b74ff, #7550e6); }
 .btn.gold { background: linear-gradient(180deg, #f5c542, #d49a1c); border-color: #ffd970; color: #2a1c00; }
+.btn.gold .chip { background: rgba(255, 255, 255, 0.5); border-color: rgba(0, 0, 0, 0.3); color: #2a1c00; }
+.btn.gold .chip-have, .btn.gold .dim { color: #5c4400; }
 .btn.danger { background: #5a2030; border-color: #8a3348; }
 .btn.small { padding: 5px 9px; font-size: 12px; border-radius: 7px; }
 .btn.on { background: #2f5a35; border-color: var(--good); }
@@ -150,7 +152,7 @@ button { font: inherit; color: inherit; }
 .bar.tall { height: 18px; }
 .bar-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; text-shadow: 0 1px 2px #000; }
 
-.chip { display: inline-flex; align-items: center; gap: 3px; background: #150f22; border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.chip { display: inline-flex; align-items: center; gap: 3px; background: #150f22; border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--text); }
 .chip.lack { border-color: var(--warn); color: var(--warn); }
 .chip-have { color: var(--dim); font-weight: 400; }
 .chip-icon { font-size: 13px; }
@@ -158,6 +160,8 @@ button { font: inherit; color: inherit; }
 .pill-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .pill-tabs .btn { border-radius: 999px; }
 .pill-tabs .btn.active { background: var(--accent2); border-color: var(--accent); color: #fff; }
+/* Secondary text keeps its own colour by default, which is far too dark on the accent fill. */
+.pill-tabs .btn.active .dim { color: #fff; }
 
 select { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 7px 8px; font: inherit; max-width: 100%; }
 textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px; font: 12px monospace; user-select: text; }
@@ -227,7 +231,7 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
   .brand { display: none; }
   .lvl { flex: 1 1 120px; min-width: 100px; }
   .nav { flex-direction: row; overflow-x: auto; border-right: none; border-top: 1px solid var(--border); padding: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom)); gap: 2px; }
-  .tab { flex-direction: column; gap: 2px; padding: 6px 8px; font-size: 10px; min-width: 58px; align-items: center; text-align: center; }
+  .tab { flex-direction: column; gap: 2px; padding: 6px 8px; font-size: 11px; min-width: 58px; align-items: center; text-align: center; }
   .tab .icon { font-size: 20px; }
   .main { padding: 14px 12px 30px; }
   .skill-row .row-label { display: none; }
@@ -256,7 +260,9 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .bar.shield .fill { background: linear-gradient(90deg, #8fd3ff, #d9f2ff); }
 .bar.enemy .fill { background: linear-gradient(90deg, #7a1a1a, #d44a2a); }
 .bar.small { height: 7px; }
-.rank-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px; border-radius: 4px; background: #3a2f55; }
+/* A 7px bar cannot hold an 11px label. Any labelled bar gets enough height, whatever class it was given. */
+.bar:has(.bar-label) { min-height: 18px; }
+.rank-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px; border-radius: 4px; background: #3a2f55; }
 .rank-tag.elite { background: #4fb3ff33; color: #8fd0ff; }
 .rank-tag.boss { background: #ff9f4333; color: #ffc27a; }
 .rank-tag.champion { background: #ff4f7a33; color: #ff8fa8; }
@@ -277,7 +283,7 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .inv-tile .inv-top { display: flex; align-items: center; gap: 10px; }
 .inv-tile .inv-icon { font-size: 28px; }
 .inv-tile .inv-qty { font-size: 18px; font-weight: 700; }
-.badge-new { position: absolute; top: 6px; right: 8px; font-size: 9px; font-weight: 800; background: var(--epic); color: #2a0020; padding: 1px 6px; border-radius: 999px; }
+.badge-new { position: absolute; top: 6px; right: 8px; font-size: 11px; font-weight: 800; background: var(--epic); color: #2a0020; padding: 1px 6px; border-radius: 999px; }
 
 @media (max-width: 760px) {
   .arena { grid-template-columns: 1fr 1fr; }
@@ -329,7 +335,7 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 
 /* ── Proficiency milestones ────────────── */
 .ms-row { display: flex; gap: 4px; flex-wrap: wrap; }
-.ms-pip { width: 28px; height: 20px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; background: #150f22; border: 1px solid var(--border); color: var(--dim); cursor: help; }
+.ms-pip { width: 30px; height: 21px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #150f22; border: 1px solid var(--border); color: var(--dim); cursor: help; }
 .ms-pip.on { background: var(--pip, var(--accent)); border-color: var(--pip, var(--accent)); color: #140d20; }
 
 /* ── Potion quality ─────────────────────────────────────── */
@@ -350,7 +356,7 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .stir-btn { white-space: nowrap; }
 
 /* ── Cross-breeding ─────────────────────────────────────── */
-.trait-badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; color: var(--t); border: 1px solid var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); }
+.trait-badge { font-size: 11px; padding: 1px 6px; border-radius: 8px; color: var(--t); border: 1px solid var(--t); background: color-mix(in srgb, var(--t) 14%, transparent); }
 .seed-chip { border-color: var(--t) !important; color: var(--t); }
 .row.wrap { flex-wrap: wrap; }
 
@@ -369,7 +375,7 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .forecast.is-good { border-color: #2f7a3f; background: #10230f; }
 .forecast.is-bad { border-color: #8a3030; background: #260f10; }
 .forecast > div { display: flex; gap: 5px; align-items: baseline; font-size: 13px; }
-.forecast .dim { font-size: 11px; }
+.forecast .dim { font-size: 12px; }
 .forecast .verdict { flex: 1 1 100%; font-size: 12px; font-weight: 600; }
 
 .gear-impact { display: flex; flex-direction: column; gap: 3px; margin: 8px 0; }

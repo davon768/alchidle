@@ -14,7 +14,7 @@ function rewardChips(g: GoalDef): TemplateResult {
 function progressBar(s: GameState, g: GoalDef, status: GoalStatus): TemplateResult | string {
   if (!g.progress || status === 'claimed' || status === 'done') return '';
   const [cur, max] = g.progress(s);
-  return bar(cur / max, undefined, `${fmt(Math.floor(cur))} / ${fmt(max)}`, 'small');
+  return bar(cur / max, undefined, `${fmt(Math.floor(cur))} / ${fmt(max)}`, 'tall');
 }
 
 function actions(g: GoalDef, status: GoalStatus, inBanner: boolean): TemplateResult {
