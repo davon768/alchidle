@@ -368,8 +368,13 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .swing-row { display: grid; grid-template-columns: minmax(90px, 150px) 1fr minmax(140px, 230px); align-items: center; gap: 10px; }
 .swing-who { font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .swing-meta { font-size: 11px; color: var(--muted); text-align: right; white-space: nowrap; }
-/* The swing bars refill from zero every swing; a transition would animate the reset backwards. */
-.swing-row .bar .fill { transition: none; }
+/* Swing bars are animated by the compositor (see swingCss in views/dungeon.ts), so they must not
+   also carry the width transition the value-driven bars use. scaleX keeps it off the layout path. */
+.swing-fill { width: 100%; transform-origin: left center; transition: none; }
+@keyframes swing-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* The potion cooldown is a one-shot countdown, so interpolating between renders is enough. */
+.potion-cd .fill { transition: width 0.12s linear; }
+@media (prefers-reduced-motion: reduce) { .swing-fill { animation: none !important; } }
 
 .forecast { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; margin-top: 4px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); }
 .forecast.is-good { border-color: #2f7a3f; background: #10230f; }

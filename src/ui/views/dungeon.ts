@@ -23,6 +23,47 @@ export function heroStatGrid(hero: HeroStats, m: Mods): TemplateResult {
 }
 
 /**
+ * Swing bars run as a looping CSS animation rather than a width bound each render.
+ *
+ * The app re-renders about 10 times a second, so a value-driven bar on a one-second swing stepped
+ * 10% at a time. This hands the motion to the compositor and only re-syncs the animation's phase when
+ * it has actually drifted from the game's timer (a new enemy, a slow landing or expiring, or the
+ * document timeline pausing while the tab is hidden). Between re-syncs the emitted style string is
+ * identical, so lit-html leaves the attribute alone and the animation keeps running untouched.
+ */
+const swingSync = new Map<string, { period: number; css: string; syncT: number; f0: number }>();
+const SWING_DRIFT = 0.08; // fraction of a cycle we tolerate before re-phasing
+
+export function swingCss(key: string, fraction: number, period: number): string {
+  const now = performance.now() / 1000;
+  const prev = swingSync.get(key);
+  let resync = !prev || Math.abs(prev.period - period) > 1e-6;
+  if (!resync && prev) {
+    const expected = ((now - prev.syncT) / period + prev.f0) % 1;
+    let drift = Math.abs(expected - fraction);
+    if (drift > 0.5) drift = 1 - drift; // the cycle wraps
+    resync = drift > SWING_DRIFT;
+  }
+  if (resync) {
+    swingSync.set(key, {
+      period,
+      syncT: now,
+      f0: fraction,
+      css: `animation: swing-fill ${period.toFixed(3)}s linear infinite; animation-delay: ${(-fraction * period).toFixed(3)}s;`,
+    });
+  }
+  return swingSync.get(key)!.css;
+}
+
+/** A bar that fills smoothly toward the next swing, phase-locked to `fraction` of `period`. */
+function swingBar(key: string, fraction: number, period: number, color: string, label: string): TemplateResult {
+  return html`<div class="bar tall">
+    <div class="fill swing-fill" style="background:${color};${swingCss(key, fraction, period)}"></div>
+    <span class="bar-label">${label}</span>
+  </div>`;
+}
+
+/**
  * The fight, read out plainly: who swings when, how hard each hit lands, and who is winning.
  * All of it is live combat state — heroTimer/enemyTimer are already 0–1 fractions of the way to the
  * next swing, so they render straight as bars.
@@ -36,18 +77,18 @@ function telemetryPanel(s: GameState, hero: HeroStats, e: Enemy): TemplateResult
   return html`<div class="telemetry">
     <div class="swing-row">
       <span class="swing-who">🧙 You</span>
-      ${bar(c.heroTimer, '#5fd068', `${((1 - c.heroTimer) * HERO_SWING).toFixed(2)}s`, 'tall')}
+      ${swingBar('hero', c.heroTimer, HERO_SWING, '#5fd068', `${((1 - c.heroTimer) * HERO_SWING).toFixed(2)}s`)}
       <span class="swing-meta">swings every ${HERO_SWING.toFixed(2)}s · ${fmt(f.heroHit)} a hit</span>
     </div>
     <div class="swing-row">
       <span class="swing-who">${e.icon} ${e.name}</span>
-      ${bar(c.enemyTimer, '#d44a2a', `${((1 - c.enemyTimer) * every).toFixed(2)}s`, 'tall')}
+      ${swingBar('enemy', c.enemyTimer, every, '#d44a2a', `${((1 - c.enemyTimer) * every).toFixed(2)}s`)}
       <span class="swing-meta">swings every ${every.toFixed(2)}s${c.slow > 0 ? ' ❄️ slowed' : ''} · ${fmt(f.enemyHit)} a hit</span>
     </div>
     <div class="swing-row">
       <span class="swing-who">🧪 Potion</span>
-      ${bar(c.potionCd > 0 ? 1 - c.potionCd / POTION_CD : 1, c.potionCd > 0 ? '#6f6590' : '#4fb3ff',
-        c.potionCd > 0 ? `${c.potionCd.toFixed(1)}s` : 'ready', 'tall')}
+      ${bar(c.potionCd > 0 ? 1 - c.potionCd / POTION_CD : 1, c.potionCd > 0 ? '#8f83b5' : '#4fb3ff',
+        c.potionCd > 0 ? `${c.potionCd.toFixed(1)}s` : 'ready', 'tall potion-cd')}
       <span class="swing-meta">drinks itself when a trigger is met</span>
     </div>
 
