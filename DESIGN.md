@@ -187,6 +187,26 @@ it, so moving up is always the obvious choice. Measured spread from the first ti
 | Zones | 106× gold/min and xp/min | `bounty` multiplies drop quantities; each zone is 1.5–3.1× the last |
 | Plants | 106× net value/min | yields climb 3 → 8.2; grow time and seed cost already scale with herb value, so a flat yield left every bed earning the same |
 
+**Demand is the fourth curve, and the one that stops a single recipe carrying a run.** Selling drops a
+potion's demand 0.0025 a unit; demand recovers toward 100% by `DEMAND_RECOVER` (0.23%) of the remaining
+gap each second, a time constant of about 7 minutes. A recipe sold steadily at R units a second settles
+at `1 − 0.0025·R / k`, so the sustainable income from one recipe is capped by how *cheap* it is:
+
+| Recipe | Sustained gold/min on three cauldrons | Demand it settles at |
+|---|---|---|
+| Minor Healing Tonic (15g) | 222 | 0.46 |
+| Alchemist's Fire (520g) | 2,807 | 0.89 |
+| Philosopher's Panacea (150,000g) | 44,828 | 0.99 |
+
+162× between the ends, and note demand *rises* as you climb: reaching 200K gold needs about 13,000 tonics
+but only ~290 Dreamweaver Philters, so a cheap recipe saturates its own market and an expensive one
+hardly dents it. That is the pressure to move up the recipe list, and it falls out of the arithmetic
+rather than being a rule. Pure Minor Healing Tonic now takes ~12 hours to reach a Magnum Opus.
+
+Recovery used to be a flat 0.004 a second against a 0.005 drop, which made the system inert: under
+~0.8 sales a second demand never moved at all, above it demand fell straight to the floor, and there
+was no gradient in between. 8,940 tonics could be sold with demand never leaving 1.00.
+
 Zones and plants used to be nearly flat — 5.5× and 4.9× across the whole game — which is why the
 Whispering Meadow and Sunleaf never stopped being reasonable choices. They are matched to the others now.
 

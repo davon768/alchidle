@@ -214,9 +214,32 @@ export const DEMAND_FLOOR = 0.2;
 export function demandOf(s: GameState, id: string): number {
   return s.demand[id] ?? 1;
 }
+/**
+ * How far one sale pushes a potion's demand down. Market proficiency softens it.
+ *
+ * Paired with DEMAND_RECOVER below, this is what stops a single recipe carrying a whole run. The two
+ * numbers set an equilibrium: a potion sold steadily at R a second settles at `1 − 0.0025·R / k`, so
+ * concentrating on one recipe depresses its price and spreading across several keeps them all healthy.
+ *
+ * The useful consequence is that a *valuable* recipe barely notices. Reaching 200K gold needs ~13,000
+ * Minor Healing Tonics but only ~290 Dreamweaver Philters, so the expensive brew hardly dents its own
+ * market. That is the pressure to move up the recipe list, and it falls out of the arithmetic rather
+ * than being a rule anyone has to be told.
+ */
 function demandDrop(s: GameState, id: string): number {
-  return 0.005 / (1 + profBonusOf(s, id).market);
+  return 0.0025 / (1 + profBonusOf(s, id).market);
 }
+
+/**
+ * Demand pulls back toward 100% by this fraction of the remaining gap each second.
+ *
+ * It used to recover a flat 0.004 a second, which made the whole system inert: a sale cost 0.005 and a
+ * second of recovery gave 0.004 back, so anything under ~0.8 sales a second never moved the price at
+ * all, and anything above it fell straight to the floor. There was no gradient — 8,940 tonics could be
+ * sold with demand never leaving 1.00. Recovering a share of the gap instead gives a real curve, and
+ * a time constant of about 7 minutes: a market that has been flooded takes a while to want more.
+ */
+export const DEMAND_RECOVER = 0.0023;
 export function resonanceMult(s: GameState): number {
   return 1 + STONE_RESONANCE * s.asc.total;
 }
@@ -642,7 +665,9 @@ export function tick(s: GameState, dt: number): void {
   // Market demand drifts back toward 100%; a random potion periodically becomes a hot seller.
   for (const id of Object.keys(s.demand)) {
     const d = s.demand[id];
-    s.demand[id] = d < 1 ? Math.min(1, d + dt * 0.004 * m.demandRecovery) : Math.max(1, d - dt * 0.002);
+    // Proportional both ways: back up toward 100% after a glut, and back down from a hot-seller spike.
+    const rate = (d < 1 ? DEMAND_RECOVER * m.demandRecovery : DEMAND_RECOVER * 0.6) * dt;
+    s.demand[id] = d + (1 - d) * Math.min(1, rate);
   }
   s.hotTimer -= dt;
   if (s.hotTimer <= 0) {
