@@ -175,7 +175,20 @@ Stones and eternal perks, proficiency, achievements, lifetime stats, settings an
 - `stonesFor` in `data/ascension.ts`: prestige formula and the 200K gold minimum
 - `riftRewardMult` / `riftTimeMult` in `data/zones.ts`: endless scaling
 - `rankThreshold` in `data/guilds.ts`: guild rank curve
-- Recipe `value`/`time`/`xp`, plant `cost`/`time`/`yield`, upgrade `baseCost`/`growth`
+- Recipe `value`/`time`/`xp`, plant `cost`/`time`/`yield`, zone `xp`/`bounty`, upgrade `baseCost`/`growth`
+
+**Reward curves.** Every line of content should be worth roughly 1.10× more per level than the one below
+it, so moving up is always the obvious choice. Measured spread from the first tier to the last:
+
+| System | Spread | Notes |
+|---|---|---|
+| Recipes | 100× gold/sec | 2.5 → 250 |
+| Dungeons | 1100× gold, 212× xp per kill | steepest, and the model the others were matched to |
+| Zones | 106× gold/min and xp/min | `bounty` multiplies drop quantities; each zone is 1.5–3.1× the last |
+| Plants | 106× net value/min | yields climb 3 → 8.2; grow time and seed cost already scale with herb value, so a flat yield left every bed earning the same |
+
+Zones and plants used to be nearly flat — 5.5× and 4.9× across the whole game — which is why the
+Whispering Meadow and Sunleaf never stopped being reasonable choices. They are matched to the others now.
 
 Pacing targets: first ascension at about 2–4 hours of active play, the Panacea recipe (level 60) around the 3rd–5th ascension, and Rift depth plus infinite nodes as the post-content grind.
 

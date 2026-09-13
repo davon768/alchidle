@@ -8,6 +8,7 @@
  *   npm run bot -- --no-research      never start a study
  *   npm run bot -- --no-hire          never hire apprentices
  *   npm run bot -- --hire-ratio 25    hire only when one costs under 1/25th of the purse
+ *   npm run bot -- --starter          only ever use the lowest tier of content it has unlocked
  *   npm run bot -- --json             machine-readable output
  *
  * The two toggles exist to isolate a system's contribution: run with and without it and diff the
@@ -51,6 +52,12 @@ export interface BotOptions {
    * because upgrades drain the purse every step. 0 disables hiring entirely.
    */
   hireRatio: number;
+  /**
+   * Play like someone who never moves on: brew the cheapest recipe, plant the cheapest herb, send
+   * every party to the first zone. Compared against the default (always the best available) this
+   * measures whether the game applies any pressure to progress through its own content.
+   */
+  starter: boolean;
 }
 
 export interface BotResult {
@@ -81,7 +88,9 @@ function tendGarden(s: GameState, m: Mods, opts: BotOptions): void {
   harvestAll(s);
   const affordable = PLANTS.filter((p) => p.level <= s.level && s.gold > plantCost(s, m, p) * 4);
   if (!affordable.length) return;
-  const choices = opts.singleHerb ? [affordable[affordable.length - 1]] : affordable.slice(-2);
+  const choices = opts.starter
+    ? [affordable[0]]
+    : opts.singleHerb ? [affordable[affordable.length - 1]] : affordable.slice(-2);
 
   // Sow any mutated seeds first — they are strictly better than a plain sowing.
   for (const [key, n] of Object.entries(s.seeds)) {
@@ -96,10 +105,11 @@ function tendGarden(s: GameState, m: Mods, opts: BotOptions): void {
   });
 }
 
-function tendCauldrons(s: GameState, m: Mods): void {
+function tendCauldrons(s: GameState, m: Mods, opts: BotOptions): void {
   s.cauldrons.forEach((c, i) => {
     if (c.active) return;
-    const r = last(unlockedRecipes(s), (rc) => hasAll(s, rc.inputs));
+    const usable = unlockedRecipes(s).filter((rc) => hasAll(s, rc.inputs));
+    const r = opts.starter ? usable[0] : usable[usable.length - 1];
     if (!r) return;
     selectRecipe(s, i, r.id);
     brew(s, i); // the bot never stirs: this is the idle baseline
@@ -186,8 +196,9 @@ export function runBot(opts: BotOptions): BotResult {
     syncSlots(s, m);
 
     tendGarden(s, m, opts);
-    tendCauldrons(s, m);
-    const zone = last(unlockedZones(s), () => true);
+    tendCauldrons(s, m, opts);
+    const zones = unlockedZones(s);
+    const zone = opts.starter ? zones[0] : zones[zones.length - 1];
     if (zone) s.expeditions.forEach((e, i) => { if (!e) startExpedition(s, i, zone.id); });
     sellStock(s, tiersSold, sold);
     tendStaff(s, m, opts);
@@ -250,6 +261,7 @@ const opts: BotOptions = {
   research: !flag('no-research'),
   singleHerb: flag('single-herb'),
   hireRatio: flag('no-hire') ? 0 : num('hire-ratio', 1),
+  starter: flag('starter'),
 };
 
 const results: BotResult[] = [];
@@ -262,7 +274,8 @@ if (flag('json')) {
   const asc = results.map((r) => r.ascendMinutes).filter((x): x is number => x !== null);
   console.log(`\nBalance bot — ${runs} run(s) of ${hours}h`
     + `${opts.stopAtAscend ? ', stopping at first ascension' : ''}`
-    + `${opts.research ? '' : ', no research'}${opts.singleHerb ? ', single herb' : ''}\n`);
+    + `${opts.research ? '' : ', no research'}${opts.singleHerb ? ', single herb' : ''}`
+    + `${opts.starter ? ', STARTER CONTENT ONLY' : ''}\n`);
   for (const [i, r] of results.entries()) {
     console.log(`run ${i + 1}: ascend ${r.ascendMinutes ?? '—'} min · level ${r.level}`
       + ` · ${r.brewed} brewed · quality ×${r.avgSaleQualityMult}`

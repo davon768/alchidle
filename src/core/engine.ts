@@ -438,7 +438,7 @@ function completeExpedition(s: GameState, m: Mods, z: ZoneDef): void {
   for (const d of z.drops) {
     const chance = Math.min(1, d.chance * (d.rare ? m.rareFind : 1));
     if (Math.random() >= chance) continue;
-    const qty = rollAmount(randInt(d.min, d.max) * m.scavYield * mult);
+    const qty = rollAmount(randInt(d.min, d.max) * m.scavYield * mult * (z.bounty ?? 1));
     if (qty <= 0) continue;
     if (d.id === 'gold') addGold(s, qty);
     else addItem(s, d.id, qty);
