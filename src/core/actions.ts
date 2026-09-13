@@ -15,6 +15,7 @@ import { TRAIT_MAP, parseSeed, traitEffect } from '../data/mutations';
 import { RECIPE_MAP } from '../data/recipes';
 import { ZONE_MAP } from '../data/zones';
 import { item } from '../data/items';
+import { fmt } from './format';
 import { UPGRADE_MAP, upgradeCost } from '../data/upgrades';
 import { ROW_POINTS, SKILL_MAP, skillRankCost, type SkillNode } from '../data/skills';
 import { GUILD_MAP, GUILD_UNLOCK_LEVEL, rankFor, rankName } from '../data/guilds';
@@ -232,44 +233,35 @@ export function sell(s: GameState, id: string, qty: number): number {
 }
 
 /**
- * Bulk-sell potions, keeping the reserve and never touching anything on the combat belt.
+ * Bulk-sell potions, keeping the reserve.
  *
- * Both exclusions used to be silent, which made a belt potion look like it simply refused to sell.
- * Whatever is held back is now named, so the button always explains itself.
+ * Belt potions used to be excluded outright, which made them look broken: a potion you had fifty of
+ * would simply not sell, with nothing said. The reserve already exists to hold stock back, so it is
+ * now the single rule — belt potions sell down to it like everything else, and raising the reserve is
+ * how you keep more for a fight.
  */
 export function sellAllPotions(s: GameState): void {
   const m = computeMods(s);
-  const belt = new Set(s.belt.filter(Boolean));
-  const heldForBelt: string[] = [];
   const heldInReserve: string[] = [];
   let total = 0;
+  let sold = 0;
 
   for (const id of Object.keys(s.items)) {
     if (item(id).kind !== 'potion') continue;
     const have = Math.floor(count(s, id));
     if (have <= 0) continue;
-    if (belt.has(id)) {
-      heldForBelt.push(item(id).name);
-      continue;
-    }
     const sellable = have - s.settings.keepReserve;
     if (sellable <= 0) {
       heldInReserve.push(item(id).name);
       continue;
     }
     total += doSell(s, m, id, sellable);
+    sold += sellable;
   }
 
-  const list = (names: string[]) => (names.length > 2 ? `${names.length} potions` : names.join(' and '));
   if (total > 0) {
-    const notes: string[] = [];
-    if (heldForBelt.length) notes.push(`${list(heldForBelt)} kept for your belt`);
-    if (heldInReserve.length) notes.push(`${list(heldInReserve)} within your reserve`);
-    toast(`Sold potions for ${Math.round(total).toLocaleString()} gold${notes.length ? ` · ${notes.join(', ')}` : ''}.`, 'good');
-    return;
-  }
-  if (heldForBelt.length) {
-    toast(`Nothing sold — ${list(heldForBelt)} ${heldForBelt.length > 1 ? 'are' : 'is'} on your potion belt, so bulk selling leaves ${heldForBelt.length > 1 ? 'them' : 'it'} alone. Use that potion's own Sell button to part with ${heldForBelt.length > 1 ? 'them' : 'it'}.`, 'warn');
+    toast(`Sold ${fmt(sold)} potion${sold === 1 ? '' : 's'} for ${Math.round(total).toLocaleString()} gold`
+      + `${s.settings.keepReserve > 0 ? `, keeping ${s.settings.keepReserve} of each` : ''}.`, 'good');
     return;
   }
   if (heldInReserve.length) {

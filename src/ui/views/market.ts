@@ -28,7 +28,7 @@ export function marketView(s: GameState, m: Mods): TemplateResult {
           <button class="btn small" @click=${act((st) => (st.settings.keepReserve = Math.max(0, st.settings.keepReserve - 5)))}>−</button>
           <b>${s.settings.keepReserve}</b>
           <button class="btn small" @click=${act((st) => (st.settings.keepReserve += 5))}>+</button>
-          <button class="btn small gold" title=${`Sells everything above your reserve of ${s.settings.keepReserve}, except potions on your combat belt`}
+          <button class="btn small gold" title=${`Sells every potion above your reserve of ${s.settings.keepReserve}, belt potions included`}
             @click=${act(sellAllPotions)}>Sell all potions</button>
         </div>` : ''}
       </div>
@@ -48,7 +48,7 @@ export function marketView(s: GameState, m: Mods): TemplateResult {
             return html`<tr>
               <td>${i.icon} ${i.name}${isPotion && !split && tiers[0]?.t > 0
                 ? html` <span class="qual-chip" style="--q:${quality(tiers[0].t).color}">${quality(tiers[0].t).mark} ${quality(tiers[0].t).name}</span>` : ''}
-                ${onBelt.has(i.id) ? html` <span class="belt-tag" title="On your potion belt — 'Sell all potions' leaves this alone. The All button on this row still sells it.">🧪 belt</span>` : ''}</td>
+                ${onBelt.has(i.id) ? html` <span class="belt-tag" title=${`On your potion belt. Bulk selling keeps ${s.settings.keepReserve} of it like any other potion — raise the reserve to hold more back for fights.`}>🧪 belt</span>` : ''}</td>
               <td>${fmt(have)}</td>
               <td>${gold(sellValue(s, m, i.id, 1))}</td>
               ${isPotion ? html`<td class=${demandOf(s, i.id) < 0.6 ? 'warn' : demandOf(s, i.id) > 1 ? 'good' : ''}>${fmtPct(demandOf(s, i.id))}</td>` : ''}
