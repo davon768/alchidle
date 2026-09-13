@@ -231,15 +231,52 @@ export function sell(s: GameState, id: string, qty: number): number {
   return doSell(s, computeMods(s), id, qty);
 }
 
+/**
+ * Bulk-sell potions, keeping the reserve and never touching anything on the combat belt.
+ *
+ * Both exclusions used to be silent, which made a belt potion look like it simply refused to sell.
+ * Whatever is held back is now named, so the button always explains itself.
+ */
 export function sellAllPotions(s: GameState): void {
   const m = computeMods(s);
-  let total = 0;
   const belt = new Set(s.belt.filter(Boolean));
+  const heldForBelt: string[] = [];
+  const heldInReserve: string[] = [];
+  let total = 0;
+
   for (const id of Object.keys(s.items)) {
-    // Potions on the combat belt are never bulk-sold.
-    if (item(id).kind === 'potion' && !belt.has(id)) total += doSell(s, m, id, Math.max(0, count(s, id) - s.settings.keepReserve));
+    if (item(id).kind !== 'potion') continue;
+    const have = Math.floor(count(s, id));
+    if (have <= 0) continue;
+    if (belt.has(id)) {
+      heldForBelt.push(item(id).name);
+      continue;
+    }
+    const sellable = have - s.settings.keepReserve;
+    if (sellable <= 0) {
+      heldInReserve.push(item(id).name);
+      continue;
+    }
+    total += doSell(s, m, id, sellable);
   }
-  if (total > 0) toast(`Sold potions for ${Math.round(total).toLocaleString()} gold.`, 'good');
+
+  const list = (names: string[]) => (names.length > 2 ? `${names.length} potions` : names.join(' and '));
+  if (total > 0) {
+    const notes: string[] = [];
+    if (heldForBelt.length) notes.push(`${list(heldForBelt)} kept for your belt`);
+    if (heldInReserve.length) notes.push(`${list(heldInReserve)} within your reserve`);
+    toast(`Sold potions for ${Math.round(total).toLocaleString()} gold${notes.length ? ` · ${notes.join(', ')}` : ''}.`, 'good');
+    return;
+  }
+  if (heldForBelt.length) {
+    toast(`Nothing sold — ${list(heldForBelt)} ${heldForBelt.length > 1 ? 'are' : 'is'} on your potion belt, so bulk selling leaves ${heldForBelt.length > 1 ? 'them' : 'it'} alone. Use that potion's own Sell button to part with ${heldForBelt.length > 1 ? 'them' : 'it'}.`, 'warn');
+    return;
+  }
+  if (heldInReserve.length) {
+    toast(`Nothing sold — every potion is within your reserve of ${s.settings.keepReserve}. Lower it to sell more.`, 'warn');
+    return;
+  }
+  toast('No potions to sell.', 'warn');
 }
 
 export function buy(s: GameState, id: string, qty: number): void {

@@ -11,6 +11,7 @@ export function marketView(s: GameState, m: Mods): TemplateResult {
   const owned = ALL_ITEMS.filter((i) => i.kind === ui.marketFilter && count(s, i.id) >= 1);
   const buyable = ALL_ITEMS.filter((i) => i.buyLevel !== undefined && i.buyLevel <= s.level);
   const hot = s.hotPotion && (s.demand[s.hotPotion] ?? 1) > 1 ? item(s.hotPotion) : null;
+  const onBelt = new Set(s.belt.filter(Boolean) as string[]);
 
   return html`<div class="view">
     ${sectionTitle('🏪 Market', 'Selling lots of one potion lowers its price — demand recovers over time. Finer bottles sell for more, and can be sold on their own.')}
@@ -27,7 +28,8 @@ export function marketView(s: GameState, m: Mods): TemplateResult {
           <button class="btn small" @click=${act((st) => (st.settings.keepReserve = Math.max(0, st.settings.keepReserve - 5)))}>−</button>
           <b>${s.settings.keepReserve}</b>
           <button class="btn small" @click=${act((st) => (st.settings.keepReserve += 5))}>+</button>
-          <button class="btn small gold" @click=${act(sellAllPotions)}>Sell all potions</button>
+          <button class="btn small gold" title=${`Sells everything above your reserve of ${s.settings.keepReserve}, except potions on your combat belt`}
+            @click=${act(sellAllPotions)}>Sell all potions</button>
         </div>` : ''}
       </div>
       <div class="table-wrap">
@@ -45,7 +47,8 @@ export function marketView(s: GameState, m: Mods): TemplateResult {
             const split = tiers.length > 1;
             return html`<tr>
               <td>${i.icon} ${i.name}${isPotion && !split && tiers[0]?.t > 0
-                ? html` <span class="qual-chip" style="--q:${quality(tiers[0].t).color}">${quality(tiers[0].t).mark} ${quality(tiers[0].t).name}</span>` : ''}</td>
+                ? html` <span class="qual-chip" style="--q:${quality(tiers[0].t).color}">${quality(tiers[0].t).mark} ${quality(tiers[0].t).name}</span>` : ''}
+                ${onBelt.has(i.id) ? html` <span class="belt-tag" title="On your potion belt — 'Sell all potions' leaves this alone. The All button on this row still sells it.">🧪 belt</span>` : ''}</td>
               <td>${fmt(have)}</td>
               <td>${gold(sellValue(s, m, i.id, 1))}</td>
               ${isPotion ? html`<td class=${demandOf(s, i.id) < 0.6 ? 'warn' : demandOf(s, i.id) > 1 ? 'good' : ''}>${fmtPct(demandOf(s, i.id))}</td>` : ''}

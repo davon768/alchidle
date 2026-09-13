@@ -407,3 +407,4 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 
 .qual-subrow > td { background: #170f28; border-top: none; }
 .qual-subrow > td:first-child { padding-left: 22px; }
+.belt-tag { font-size: 11px; padding: 1px 6px; border-radius: 8px; color: #7fd8ff; border: 1px solid #7fd8ff; background: color-mix(in srgb, #7fd8ff 14%, transparent); white-space: nowrap; }
