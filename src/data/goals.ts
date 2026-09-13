@@ -2,7 +2,7 @@ import type { GameState, ItemStack } from '../core/types';
 import { profLevel } from './proficiency';
 import { REAGENTS } from './spells';
 import { ASC_MIN_GOLD } from './ascension';
-import { TALENTS } from './apprentices';
+import { apprenticeLevel } from './apprentices';
 
 /**
  * Goals are the game's tutorial: each one teaches a single mechanic. They are listed in the order a player
@@ -54,26 +54,26 @@ export const GOALS: GoalDef[] = [
     check: (s) => Object.values(s.skills).some((v) => v > 0), reward: { gold: 60 } },
 
   // ── Apprentices ────────────────────────────────────────────
-  { id: 'hire', chapter: 'Apprentices', title: 'Hire an apprentice', level: 3, tab: 'staff',
-    how: 'Hire a candidate in 👥 Apprentices.',
-    about: 'Apprentices automate your workshop. Talent sets how high they can level; traits add quirks like extra plots or faster learning.',
-    check: (s) => s.staff.hired.length > 0 || s.staff.masters.length > 0, reward: { gold: 150 } },
-  { id: 'assign', chapter: 'Apprentices', title: 'Give them a job', level: 3, tab: 'staff',
-    how: 'Choose a role for your apprentice.',
-    about: 'Each role automates one system: Gardeners harvest, Brewers repeat cauldrons, Scouts repeat expeditions. Trained apprentices handle more at once.',
-    check: (s) => s.staff.hired.some((a) => a.role) || s.staff.masters.length > 0, reward: { gold: 100 } },
-  { id: 'automate', chapter: 'Apprentices', title: 'Automate a cauldron', level: 3, tab: 'brew',
-    how: 'With a Brewer apprentice working, turn on 🔁 Repeat on a cauldron.',
+  { id: 'hire', chapter: 'Apprentices', title: 'Take on an apprentice', level: 3, tab: 'library',
+    how: 'Finish A Gardener\u2019s Hands in the \ud83d\udcda Library.',
+    about: 'Apprentices are unlocked by study rather than hired. Each craft has exactly one, and every one you unlock automates part of the workshop for good.',
+    check: (s) => Object.keys(s.staff.crew).length > 0, reward: { gold: 150 } },
+  { id: 'assign', chapter: 'Apprentices', title: 'Spend a skill point', level: 3, tab: 'staff',
+    how: 'Buy anything in an apprentice\u2019s upgrade tree.',
+    about: 'Apprentices earn a skill point every level, and levels come from doing their work. You decide where those points go \u2014 more plots tended, or the same few tended better.',
+    check: (s) => Object.values(s.staff.crew).some((a) => a && Object.keys(a.nodes).length > 0), reward: { gold: 100 } },
+  { id: 'automate', chapter: 'Apprentices', title: 'Automate a cauldron', level: 5, tab: 'brew',
+    how: 'With a Brewer working, turn on \ud83d\udd01 Repeat on a cauldron.',
     about: 'A cauldron tended by a Brewer restarts its recipe on its own for as long as the ingredients last.',
     check: (s) => s.cauldrons.some((c) => c.repeat), reward: { gold: 200 } },
   { id: 'event', chapter: 'Apprentices', title: 'Witness a world event', level: 3,
-    how: 'Keep playing — the next event arrives within 8 minutes.',
+    how: 'Keep playing \u2014 the next event arrives within 8 minutes.',
     about: 'World events change the rules for a few minutes: bountiful rain, market booms, goblin raids. The banner at the top shows what each one does.',
     check: (s) => s.stats.events >= 1, reward: { gold: 150 } },
-  { id: 'study', chapter: 'Apprentices', title: 'Send an apprentice to study', level: 3, tab: 'staff',
-    how: 'Switch an apprentice to 📚 Study.',
-    about: 'Studying levels an apprentice faster but costs tuition, and they stop working meanwhile. Your own proficiency in their craft makes them learn faster.',
-    check: (s) => s.staff.hired.some((a) => a.mode === 'train') || s.staff.masters.length > 0, reward: { gold: 250 } },
+  { id: 'study', chapter: 'Apprentices', title: 'Grow an apprentice to level 10', level: 5, tab: 'staff',
+    how: 'Leave them working \u2014 levels come from the job itself.',
+    about: 'Your own proficiency in a craft makes you a better teacher, so the more you brew, the faster your Brewer learns. Ten levels is ten skill points to spend.',
+    check: (s) => Object.values(s.staff.crew).some((a) => a && apprenticeLevel(a.xp) >= 10), reward: { gold: 250 } },
 
   // ── Craft & proficiency ────────────────────────────────────
   { id: 'prof10', chapter: 'Craft & proficiency', title: 'Reach proficiency 10', level: 1, tab: 'proficiency',
@@ -166,13 +166,13 @@ export const GOALS: GoalDef[] = [
     how: 'Spend Philosopher’s Stones in 🌟 Magnum Opus.',
     about: 'Eternal perks never reset. Every stone you’ve ever earned also raises your sell prices by 2%, even after you spend it.',
     check: (s) => Object.values(s.asc.nodes).some((v) => v > 0), reward: { gold: 5000 } },
-  { id: 'graduate', chapter: 'The long game', title: 'Graduate an apprentice', level: 3, tab: 'staff',
-    how: 'Train an apprentice to their level cap, then press 🎓 Graduate.',
-    about: 'Graduates join the Hall of Masters: a permanent bonus that survives ascension, and every master makes future apprentices learn faster.',
-    check: (s) => s.staff.masters.length >= 1,
+  { id: 'graduate', chapter: 'The long game', title: 'Master a craft', level: 3, tab: 'staff',
+    how: 'Take any apprentice to level 30 by leaving them at their work.',
+    about: 'Thirty levels is thirty skill points, enough to take a tree deep rather than wide. Apprentices and everything you have spent on them survive ascension.',
+    check: (s) => Object.values(s.staff.crew).some((a) => a && apprenticeLevel(a.xp) >= 30),
     progress: (s) => {
-      const best = [...s.staff.hired].sort((a, b) => b.level / TALENTS[b.talent].cap - a.level / TALENTS[a.talent].cap)[0];
-      return best ? [best.level, TALENTS[best.talent].cap] : [0, TALENTS[0].cap];
+      const best = Math.max(0, ...Object.values(s.staff.crew).map((a) => (a ? apprenticeLevel(a.xp) : 0)));
+      return [Math.min(30, best), 30];
     },
     reward: { gold: 5000 } },
   { id: 'rift', chapter: 'The long game', title: 'Descend the Endless Rift', level: 50, tab: 'explore',

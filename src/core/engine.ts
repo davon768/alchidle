@@ -18,7 +18,7 @@ import { FAMILIAR_MAP, familiarLevel, familiarsOfZone, feedXp, milestonesAt } fr
 import { dungeonUnlocked, tickCombat } from './combat';
 import { tickMagic } from './magic';
 import { tickEvents } from './events';
-import { tickStaff, workXp } from './staff';
+import { tickStaff, unlockApprentice, workXp } from './staff';
 
 // ── Notifications ────────────────────────────────────────────
 export type ToastKind = 'info' | 'good' | 'warn' | 'epic';
@@ -570,7 +570,9 @@ export function tickResearch(s: GameState, m: Mods, dt: number): void {
     s.research.queue.splice(i, 1);
     s.research.done[st.id] = (s.research.done[st.id] ?? 0) + 1;
     const def = RESEARCH_MAP[st.id];
-    if (def) toast(`📚 Research complete: ${def.icon} ${def.name}!`, 'epic');
+    if (!def) continue;
+    toast(`📚 Research complete: ${def.icon} ${def.name}!`, 'epic');
+    if (def.unlocksRole) unlockApprentice(s, def.unlocksRole);
   }
 }
 

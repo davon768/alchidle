@@ -38,7 +38,6 @@ export interface Mods {
   autoSell: number;
   autoScav: number;
   autoRitual: number;
-  apprenticeSlots: number;
   apprenticeXp: number;
   // Research Library
   researchSlots: number; // studies that can run at once
@@ -233,31 +232,15 @@ export interface EventState {
 // ── Apprentices ──────────────────────────────────────────────
 export type RoleId = 'gardener' | 'brewer' | 'scout' | 'shopkeeper' | 'squire' | 'scribe';
 
+/** One craft's apprentice. There is exactly one per role, unlocked through the Library. */
 export interface Apprentice {
-  id: string;
-  name: string;
-  icon: string;
-  talent: number; // index into TALENTS
-  traits: string[];
-  role: RoleId | null;
-  mode: 'work' | 'train';
-  level: number;
-  xp: number;
-}
-
-export interface MasterRecord {
-  name: string;
-  icon: string;
   role: RoleId;
-  talent: number;
+  xp: number; // lifetime work XP; level and skill points are derived from it
+  nodes: Record<string, number>; // upgrade tree ranks, keyed by node id
 }
 
 export interface StaffState {
-  hired: Apprentice[];
-  candidates: Apprentice[];
-  refresh: number; // seconds until new candidates arrive
-  masters: MasterRecord[]; // graduates — permanent bonuses
-  nextId: number;
+  crew: Partial<Record<RoleId, Apprentice>>;
   repush: number; // Squire timer
 }
 

@@ -2,8 +2,6 @@ import type { GameState, Mods } from './types';
 import { addGold, availableIngredients, randInt, toast } from './engine';
 import { addGear, newGear } from './armory';
 import { dungeonUnlocked } from './combat';
-import { rollCandidates } from './staff';
-import { CANDIDATE_REFRESH } from '../data/apprentices';
 import { EVENTS, EVENT_GAP, EVENT_MAP, EVENT_UNLOCK_LEVEL, raidTarget, type EventDef } from '../data/events';
 import { DUNGEONS, DUNGEON_UNLOCK_LEVEL } from '../data/combat';
 import { rollRarity } from '../data/gear';
@@ -25,8 +23,8 @@ export function startEvent(s: GameState, ev: EventDef): void {
       s.combat.champion = true;
       break;
     case 'jobfair':
-      s.staff.candidates = rollCandidates(s, 4); // gifted and prodigy applicants are 4× as common
-      s.staff.refresh = CANDIDATE_REFRESH;
+      // Apprentices are no longer hired from a candidate list, so the fair is a teaching day instead:
+      // the standing bonus in data/events.ts does the work while it runs.
       break;
     case 'merchant': {
       const pool = availableIngredients(s, 8).filter((i) => i.value >= 30);

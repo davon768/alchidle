@@ -14,7 +14,7 @@
  * The two toggles exist to isolate a system's contribution: run with and without it and diff the
  * time-to-ascension. Runs under plain Node via scripts/register-ts.mjs.
  */
-import type { GameState, Mods, RoleId } from '../src/core/types.ts';
+import type { GameState, Mods } from '../src/core/types.ts';
 import { newState } from '../src/core/state.ts';
 import { computeMods } from '../src/core/mods.ts';
 import {
@@ -25,8 +25,8 @@ import {
   brew, buy, buyUpgrade, buySkill, harvestAll, plant, plantSeed, selectRecipe, sell,
   skillStatus, startExpedition, startResearch, toggleRepeat,
 } from '../src/core/actions.ts';
-import { assignRole, hire, hireCost } from '../src/core/staff.ts';
-import { apprenticeCap } from '../src/data/apprentices.ts';
+import { learnNode, nodeStatus, pointsFree } from '../src/core/staff.ts';
+import { ROLES, apprenticeLevel } from '../src/data/apprentices.ts';
 import { PLANTS } from '../src/data/plants.ts';
 import { ALL_ITEMS } from '../src/data/items.ts';
 import { UPGRADES, upgradeCost } from '../src/data/upgrades.ts';
@@ -37,7 +37,6 @@ import { QUALITIES } from '../src/data/quality.ts';
 
 /** Simulated seconds between decisions. The engine itself is correct for any dt. */
 const STEP = 5;
-const ROLES: RoleId[] = ['brewer', 'gardener', 'scout', 'shopkeeper'];
 
 export interface BotOptions {
   hours: number;
@@ -46,10 +45,7 @@ export interface BotOptions {
   /** Plant a single herb everywhere instead of alternating — cross-breeding needs unlike neighbours. */
   singleHerb: boolean;
   /**
-   * Hire once an apprentice costs no more than 1/hireRatio of the purse. 1 (the default) means hire
-   * as soon as one is affordable, which measurably wins: the role perks an apprentice earns as it
-   * levels outweigh the gold, and holding out for a comfortable margin means never hiring at all,
-   * because upgrades drain the purse every step. 0 disables hiring entirely.
+   * Retained so older invocations keep working; hiring no longer exists, so it does nothing.
    */
   hireRatio: number;
   /**
@@ -76,9 +72,9 @@ export interface BotResult {
   topProficiencies: [string, number][];
   apprentices: number;
   bestApprenticeLevel: number;
-  /** Minutes until any item reaches proficiency 50, and until a hired apprentice first hits its cap. */
+  /** Minutes until any item reaches proficiency 50, and until any apprentice reaches level 25. */
   minutesToProf50: number | null;
-  minutesToApprenticeCap: number | null;
+  minutesToApprenticeCap: number | null; // level 25
 }
 
 const last = <T>(arr: T[], ok: (x: T) => boolean): T | undefined => arr.filter(ok).slice(-1)[0];
@@ -165,21 +161,28 @@ function spendGold(s: GameState, m: Mods, opts: BotOptions): void {
   }
 }
 
-/** Hire when an apprentice is comfortably affordable — see BotOptions.hireRatio for why not sooner. */
-function tendStaff(s: GameState, m: Mods, opts: BotOptions): void {
-  if (opts.hireRatio <= 0) return;
-  const slots = Math.floor(m.apprenticeSlots);
-  for (let guard = 0; guard < 4; guard++) {
-    if (s.staff.hired.length >= slots) break;
-    const i = s.staff.candidates.findIndex((a) => hireCost(s, a) * opts.hireRatio <= s.gold);
-    if (i < 0) break;
-    const before = s.staff.hired.length;
-    hire(s, i);
-    if (s.staff.hired.length === before) break;
+/**
+ * Spend whatever skill points the apprentices have earned. There is nothing to hire any more: each
+ * craft's apprentice arrives through the Library, so all the bot decides is where the points go. It
+ * buys the cheapest available node in each tree, which favours capacity and keeps it honest about
+ * breadth rather than cherry-picking the strongest stat.
+ */
+function tendStaff(s: GameState, _m: Mods, _opts: BotOptions): void {
+  for (const role of ROLES) {
+    const a = s.staff.crew[role.id];
+    if (!a) continue;
+    for (let guard = 0; guard < 12; guard++) {
+      if (pointsFree(a) <= 0) break;
+      const next = role.tree
+        .map((n) => ({ n, st: nodeStatus(a, n) }))
+        .filter((x) => x.st.ok)
+        .sort((x, y) => x.st.cost - y.st.cost)[0];
+      if (!next) break;
+      const before = a.nodes[next.n.id] ?? 0;
+      learnNode(s, role.id, next.n.id);
+      if ((a.nodes[next.n.id] ?? 0) === before) break;
+    }
   }
-  s.staff.hired.forEach((a, i) => {
-    if (!a.role) assignRole(s, a.id, ROLES[i % ROLES.length]);
-  });
 }
 
 export function runBot(opts: BotOptions): BotResult {
@@ -212,7 +215,7 @@ export function runBot(opts: BotOptions): BotResult {
     if (minutesToProf50 === null && Object.keys(s.prof).some((id) => profLevelOf(s, id) >= 50)) {
       minutesToProf50 = +(t / 60).toFixed(1);
     }
-    if (minutesToApprenticeCap === null && s.staff.hired.some((a) => a.level >= apprenticeCap(a))) {
+    if (minutesToApprenticeCap === null && Object.values(s.staff.crew).some((a) => a && apprenticeLevel(a.xp) >= 25)) {
       minutesToApprenticeCap = +(t / 60).toFixed(1);
     }
     if (ascendMinutes === null && s.stats.runGold >= ASC_MIN_GOLD) {
@@ -238,8 +241,8 @@ export function runBot(opts: BotOptions): BotResult {
       .filter(([, l]) => l > 1)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6),
-    apprentices: s.staff.hired.length,
-    bestApprenticeLevel: Math.max(0, ...s.staff.hired.map((a) => a.level)),
+    apprentices: Object.keys(s.staff.crew).length,
+    bestApprenticeLevel: Math.max(0, ...Object.values(s.staff.crew).map((a) => (a ? apprenticeLevel(a.xp) : 0))),
     minutesToProf50,
     minutesToApprenticeCap,
   };
@@ -293,7 +296,7 @@ if (flag('json')) {
   const p50 = got((r) => r.minutesToProf50);
   const cap = got((r) => r.minutesToApprenticeCap);
   if (p50.length) console.log(`proficiency 50: mean ${mean(p50).toFixed(0)} min (${p50.length}/${runs} runs reached it)`);
-  if (cap.length) console.log(`apprentice cap: mean ${mean(cap).toFixed(0)} min (${cap.length}/${runs} runs reached it)`);
+  if (cap.length) console.log(`apprentice level 25: mean ${mean(cap).toFixed(0)} min (${cap.length}/${runs} runs reached it)`);
   console.log(`quality multiplier: mean ×${mean(results.map((r) => r.avgSaleQualityMult)).toFixed(3)}`);
   console.log(`strains found: mean ${mean(results.map((r) => r.strainsFound)).toFixed(1)}`
     + ` · studies: mean ${mean(results.map((r) => r.studiesDone)).toFixed(1)}\n`);

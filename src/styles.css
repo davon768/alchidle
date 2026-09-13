@@ -408,3 +408,12 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .qual-subrow > td { background: #170f28; border-top: none; }
 .qual-subrow > td:first-child { padding-left: 22px; }
 .belt-tag { font-size: 11px; padding: 1px 6px; border-radius: 8px; color: #7fd8ff; border: 1px solid #7fd8ff; background: color-mix(in srgb, #7fd8ff 14%, transparent); white-space: nowrap; }
+
+/* ── Apprentice trees ───────────────────────────────────── */
+.appr-row { display: flex; flex-direction: column; gap: 6px; }
+.appr-row.locked { opacity: 0.5; }
+.appr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.appr-node { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 9px; background: #171026; }
+.appr-node.ready { border-color: var(--accent); }
+.appr-node.maxed { border-color: var(--good); opacity: 0.8; }
+.appr-node.locked { opacity: 0.6; }

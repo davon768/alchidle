@@ -1,4 +1,5 @@
-import type { GameState } from './types';
+import type { GameState, RoleId } from './types';
+import { learnNode, respecApprentice as respecTree } from './staff';
 import { computeMods } from './mods';
 import { newState } from './state';
 import {
@@ -56,6 +57,15 @@ export function startResearch(s: GameState, id: string): void {
 /** Abandon a study. The time is lost; the materials are not refunded. */
 export function cancelResearch(s: GameState, idx: number): void {
   if (s.research.queue[idx]) s.research.queue.splice(idx, 1);
+}
+
+// ── Apprentices ──────────────────────────────────────────────
+export function learnApprenticeNode(s: GameState, role: RoleId, nodeId: string): void {
+  learnNode(s, role, nodeId);
+}
+
+export function respecApprentice(s: GameState, role: RoleId): void {
+  respecTree(s, role);
 }
 
 // ── Familiars ────────────────────────────────────────────────

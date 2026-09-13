@@ -3,6 +3,7 @@ import { repeat } from 'lit-html/directives/repeat.js';
 import type { GameState, Mods } from '../core/types';
 import { game } from '../core/game';
 import { computeMods, describeEffects } from '../core/mods';
+import { pointsFree } from '../core/staff';
 import { onGain, onToast, skillPointsFree, type Gain, type OfflineSummary, type ToastKind } from '../core/engine';
 import { manaMax } from '../core/magic';
 import { xpToNext } from '../core/state';
@@ -37,7 +38,6 @@ import { staffView } from './views/apprentices';
 import { goalBanner, goalsView } from './views/goals';
 import { GOALS } from '../data/goals';
 import { RESEARCH_UNLOCK_LEVEL } from '../data/research';
-import { apprenticeCap } from '../data/apprentices';
 
 interface TabDef {
   id: TabId;
@@ -53,8 +53,8 @@ const TABS: TabDef[] = [
   { id: 'garden', icon: '🌱', label: 'Garden', unlocked: () => true, dot: (s, m) => m.autoHarvest <= 0 && s.plots.some((p) => p.ready || !p.plantId) },
   { id: 'brew', icon: '⚗️', label: 'Cauldrons', unlocked: () => true, dot: (s) => s.cauldrons.some((c) => !c.active) },
   { id: 'explore', icon: '🧭', label: 'Expeditions', unlocked: () => true, dot: (s) => s.expeditions.some((e) => !e) },
-  { id: 'staff', icon: '👥', label: 'Apprentices', unlocked: (s) => s.level >= 3 || s.staff.hired.length > 0 || s.staff.masters.length > 0,
-    dot: (s) => s.staff.hired.some((a) => !a.role || a.level >= apprenticeCap(a)) },
+  { id: 'staff', icon: '👥', label: 'Apprentices', unlocked: (s) => Object.keys(s.staff.crew).length > 0,
+    dot: (s) => Object.values(s.staff.crew).some((a) => a && pointsFree(a) > 0) },
   { id: 'dungeon', icon: '⚔️', label: 'Dungeons', unlocked: (s) => s.level >= DUNGEON_UNLOCK_LEVEL, dot: (s) => !s.combat.dungeonId },
   { id: 'market', icon: '🏪', label: 'Market', unlocked: () => true },
   { id: 'inventory', icon: '🎒', label: 'Inventory', unlocked: () => true },

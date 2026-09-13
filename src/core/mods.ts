@@ -10,8 +10,8 @@ import { EVENT_MAP } from '../data/events';
 import { RESEARCH_MAP } from '../data/research';
 import { CATALOGUE_BONUS } from '../data/mutations';
 import { FAMILIAR_MAP, familiarEffects, familiarLevel } from '../data/familiars';
-import { MASTER_XP, ROLE_MAP, TALENTS, apprenticeCapacity } from '../data/apprentices';
 import type { RoleId } from './types';
+import { apprenticeEffects, capacityOf } from './staff';
 import { fmt } from './format';
 
 export function baseMods(): Mods {
@@ -22,7 +22,7 @@ export function baseMods(): Mods {
     scavSpeed: 1, scavYield: 1, rareFind: 1,
     xpGain: 1, stoneGain: 1, offlineHours: 8,
     plots: 2, cauldrons: 1, expSlots: 1, skillPoints: 0, startGold: 0,
-    autoHarvest: 0, autoBrew: 0, autoSell: 0, autoScav: 0, autoRitual: 0, apprenticeSlots: 2, apprenticeXp: 1,
+    autoHarvest: 0, autoBrew: 0, autoSell: 0, autoScav: 0, autoRitual: 0, apprenticeXp: 1,
     researchSlots: 1, researchSpeed: 1, familiarSlots: 1,
     attack: 0, attackMult: 1, defense: 0, defenseMult: 1, maxHp: 0, hpMult: 1,
     spellPower: 0, spellMult: 1, critChance: 0.05, critDamage: 1.5, dodge: 0,
@@ -79,25 +79,19 @@ export function computeMods(s: GameState): Mods {
     if (ev) apply(m, ev.effects, 1);
   }
 
-  // Apprentices: working apprentices add tending capacity and their earned perks; graduates add permanent bonuses.
-  const workers: Record<RoleId, number> = { gardener: 0, brewer: 0, scout: 0, shopkeeper: 0, squire: 0, scribe: 0 };
-  const capacity: Record<RoleId, number> = { gardener: 0, brewer: 0, scout: 0, shopkeeper: 0, squire: 0, scribe: 0 };
-  for (const a of s.staff.hired) {
-    if (!a.role || a.mode !== 'work') continue;
-    workers[a.role]++;
-    capacity[a.role] += apprenticeCapacity(a);
-    for (const p of ROLE_MAP[a.role].perks) if (p.level <= a.level) apply(m, p.effects, 1);
+  // Apprentices: one per craft, each contributing whatever its upgrade tree has been spent on.
+  // Bonus capacity from skills and guilds only counts while that craft actually has an apprentice.
+  const tended: Record<RoleId, number> = { gardener: 0, brewer: 0, scout: 0, shopkeeper: 0, squire: 0, scribe: 0 };
+  for (const a of Object.values(s.staff?.crew ?? {})) {
+    if (!a) continue;
+    tended[a.role] = capacityOf(a);
+    apply(m, apprenticeEffects(a) as Effect[], 1);
   }
-  for (const ms of s.staff.masters) {
-    apply(m, ROLE_MAP[ms.role].master, TALENTS[ms.talent].master);
-    m.apprenticeXp += MASTER_XP;
-  }
-  // Bonus capacity from skills and guilds only helps when someone of that role is actually working.
-  m.autoHarvest = workers.gardener ? m.autoHarvest + capacity.gardener : 0;
-  m.autoBrew = workers.brewer ? m.autoBrew + capacity.brewer : 0;
-  m.autoScav = workers.scout ? m.autoScav + capacity.scout : 0;
-  m.autoSell = workers.shopkeeper ? m.autoSell + capacity.shopkeeper : 0;
-  m.autoRitual = workers.scribe ? m.autoRitual + capacity.scribe : 0;
+  m.autoHarvest = tended.gardener ? m.autoHarvest + tended.gardener : 0;
+  m.autoBrew = tended.brewer ? m.autoBrew + tended.brewer : 0;
+  m.autoScav = tended.scout ? m.autoScav + tended.scout : 0;
+  m.autoSell = tended.shopkeeper ? m.autoSell + tended.shopkeeper : 0;
+  m.autoRitual = tended.scribe ? m.autoRitual + tended.scribe : 0;
 
   m.seedDiscount = Math.min(0.75, m.seedDiscount);
   m.doubleBrew = Math.min(1, m.doubleBrew);
@@ -146,7 +140,6 @@ export const STAT_INFO: Record<StatKey, { label: string; fmt: StatFormat }> = {
   autoSell: { label: 'potion types your Shopkeepers auto-sell', fmt: 'flat' },
   autoScav: { label: 'parties tended by your Scouts', fmt: 'flat' },
   autoRitual: { label: 'rituals your Scribes keep running', fmt: 'flat' },
-  apprenticeSlots: { label: 'apprentice slot', fmt: 'flat' },
   apprenticeXp: { label: 'apprentice XP', fmt: 'pct' },
   attack: { label: 'attack', fmt: 'flat' },
   attackMult: { label: 'attack', fmt: 'pct' },

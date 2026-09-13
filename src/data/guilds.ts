@@ -29,7 +29,7 @@ export const GUILDS: GuildDef[] = [
     perRank: [{ stat: 'sellPrice', value: 0.06 }, { stat: 'tradeBonus', value: 0.04 }],
     milestones: [
       { rank: 2, effects: [{ stat: 'demandRecovery', value: 0.3 }], label: '+30% demand recovery' },
-      { rank: 4, effects: [{ stat: 'apprenticeSlots', value: 1 }], label: 'The Exchange sponsors +1 apprentice slot' },
+      { rank: 4, effects: [{ stat: 'apprenticeXp', value: 0.2 }], label: 'The Exchange sponsors your apprentices\u2019 training' },
     ] },
   { id: 'wayfarer', name: "Wayfarers' Lodge", icon: '🧭', color: '#4fb3ff', desc: 'Explorers who map the unmappable.',
     perRank: [{ stat: 'scavSpeed', value: 0.06 }, { stat: 'scavYield', value: 0.05 }],

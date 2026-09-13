@@ -5,7 +5,7 @@ import { PROF_MAP } from '../data/proficiency';
 import { RESEARCH_MAP } from '../data/research';
 import { TRAIT_MAP, parseSeed } from '../data/mutations';
 import { FAMILIAR_MAP } from '../data/familiars';
-import { createApprentice } from '../data/apprentices';
+import { ROLE_MAP, apprXpForLevel } from '../data/apprentices';
 
 const KEY = 'alchemy-idle-save';
 
@@ -21,7 +21,18 @@ function mergeDefaults<T>(defaults: T, loaded: unknown): T {
   return out as T;
 }
 
+type LegacyApprentice = { role?: RoleId | null; level?: number };
+type LegacyStaff = { hired?: LegacyApprentice[]; masters?: { role?: RoleId }[]; nextId?: number };
 type LegacySave = Partial<GameState> & { mastery?: Record<string, number> };
+
+/** Unlock a craft and credit it with the XP an apprentice of that level had earned. */
+function legacyRole(s: GameState, role: RoleId, level: number): void {
+  if (!ROLE_MAP[role]) return;
+  const existing = s.staff.crew[role];
+  const xp = apprXpForLevel(Math.max(1, level));
+  if (existing) existing.xp = Math.max(existing.xp, xp);
+  else s.staff.crew[role] = { role, xp, nodes: {} };
+}
 
 function migrate(raw: LegacySave): GameState {
   const s = mergeDefaults(newState(), raw) as GameState & { mastery?: Record<string, number> };
@@ -33,17 +44,15 @@ function migrate(raw: LegacySave): GameState {
     }
   }
   delete s.mastery;
-  // v2 → v3: bought automation (gnome, coal, falcon, clerk) becomes experienced apprentices.
-  const legacyHelpers: [string, RoleId, string, string][] = [
-    ['gnome', 'gardener', 'Gnorbert', '🧙'], ['flame', 'brewer', 'Cinder', '🧑‍🔬'], ['falcon', 'scout', 'Talon', '🧝'], ['clerk', 'shopkeeper', 'Bramble', '🧑‍💼'],
+  // v2 → v3: bought automation (gnome, coal, falcon, clerk) becomes an apprentice in that craft.
+  const legacyHelpers: [string, RoleId][] = [
+    ['gnome', 'gardener'], ['flame', 'brewer'], ['falcon', 'scout'], ['clerk', 'shopkeeper'],
   ];
-  for (const [upgrade, role, name, icon] of legacyHelpers) {
+  for (const [upgrade, role] of legacyHelpers) {
     if (!s.upgrades[upgrade]) continue;
     delete s.upgrades[upgrade];
-    s.staff.hired.push(createApprentice(`a${s.staff.nextId++}`, name, icon, 0, [], role, 10));
+    legacyRole(s, role, 10);
   }
-  // v3 → v4: potion quality. `qual` starts empty and engine.qualCounts reconciles each potion's
-  // total into Common the first time it is touched, so pre-quality stock simply becomes Common.
   if (s.asc.nodes['automata']) {
     s.asc.nodes['loyal'] = s.asc.nodes['automata'];
     delete s.asc.nodes['automata'];
@@ -72,6 +81,21 @@ function migrate(raw: LegacySave): GameState {
   // gone and trim the equipped list so a stale id cannot reach computeMods.
   for (const id of Object.keys(s.familiars)) if (!FAMILIAR_MAP[id]) delete s.familiars[id];
   s.equippedFamiliars = s.equippedFamiliars.filter((id) => s.familiars[id] !== undefined);
+  // v8 → v9: hiring is gone. Every craft the player had staffed — working or graduated — becomes that
+  // craft's single apprentice, credited with the XP its old level represented. Talents, traits,
+  // candidate lists and the Hall of Masters have no equivalent and are dropped. Points are unspent, so
+  // the tree is theirs to lay out fresh.
+  const oldStaff = (raw.staff ?? {}) as LegacyStaff;
+  for (const a of oldStaff.hired ?? []) if (a?.role) legacyRole(s, a.role, a.level ?? 1);
+  for (const mr of oldStaff.masters ?? []) if (mr?.role) legacyRole(s, mr.role, 25);
+  for (const role of Object.keys(s.staff.crew) as RoleId[]) {
+    if (!ROLE_MAP[role]) delete s.staff.crew[role];
+  }
+  // mergeDefaults keeps keys it does not recognise, so the old hiring fields would otherwise ride
+  // along in every future save. Nothing reads them; drop them.
+  for (const dead of ['hired', 'masters', 'candidates', 'refresh', 'nextId']) {
+    delete (s.staff as unknown as Record<string, unknown>)[dead];
+  }
   s.version = SAVE_VERSION;
   return s;
 }

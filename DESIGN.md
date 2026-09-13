@@ -11,7 +11,7 @@
  Gold earned this run ► Magnum Opus (ascension) ► Philosopher's Stones ► Eternal perks ► faster next run
 ```
 
-Early game is hands-on (click to plant, brew, sell). Automation comes from **apprentices** you hire and train: each role automates one system, and how much it handles grows with training. The game moves from active play to idle play at the pace you invest in your staff.
+Early game is hands-on (click to plant, brew, sell). Automation comes from **apprentices**: one per craft, unlocked by study in the Library, each automating one system. They level by doing the work and spend the skill points where you tell them, so the game moves from active play to idle play at the pace you invest in your staff.
 
 ## 2. Systems (v0.1)
 
@@ -129,27 +129,36 @@ is out is a real choice for most of a run. Familiars and their levels survive as
 
 28 goals in 7 chapters (Workshop basics, Apprentices, Craft & proficiency, Commerce, Adventure, Magic, The long game) teach every mechanic in the order players meet it. Each goal has a one-line *how*, a short explanation of the mechanic, an optional progress bar, a **Show me** button that opens the right tab, and a one-time reward (gold, or items that help with the next step — for example, the reagent goal pays Rune Chalk and Spell Ink toward learning Firebolt). The banner at the top of every tab shows a claimable goal first, otherwise the next unfinished one; the 🎯 Goals tab lists them all. Goals are checked every second, stay done once reached, and survive ascension, so each reward pays out only once. Content lives in `src/data/goals.ts` — add a goal whenever a new system is added.
 
-### Apprentices (v0.4): replace bought automation
+### Apprentices (v0.9): one per craft, shaped by you
 
-The Workshop's Garden Gnome, Everburning Coal, Trained Falcon and Shop Clerk are gone. Automation now comes from people you hire in the 👥 Apprentices tab (from level 3).
+Six crafts, six apprentices, no hiring. Each is unlocked by its own study in the Library — *A Gardener's
+Hands* at level 3 through *A Scribe's Alphabet* at 18 — so automation arrives on a schedule you can
+plan around rather than when a candidate list happens to offer something good.
 
-| Role | Automates | Grows with level |
-|---|---|---|
-| 🧑‍🌾 Gardener | harvest and replant | tends 2 + L/3 plots |
-| 🧑‍🔬 Brewer | cauldron 🔁 repeat | tends 1 + L/6 cauldrons |
-| 🧝 Scout | expedition 🔁 repeat | tends 1 + L/12 parties |
-| 🧑‍💼 Shopkeeper | auto-sell of marked potions | 1 + L/5 potion types |
-| 🤺 Squire | resumes pushing floors after a retreat | re-push delay 176s → 15s |
-| 🧙 Scribe | recasts auto-marked rituals | 1 + L/10 rituals |
+- **They level by working.** Every plot harvested, cauldron repeated, party sent or potion auto-sold
+  credits the apprentice that tended it, and only up to the number it actually tends. Your own
+  **proficiency** in that craft makes you a better teacher (up to ×2 at proficiency 100). Level 60 is
+  the ceiling; roughly level 20 by a first ascension and 50 after a long haul.
+- **Every level is one skill point**, spent in that craft's **upgrade tree**. Five or six nodes per
+  role across four rows, each row opening after 3 more points are spent in that tree, ending in an
+  infinite-rank node whose cost creeps up. Points can be refunded in full at any time (*Rethink*) —
+  they were earned by working, so there is nothing to punish.
+- **Breadth or depth is the decision.** A capacity node (*More Beds*, *Another Burner*, *Second Party*…)
+  means tending more units; the stat nodes mean tending the same few better. That trade is the whole
+  system — a Gardener on ten beds and a Gardener on three superb ones are both valid.
+- **Trees reach into other systems.** The Gardener's *Curious Grafter* raises cross-breeding odds, the
+  Brewer's *Fine Hand* raises potion quality, the Scout's *Keen Eye* finds familiars sooner, the
+  Shopkeeper's *Word of Mouth* speeds demand recovery, the Scribe's *Careful Copyist* speeds research.
+- **They survive ascension**, levels and spent points both, like proficiency and research.
 
-- **Hiring:** 3 candidates rotate every 10 minutes; you can pay to call new ones, and the *Job Fair* event brings 4× more gifted applicants. **Talent** (Common / Gifted / Prodigy: 70 / 25 / 5%) sets the level cap (25 / 40 / 50), learning speed and hiring cost. Each candidate has 1–2 **traits**: Quick Learner, Bookworm, Hard Worker, Frugal, Diligent, Clumsy, or role-affinity traits like Green Thumb (+2 plots as a Gardener).
-- **Slots:** 2 to start; more from Apprentice Quarters (Workshop), the Headmaster skill and the Gilded Exchange guild.
-- **Training:** apprentices earn XP from the work they do. **Studying** is faster, but costs tuition that rises steeply with level, and they don't work meanwhile. Your own **proficiency** in that craft makes you a better teacher (up to ×2 study speed).
-- **Perks every 5 levels** per role (for example, Gardener: +grow speed, +yield, cheaper seeds). They stack across apprentices.
-- **Graduation:** at their level cap, an apprentice can graduate into the **Hall of Masters**. They leave, and you get a permanent bonus (× talent: 1 / 1.6 / 2.5) plus +5% apprentice XP for every future apprentice. Masters survive ascension. You choose between keeping a strong worker and banking permanent power.
-- **Tie-ins:** the old automation skills and guild milestones now add tending capacity (only while someone of that role is working). New: Training Library (Workshop), Mentorship and Headmaster (Arcana tree), the Loyal Apprentices and Eternal Academy ascension perks, and 3 achievements. Old saves turn bought helpers into level-10 apprentices.
+What this replaced: hiring from a rolling candidate list, talent tiers (Common/Gifted/Prodigy) that set
+a level cap, random traits, apprentice slots, tuition-funded study, and graduation into a Hall of
+Masters. All of it was a hunt for a good roll rather than a decision. Old saves convert every craft
+that was staffed — working or graduated — into that craft's apprentice with the XP its level
+represented, and leave the points unspent so the tree is laid out fresh.
 
-**Backlog ideas for this system:** specializations at level 20 (for example, Gardener → Botanist or Druid); morale and fatigue with rest rotation; lessons that consume ingredients for XP bursts; apprentices as dungeon companions; certification exams at levels 10/25/40 for bonus perks; rival guilds poaching staff; apprentice-driven events ("Ivy had an idea!"); friendships between apprentices who work the same system.
+**Backlog ideas for this system:** specializations that branch a tree at level 30; lessons that convert
+ingredients into XP bursts; apprentices as dungeon companions; apprentice-driven events.
 
 ### Proficiency (v0.3): replaces recipe mastery
 
@@ -212,9 +221,8 @@ Whispering Meadow and Sunleaf never stopped being reasonable choices. They are m
 
 Pacing targets: first ascension at about 2–4 hours of active play, the Panacea recipe (level 60) around the 3rd–5th ascension, and Rift depth plus infinite nodes as the post-content grind.
 
-Measured with `npm run bot`, 8 runs of 6 simulated hours under its default policy (hire an apprentice
-as soon as one is affordable, alternate two herbs so cross-breeding can happen, keep every research desk
-busy, buy the cheapest affordable upgrade and skill each step):
+Measured with `npm run bot` under its default policy (alternate two herbs so cross-breeding can happen,
+keep every research desk busy, buy the cheapest affordable upgrade, skill and apprentice node each step):
 
 | Milestone | Bot | Human (~2× slower) |
 |---|---|---|
@@ -222,7 +230,7 @@ busy, buy the cheapest affordable upgrade and skill each step):
 | Level 20 | ~30 min | ~1 h |
 | First ascension | **98 min** (range 90–112) | **~3.3 h** |
 | An item reaches proficiency 50 | ~158 min | ~5 h |
-| An apprentice reaches its cap | ~146 min | ~5 h |
+| An apprentice reaches level 25 | ~40 min | ~1.3 h |
 
 That lands first ascension inside the 2–4 hour design target above. An earlier note in this file put the
 bot at ~70 minutes; that figure came from a bot whose policy was not recorded and could not be

@@ -1,5 +1,6 @@
 import type { Effect, GameState } from '../core/types';
 import { profLevel } from './proficiency';
+import { apprenticeLevel } from './apprentices';
 
 const bestProf = (s: GameState) => Math.max(1, ...Object.values(s.prof).map(profLevel));
 
@@ -45,10 +46,12 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'void_25', name: 'Void Walker', icon: '🌌', desc: 'Reach floor 25 of the Void Citadel.', check: (s) => (s.dungeons['void'] ?? 0) >= 25,
     reward: [{ stat: 'attackMult', value: 0.1 }, { stat: 'spellMult', value: 0.1 }] },
   { id: 'events_25', name: 'Town Favorite', icon: '🎪', desc: 'Witness 25 world events.', check: (s) => s.stats.events >= 25, reward: [{ stat: 'xpGain', value: 0.05 }] },
-  { id: 'hire_1', name: 'Taking on Help', icon: '👥', desc: 'Hire your first apprentice.', check: (s) => s.staff.hired.length > 0 || s.staff.masters.length > 0,
-    reward: [{ stat: 'apprenticeXp', value: 0.05 }] },
-  { id: 'graduate_1', name: 'Graduation Day', icon: '🎓', desc: 'Graduate an apprentice.', check: (s) => s.staff.masters.length >= 1, reward: [{ stat: 'apprenticeXp', value: 0.1 }] },
-  { id: 'masters_10', name: 'Hall of Fame', icon: '🏛️', desc: 'Graduate 10 apprentices.', check: (s) => s.staff.masters.length >= 10,
+  { id: 'hire_1', name: 'Taking on Help', icon: '👥', desc: 'Bring your first apprentice into the workshop.',
+    check: (s) => Object.keys(s.staff.crew).length > 0, reward: [{ stat: 'apprenticeXp', value: 0.05 }] },
+  { id: 'graduate_1', name: 'Coming Along', icon: '🎓', desc: 'Take an apprentice to level 25.',
+    check: (s) => Object.values(s.staff.crew).some((a) => a && apprenticeLevel(a.xp) >= 25), reward: [{ stat: 'apprenticeXp', value: 0.1 }] },
+  { id: 'masters_10', name: 'A Full Workshop', icon: '🏛️', desc: 'Have an apprentice in every craft.',
+    check: (s) => Object.keys(s.staff.crew).length >= 6,
     reward: [{ stat: 'apprenticeXp', value: 0.15 }, { stat: 'sellPrice', value: 0.05 }] },
   { id: 'ascend_10', name: 'Cycle of Rebirth', icon: '♻️', desc: 'Ascend 10 times.', check: (s) => s.asc.count >= 10, reward: [{ stat: 'stoneGain', value: 0.1 }] },
 ];

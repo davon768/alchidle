@@ -22,7 +22,7 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'boots', name: 'Seven-League Boots', icon: '👢', desc: 'Expeditions finish faster.', level: 3, baseCost: 100, growth: 1.85, max: 0, effects: [{ stat: 'scavSpeed', value: 0.1 }] },
   { id: 'satchel', name: 'Expedition Pack', icon: '🎒', desc: 'Run another expedition at once.', level: 5, baseCost: 500, growth: 6, max: 3, effects: [{ stat: 'expSlots', value: 1 }] },
   { id: 'sieve', name: 'Silver Sieve', icon: '🥄', desc: 'Find more on expeditions.', level: 5, baseCost: 120, growth: 1.85, max: 0, effects: [{ stat: 'scavYield', value: 0.08 }] },
-  { id: 'quarters', name: 'Apprentice Quarters', icon: '🛏️', desc: 'Room for another apprentice.', level: 3, baseCost: 300, growth: 4, max: 4, effects: [{ stat: 'apprenticeSlots', value: 1 }] },
+  { id: 'quarters', name: 'Apprentice Quarters', icon: '🛏️', desc: 'Somewhere decent to sleep. They learn quicker for it.', level: 3, baseCost: 300, growth: 4, max: 4, effects: [{ stat: 'apprenticeXp', value: 0.15 }] },
   { id: 'library', name: 'Training Library', icon: '📚', desc: 'Apprentices learn faster.', level: 5, baseCost: 500, growth: 2.2, max: 0, effects: [{ stat: 'apprenticeXp', value: 0.1 }] },
   { id: 'hourglass', name: 'Sleeper\'s Hourglass', icon: '⌛', desc: '+2 hours of offline progress.', level: 8, baseCost: 5000, growth: 3, max: 4, effects: [{ stat: 'offlineHours', value: 2 }] },
   { id: 'ledger', name: 'Guild Ledger', icon: '📒', desc: 'More reputation per contract.', level: 8, baseCost: 1000, growth: 1.9, max: 0, effects: [{ stat: 'repGain', value: 0.1 }] },

@@ -109,7 +109,7 @@ export const SKILLS: SkillNode[] = [
   n('arca', 'golden_aura', 'Golden Aura', '🌟', 2, 5, 2, [{ stat: 'sellPrice', value: 0.05 }, { stat: 'harvestYield', value: 0.05 }], [{ id: 'arcane_focus', rank: 5 }]),
   n('arca', 'sage_mind', 'Sage Mind', '🧠', 2, 5, 2, [{ stat: 'masteryRate', value: 0.1 }, { stat: 'xpGain', value: 0.05 }], [{ id: 'arcane_focus', rank: 5 }]),
   n('arca', 'mentorship', 'Mentorship', '🎓', 3, 10, 1, [{ stat: 'apprenticeXp', value: 0.08 }], [{ id: 'sage_mind', rank: 1 }], 'Your apprentices learn faster.'),
-  n('arca', 'headmaster', 'Headmaster', '🏫', 3, 2, 3, [{ stat: 'apprenticeSlots', value: 1 }], [{ id: 'arcane_focus', rank: 5 }], 'Take on another apprentice.'),
+  n('arca', 'headmaster', 'Headmaster', '🏫', 3, 2, 3, [{ stat: 'apprenticeXp', value: 0.25 }], [{ id: 'arcane_focus', rank: 5 }], 'Your apprentices learn markedly faster.'),
   n('arca', 'astral_attune', 'Astral Attunement', '🌌', 4, 1, 5, [{ stat: 'plots', value: 1 }, { stat: 'cauldrons', value: 1 }, { stat: 'expSlots', value: 1 }],
     [{ id: 'chronomancy', rank: 5 }, { id: 'golden_aura', rank: 3 }]),
   n('arca', 'endless_arcana', 'The Great Work', '♾️', 5, 0, 3, [

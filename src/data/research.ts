@@ -5,7 +5,7 @@
  * only competitor for the materials the player would otherwise sell. Projects survive ascension, so a
  * study started on one run finishes on the next.
  */
-import type { Effect, ItemStack } from '../core/types';
+import type { Effect, ItemStack, RoleId } from '../core/types';
 
 export interface ResearchDef {
   id: string;
@@ -17,18 +17,40 @@ export interface ResearchDef {
   cost: ItemStack[]; // paid when the study starts; 'gold' allowed
   req?: string[]; // other research ids that must be finished first
   effects?: Effect[]; // permanent modifiers, applied once finished (per completion when repeatable)
+  unlocksRole?: RoleId; // brings this craft's apprentice into the workshop when the study finishes
   repeat?: boolean; // endless: can be researched again and again, cost and time growing each time
   growth?: number; // cost/time multiplier per completion for repeatable projects
 }
 
 /** Player level at which the Library tab appears — matches the first study. */
-export const RESEARCH_UNLOCK_LEVEL = 4;
+export const RESEARCH_UNLOCK_LEVEL = 3;
 
 const MIN = 60;
 const HOUR = 3600;
 
 export const RESEARCH: ResearchDef[] = [
   // ── Tier 1: the first hour ──────────────────────────────────
+  // Apprentices are unlocked here rather than hired. Each is cheap and quick, so automation arrives
+  // steadily through the early game instead of waiting on a lucky roll in a candidate list.
+  { id: 'appr_gardener', name: 'A Gardener\'s Hands', icon: '🧑‍🌾', level: 3, time: 2 * MIN,
+    desc: 'Write down how the beds are kept, and someone can keep them for you.',
+    cost: [{ id: 'gold', qty: 150 }], unlocksRole: 'gardener' },
+  { id: 'appr_brewer', name: 'A Brewer\'s Notes', icon: '🧑‍🔬', level: 5, time: 6 * MIN,
+    desc: 'Set the method down plainly and the cauldrons need not be watched.',
+    cost: [{ id: 'gold', qty: 600 }], unlocksRole: 'brewer' },
+  { id: 'appr_scout', name: 'Trail Signs', icon: '🧝', level: 8, time: 20 * MIN,
+    desc: 'Map the safe roads so a party can walk them without you.',
+    cost: [{ id: 'gold', qty: 4000 }, { id: 'batwing', qty: 10 }], unlocksRole: 'scout' },
+  { id: 'appr_shopkeeper', name: 'Shop Ledgers', icon: '🧑‍💼', level: 11, time: 40 * MIN,
+    desc: 'Somebody has to mind the counter while you are at the cauldron.',
+    cost: [{ id: 'gold', qty: 18000 }], req: ['ledger'], unlocksRole: 'shopkeeper' },
+  { id: 'appr_squire', name: 'Squire\'s Drill', icon: '🤺', level: 14, time: 90 * MIN,
+    desc: 'Teach one to carry the pack, and to say get up when you would rather not.',
+    cost: [{ id: 'gold', qty: 60000 }, { id: 'ironore', qty: 30 }], unlocksRole: 'squire' },
+  { id: 'appr_scribe', name: 'A Scribe\'s Alphabet', icon: '🧙', level: 18, time: 3 * HOUR,
+    desc: 'The sigils can be copied. Slowly, and by someone else.',
+    cost: [{ id: 'gold', qty: 200000 }, { id: 'soulink', qty: 6 }], req: ['annex'], unlocksRole: 'scribe' },
+
   { id: 'catalog', name: 'Catalogue the Shelves', icon: '🗂️', level: 4, time: 3 * MIN,
     desc: 'Put the library in order. Everything after this goes faster.',
     cost: [{ id: 'gold', qty: 400 }],

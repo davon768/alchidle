@@ -20,11 +20,11 @@ Deployment: every push to `main` runs `.github/workflows/deploy.yml`, which buil
 
 - **`src/data/`** — all content is data-driven: items, plants, recipes, zones, skills, upgrades, guilds, ascension, achievements, dungeons (`combat.ts`), spells/reagents, gear, events, proficiency, apprentices. Adding content means adding entries; the engine and UI pick them up. `RECIPES` must stay sorted by level (unlock lists and contract pools slice from the end).
 - **`src/core/types.ts`** — `GameState` is one plain-JSON object. `Mods` holds every number the systems read.
-- **`src/core/mods.ts` → `computeMods(s)`** — the single modifier pipeline. Skills, upgrades, guild rank, ascension nodes, achievements, equipped gear, ritual buffs, the active event, working apprentices and graduated masters all emit `Effect { stat, value }` onto base values. New bonus sources plug in here. The `auto*` stats are *capacities* (plots/cauldrons/parties/potion types/rituals tended) and are zeroed unless an apprentice of that role is working.
+- **`src/core/mods.ts` → `computeMods(s)`** — the single modifier pipeline. Skills, upgrades, guild rank, ascension nodes, achievements, equipped gear, ritual buffs, the active event, working apprentices and graduated masters all emit `Effect { stat, value }` onto base values. New bonus sources plug in here. The `auto*` stats are *capacities* (plots/cauldrons/parties/potion types/rituals tended) and are zeroed unless that craft has an apprentice; a craft's capacity comes from its own tree (`capacityOf` in `core/staff.ts`).
 - **`src/core/engine.ts` → `tick(s, dt)`** — correct for any `dt`: 100 ms live ticks, throttled background tabs and offline catch-up all use it. `simulate()` runs it in ≤4000 steps with `quiet = true`, which suppresses toasts and item pop-ups (offline gets a summary modal instead). Sub-systems ticked from here: `magic.ts` (mana, rituals), `events.ts`, `combat.ts` (0.25 s sub-steps, auto-battle), `staff.ts` (apprentices). `addItem()` emits the gain signal that drives the UI pop-up feed.
 - **Goals** (`data/goals.ts`, `core/goals.ts`) are the tutorial: one goal per mechanic, each with a *how*, an explanation and a one-time reward, shown in the top banner and the 🎯 Goals tab. When you add a system, add a goal that teaches it.
 - **Proficiency** (`data/proficiency.ts`, accessed via `profBonusOf` / `gainProf` in the engine) replaced recipe mastery: every plant, potion, reagent and forge tier levels 1–100 with milestone bonuses every 10 levels.
-- **Saves** (`core/save.ts`): `mergeDefaults()` fills missing fields from `newState()`, so adding fields never breaks old saves. When a field changes meaning, bump `SAVE_VERSION` in `state.ts` and add a step to `migrate()` (v2: mastery → proficiency XP; v3: bought automation upgrades → level-10 apprentices). `newState(prev)` defines what survives ascension.
+- **Saves** (`core/save.ts`): `mergeDefaults()` fills missing fields from `newState()`, so adding fields never breaks old saves. When a field changes meaning, bump `SAVE_VERSION` in `state.ts` and add a step to `migrate()` (v2: mastery → proficiency XP; v3: bought automation upgrades → apprentices; v9: hired staff and graduated masters → one apprentice per craft). `newState(prev)` defines what survives ascension.
 - **UI**: `src/ui/app.ts` re-renders the whole app with lit-html ~10×/s via `requestAnimationFrame`. Views in `src/ui/views/` are pure `(s, m) => TemplateResult`; state changes go through `act(fn)`, which re-renders immediately. Tabs unlock through `TABS[].unlocked`.
 - Circular imports between core modules (engine ↔ combat/magic/staff/events/armory) are intentional and safe: nothing runs at module load.
 
@@ -39,7 +39,7 @@ Deployment: every push to `main` runs `.github/workflows/deploy.yml`, which buil
 
 - Long, effectively endless progression. Prefer milestone bonuses (every 5 or 10 levels) over small per-level percentages.
 - New systems must interlock with existing ones (consume and produce other systems' items and stats), surface their activity through toasts and item pop-ups, and be re-balanced with the bot afterwards.
-- Automation comes from hiring and training apprentices, never from one-off purchases.
+- Automation comes from apprentices, never from one-off purchases. There is exactly one per craft, unlocked by a Library study; they level by doing their work and spend skill points in a per-craft upgrade tree the player directs. No hiring, rolling or slots.
 
 ## Claude conversation sync
 

@@ -1,33 +1,99 @@
 import type { Apprentice, GameState, Mods, RoleId } from './types';
-import { addGold, randInt, toast } from './engine';
-import { computeMods, describeEffects } from './mods';
+import { toast } from './engine';
+import { describeEffects } from './mods';
 import {
-  CANDIDATE_REFRESH, NAMES, PORTRAITS, ROLES, ROLE_MAP, TALENTS, TRAITS, TRAIT_MAP,
-  apprXpToNext, apprenticeCap, apprenticeCapacity, createApprentice, repushDelay, traitXpMult, tuitionMult,
+  APPRENTICE_MAX, APPR_ROW_POINTS, NAMES, NODE_MAP, ROLE_MAP, ROLES,
+  apprenticeLevel, apprenticeProgress, nodeRankCost, roleOfNode, type ApprenticeNode,
 } from '../data/apprentices';
 import { PROFS, profLevel } from '../data/proficiency';
 
-export function findApprentice(s: GameState, id: string): Apprentice | undefined {
-  return s.staff.hired.find((a) => a.id === id);
+export function apprenticeOf(s: GameState, role: RoleId): Apprentice | undefined {
+  return s.staff.crew[role];
+}
+export const hasApprentice = (s: GameState, role: RoleId): boolean => !!s.staff.crew[role];
+
+/** Bring a role's apprentice into the workshop. Called when its Library study finishes. */
+export function unlockApprentice(s: GameState, role: RoleId): void {
+  if (s.staff.crew[role]) return;
+  s.staff.crew[role] = { role, xp: 0, nodes: {} };
+  const def = ROLE_MAP[role];
+  toast(`${def.icon} ${NAMES[role]} joins your workshop as your ${def.name}!`, 'epic');
 }
 
-export function workersOf(s: GameState, role: RoleId): Apprentice[] {
-  return s.staff.hired.filter((a) => a.role === role && a.mode === 'work');
-}
+// ── Levels, points and the tree ──────────────────────────────
+export const levelOf = (a: Apprentice): number => apprenticeLevel(a.xp);
+export const progressOf = (a: Apprentice): { level: number; into: number; need: number } => apprenticeProgress(a.xp);
 
-/** The apprentice tending slot `index` of a role (plot, cauldron, party…). Bonus capacity from skills is credited to the lead worker. */
-export function tenderOf(s: GameState, role: RoleId, index: number): Apprentice | null {
-  const workers = workersOf(s, role);
-  let i = index;
-  for (const a of workers) {
-    const c = apprenticeCapacity(a);
-    if (i < c) return a;
-    i -= c;
+/** One skill point per level. */
+export const pointsEarned = (a: Apprentice): number => levelOf(a);
+
+export function pointsSpent(a: Apprentice): number {
+  let total = 0;
+  for (const [id, rank] of Object.entries(a.nodes)) {
+    const node = NODE_MAP[id];
+    if (!node) continue;
+    for (let r = 0; r < rank; r++) total += nodeRankCost(node, r);
   }
-  return workers[0] ?? null;
+  return total;
 }
 
-// ── Training ─────────────────────────────────────────────────
+export const pointsFree = (a: Apprentice): number => pointsEarned(a) - pointsSpent(a);
+
+/** Whether a node can be bought right now, and why not. */
+export function nodeStatus(a: Apprentice, node: ApprenticeNode): { ok: boolean; reason: string; cost: number } {
+  const rank = a.nodes[node.id] ?? 0;
+  const cost = nodeRankCost(node, rank);
+  if (node.maxRank > 0 && rank >= node.maxRank) return { ok: false, reason: 'Fully learned', cost };
+  if (pointsSpent(a) < node.row * APPR_ROW_POINTS) {
+    return { ok: false, reason: `Spend ${node.row * APPR_ROW_POINTS} points in this tree first`, cost };
+  }
+  if (pointsFree(a) < cost) return { ok: false, reason: `Needs ${cost} skill point${cost > 1 ? 's' : ''}`, cost };
+  return { ok: true, reason: '', cost };
+}
+
+export function learnNode(s: GameState, role: RoleId, nodeId: string): void {
+  const a = s.staff.crew[role];
+  const node = NODE_MAP[nodeId];
+  if (!a || !node || roleOfNode[nodeId] !== role) return;
+  const status = nodeStatus(a, node);
+  if (!status.ok) {
+    if (status.reason) toast(status.reason, 'warn');
+    return;
+  }
+  a.nodes[nodeId] = (a.nodes[nodeId] ?? 0) + 1;
+}
+
+/** Refund every point in a tree so it can be spent again. Free: the points were earned by working. */
+export function respecApprentice(s: GameState, role: RoleId): void {
+  const a = s.staff.crew[role];
+  if (!a) return;
+  a.nodes = {};
+  toast(`${ROLE_MAP[role].icon} ${NAMES[role]} starts afresh — every point is yours to spend again.`, 'good');
+}
+
+/** How many units of its craft this apprentice tends. */
+export function capacityOf(a: Apprentice): number {
+  const def = ROLE_MAP[a.role];
+  let n = def.baseCapacity;
+  for (const [id, rank] of Object.entries(a.nodes)) {
+    const node = NODE_MAP[id];
+    if (node?.capacity) n += node.capacity * rank;
+  }
+  return Math.max(1, n);
+}
+
+/** Everything a role's tree currently contributes to the modifier pipeline. */
+export function apprenticeEffects(a: Apprentice): { stat: keyof Mods; value: number }[] {
+  const out: { stat: keyof Mods; value: number }[] = [];
+  for (const [id, rank] of Object.entries(a.nodes)) {
+    const node = NODE_MAP[id];
+    if (!node?.effects || rank <= 0) continue;
+    for (const eff of node.effects) out.push({ stat: eff.stat, value: eff.value * rank });
+  }
+  return out;
+}
+
+// ── Earning ──────────────────────────────────────────────────
 /** Your own proficiency in a craft makes you a better teacher (up to ×2 at proficiency 100). */
 function mentorMult(s: GameState, role: RoleId): number {
   const kind = ROLE_MAP[role].mentor;
@@ -37,165 +103,50 @@ function mentorMult(s: GameState, role: RoleId): number {
   return 1 + best / 100;
 }
 
-/** Base study speed (XP/s) before XP multipliers. */
-export function trainRate(s: GameState, a: Apprentice): number {
-  return (0.5 + 0.05 * a.level) * (a.role ? mentorMult(s, a.role) : 1);
-}
-
-export function effectiveTrainRate(s: GameState, m: Mods, a: Apprentice): number {
-  return trainRate(s, a) * m.apprenticeXp * TALENTS[a.talent].xp * traitXpMult(a, false);
-}
-
-/** Gold per second while studying — rises steeply with level. */
-export function tuitionRate(a: Apprentice): number {
-  return (0.5 + 0.05 * a.level) * 2 * 1.13 ** (a.level - 1) * tuitionMult(a);
-}
-
-export function gainApprenticeXp(_s: GameState, m: Mods, a: Apprentice, amount: number, working: boolean): void {
-  const cap = apprenticeCap(a);
-  if (a.level >= cap || amount <= 0) return;
-  a.xp += amount * m.apprenticeXp * TALENTS[a.talent].xp * traitXpMult(a, working);
-  let need = apprXpToNext(a.level);
-  while (a.xp >= need && a.level < cap) {
-    a.xp -= need;
-    a.level++;
-    need = apprXpToNext(a.level);
-    const perk = a.role ? ROLE_MAP[a.role].perks.find((p) => p.level === a.level) : undefined;
-    if (perk) toast(`${a.icon} ${a.name} reached level ${a.level}: ${describeEffects(perk.effects)}`, 'good');
-  }
-  if (a.level >= cap) {
-    a.xp = 0;
-    toast(`🎓 ${a.icon} ${a.name} has mastered their craft and is ready to graduate!`, 'epic');
-  }
-}
-
-/** Credit work XP to whichever apprentice handles slot `index` of `role`. */
+/** Credit an apprentice for a piece of work it tended. `index` is which unit, so only tended ones count. */
 export function workXp(s: GameState, m: Mods, role: RoleId, index: number, amount: number): void {
-  const a = tenderOf(s, role, index);
-  if (a) gainApprenticeXp(s, m, a, amount, true);
-}
-
-// ── Hiring ───────────────────────────────────────────────────
-export function rollCandidate(s: GameState, luck = 1): Apprentice {
-  const weights = TALENTS.map((t, i) => t.weight * (i > 0 ? luck : 1));
-  let r = Math.random() * weights.reduce((x, y) => x + y, 0);
-  let talent = 0;
-  for (let i = 0; i < weights.length; i++) {
-    r -= weights[i];
-    if (r <= 0) {
-      talent = i;
-      break;
-    }
+  const a = s.staff.crew[role];
+  if (!a || amount <= 0) return;
+  if (index >= capacityOf(a)) return;
+  const before = levelOf(a);
+  if (before >= APPRENTICE_MAX) return;
+  a.xp += amount * m.apprenticeXp * mentorMult(s, role);
+  const after = levelOf(a);
+  if (after > before) {
+    toast(`${ROLE_MAP[role].icon} ${NAMES[role]} reached level ${after} — ${after - before} skill point${after - before > 1 ? 's' : ''} to spend.`, 'good');
   }
-  const pool = [...TRAITS].sort(() => Math.random() - 0.5);
-  const traits = [pool[0].id];
-  if (Math.random() < 0.4) {
-    const clash = (a: string, b: string) => [a, b].includes('clumsy') && [a, b].includes('diligent');
-    const second = pool.slice(1).find((t) => !clash(t.id, pool[0].id));
-    if (second) traits.push(second.id);
-  }
-  return createApprentice(`a${s.staff.nextId++}`, NAMES[randInt(0, NAMES.length - 1)], PORTRAITS[randInt(0, PORTRAITS.length - 1)], talent, traits);
 }
 
-export function rollCandidates(s: GameState, luck = 1): Apprentice[] {
-  return [0, 1, 2].map(() => rollCandidate(s, luck));
+/** Seconds a Squire waits after your recovery before pushing deeper again. */
+export function repushDelay(a: Apprentice): number {
+  return Math.max(15, 180 - 3 * levelOf(a));
 }
 
-export function hireCost(s: GameState, a: Apprentice): number {
-  return Math.round(40 * (1 + s.level) ** 1.4 * TALENTS[a.talent].cost);
+export function describeNode(node: ApprenticeNode, rank = 1): string {
+  const parts: string[] = [];
+  if (node.capacity) parts.push(`+${node.capacity * rank} tended`);
+  if (node.effects) parts.push(describeEffects(node.effects, rank));
+  return parts.filter(Boolean).join(', ');
 }
 
-/** Suggest the first unlocked role nobody is doing yet. */
-function suggestRole(s: GameState, a: Apprentice): RoleId | null {
-  const affinity = a.traits.map((id) => TRAIT_MAP[id]?.role).find((r) => r && s.level >= ROLE_MAP[r].level);
-  if (affinity) return affinity;
-  const open = ROLES.filter((r) => s.level >= r.level);
-  return (open.find((r) => !s.staff.hired.some((h) => h.role === r.id)) ?? open[0])?.id ?? null;
-}
+export { ROLES, ROLE_MAP, NAMES, APPRENTICE_MAX, APPR_ROW_POINTS };
 
-export function hire(s: GameState, index: number): void {
-  const a = s.staff.candidates[index];
-  if (!a) return;
-  if (s.staff.hired.length >= Math.floor(computeMods(s).apprenticeSlots)) {
-    toast('No free apprentice slots — build Apprentice Quarters in the 🔨 Workshop.', 'warn');
-    return;
-  }
-  const cost = hireCost(s, a);
-  if (s.gold < cost) {
-    toast('Not enough gold to hire.', 'warn');
-    return;
-  }
-  addGold(s, -cost, false);
-  s.staff.candidates.splice(index, 1);
-  a.role = suggestRole(s, a);
-  s.staff.hired.push(a);
-  toast(`👥 ${a.icon} ${a.name} joins your workshop${a.role ? ` as a ${ROLE_MAP[a.role].name}` : ''}!`, 'good');
-}
-
-export function dismiss(s: GameState, id: string): void {
-  s.staff.hired = s.staff.hired.filter((a) => a.id !== id);
-}
-
-export function assignRole(s: GameState, id: string, role: RoleId | null): void {
-  const a = findApprentice(s, id);
-  if (!a || (role && s.level < ROLE_MAP[role].level)) return;
-  a.role = role;
-}
-
-export function setMode(s: GameState, id: string, mode: 'work' | 'train'): void {
-  const a = findApprentice(s, id);
-  if (!a || (mode === 'train' && a.level >= apprenticeCap(a))) return;
-  a.mode = mode;
-}
-
-/** A maxed apprentice leaves to join the Hall of Masters: a permanent bonus that survives ascension. */
-export function graduate(s: GameState, id: string): void {
-  const a = findApprentice(s, id);
-  if (!a || !a.role || a.level < apprenticeCap(a)) return;
-  dismiss(s, id);
-  s.staff.masters.push({ name: a.name, icon: a.icon, role: a.role, talent: a.talent });
-  toast(`🏛️ ${a.icon} ${a.name} graduates as a ${TALENTS[a.talent].name} Master ${ROLE_MAP[a.role].name}!`, 'epic');
-}
-
-export function rerollCost(s: GameState): number {
-  return Math.round(25 * s.level ** 1.3);
-}
-
-export function rerollCandidates(s: GameState): void {
-  const cost = rerollCost(s);
-  if (s.gold < cost) return;
-  addGold(s, -cost, false);
-  s.staff.candidates = rollCandidates(s);
-  s.staff.refresh = CANDIDATE_REFRESH;
-}
-
-// ── Tick ─────────────────────────────────────────────────────
-export function tickStaff(s: GameState, m: Mods, dt: number): void {
+/**
+ * Per-tick apprentice upkeep. All that remains is the Squire: after a defeat drops you a floor and you
+ * recover, it turns auto-advance back on. Candidate refreshes, tuition and study time are gone with the
+ * hiring system — apprentices now earn only by working, which `workXp` handles.
+ */
+export function tickStaff(s: GameState, _m: Mods, dt: number): void {
   const st = s.staff;
-  st.refresh -= dt;
-  if (st.refresh <= 0) {
-    st.candidates = rollCandidates(s);
-    st.refresh = CANDIDATE_REFRESH;
-  }
-
-  for (const a of st.hired) {
-    if (a.mode !== 'train' || a.level >= apprenticeCap(a)) continue;
-    const cost = tuitionRate(a) * dt;
-    if (s.gold < cost) continue; // can't pay tuition: study pauses
-    addGold(s, -cost, false);
-    gainApprenticeXp(s, m, a, trainRate(s, a) * dt, false);
-  }
-
-  // Squires: after a defeat-retreat and recovery, push deeper again.
   const c = s.combat;
-  const squires = workersOf(s, 'squire');
-  if (squires.length && c.dungeonId && c.retreated && !c.autoAdvance && c.dead <= 0) {
+  const squire = st.crew.squire;
+  if (squire && c.dungeonId && c.retreated && !c.autoAdvance && c.dead <= 0) {
     st.repush += dt;
-    if (st.repush >= Math.min(...squires.map(repushDelay))) {
+    if (st.repush >= repushDelay(squire)) {
       c.autoAdvance = true;
       c.retreated = false;
       st.repush = 0;
-      toast(`🤺 ${squires[0].name} rallies you — pushing deeper again!`, 'info');
+      toast(`🤺 ${NAMES.squire} rallies you — pushing deeper again!`, 'info');
     }
   } else {
     st.repush = 0;

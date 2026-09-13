@@ -1,7 +1,7 @@
 import type { CombatState, GameState, Stats } from './types';
 import { startGoldFor } from '../data/ascension';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export function xpToNext(level: number): number {
   return Math.floor(25 * 1.21 ** (level - 1) + 15 * level);
@@ -82,7 +82,7 @@ export function newState(prev?: GameState): GameState {
     research: { queue: [], done: {} },
     familiars: {},
     equippedFamiliars: [],
-    staff: { hired: [], candidates: [], refresh: 0, masters: [], nextId: 1, repush: 0 },
+    staff: { crew: {}, repush: 0 },
     lastTick: Date.now(),
   };
   if (prev) {
@@ -100,9 +100,7 @@ export function newState(prev?: GameState): GameState {
     s.catalogue = prev.catalogue; // the seed catalogue is a lifetime record
     s.familiars = prev.familiars; // companions stay with you through ascension
     s.equippedFamiliars = prev.equippedFamiliars;
-    s.staff.masters = prev.staff.masters;
-    s.staff.nextId = prev.staff.nextId;
-    if (s.asc.nodes['loyal']) s.staff.hired = prev.staff.hired;
+    s.staff = prev.staff; // apprentices and their trees are a lifetime investment
     if (s.asc.nodes['arcane_memory']) {
       s.spells = prev.spells;
       s.spellSlots = prev.spellSlots;
