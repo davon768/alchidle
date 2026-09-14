@@ -5,6 +5,8 @@ import { researchActive, researchDone, researchStatus } from '../../core/engine'
 import { cancelResearch, startResearch } from '../../core/actions';
 import { fmtTime } from '../../core/format';
 import { act, bar, costChips, sectionTitle } from '../common';
+import { QUALITY_RESEARCH_BOOST } from '../../data/research';
+import { QUAL_MAX } from '../../data/quality';
 
 export function libraryView(s: GameState, m: Mods): TemplateResult {
   const desks = Math.floor(m.researchSlots);
@@ -36,7 +38,20 @@ export function libraryView(s: GameState, m: Mods): TemplateResult {
       })}
     </div>
 
-    ${sectionTitle('🔖 Studies', 'Costs are paid when a study begins. Spending finer potions shortens the work.')}
+    ${sectionTitle('🔖 Studies', 'Costs are paid when a study begins.')}
+    <div class="card">
+      <div class="row between">
+        <div class="row">
+          <span>Pay studies with your finest bottles:</span>
+          <button class="btn small ${s.settings.fineStudies ? 'on' : ''}"
+            @click=${act((g) => (g.settings.fineStudies = !g.settings.fineStudies))}>${s.settings.fineStudies ? 'ON' : 'OFF'}</button>
+        </div>
+        <span class="dim small">Up to −${Math.round(QUAL_MAX * QUALITY_RESEARCH_BOOST * 100)}% study time</span>
+      </div>
+      <div class="dim small">${s.settings.fineStudies
+        ? 'Studies draw the highest quality potions you hold, and finish sooner for it. Your best bottles go to the Library instead of the Market.'
+        : 'Studies draw your cheapest potions, so they keep your finest for selling — and get no time bonus. Turn this on to trade fine bottles for faster research.'}</div>
+    </div>
     <div class="card table-wrap">
       <table class="table">
         <tr><th></th><th>Study</th><th>Cost</th><th>Time</th><th></th></tr>

@@ -101,6 +101,8 @@ It interlocks with quality in both directions: several studies grant `brewQualit
 in higher-quality potions shortens it** — up to 35% off, 18% for an all-Legendary payment — which gives
 Masterworks a use other than the market.
 
+**Study time** responds to two things: the `researchSpeed` stat (Archive Owl, the Scribe's Careful Copyist, Library studies), and the quality of the potions paid as cost. The quality cut reaches a third off for an all-Legendary payment, but only when **Pay studies with your finest bottles** is on in the Library — every other system spends cheapest-first, and that default made the bonus unreachable in practice. Off by default: handing the Library your best bottles is a real trade against selling them.
+
 ### Cross-breeding (v0.7, seed tray reworked in v1.0)
 
 Harvesting a plot whose neighbour holds a *different* herb has a 2% chance (`mutationChance` scales it) of

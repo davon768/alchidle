@@ -44,9 +44,14 @@ export function startResearch(s: GameState, id: string): void {
   }
   let qualityCredit = 0;
   let potions = 0;
+  // Which end of the stock a study draws from is the whole mechanic. Drawing the cheapest bottles first
+  // is right everywhere else, but here it meant the shortening never fired: any Commons on the shelf
+  // were spent before a single Masterwork, so the bonus that exists to give fine bottles a use outside
+  // the market was unreachable unless you happened to hold nothing else.
+  const from = s.settings.fineStudies ? 'high' : 'low';
   for (const c of cost) {
     if (c.id === 'gold') { addGold(s, -c.qty, false); continue; }
-    const taken = removeItem(s, c.id, c.qty);
+    const taken = removeItem(s, c.id, c.qty, from);
     for (let t = 1; t <= 3; t++) { qualityCredit += taken[t] * t; potions += taken[t]; }
     potions += taken[0];
   }

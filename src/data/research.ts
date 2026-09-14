@@ -151,5 +151,8 @@ export function researchTime(def: ResearchDef, done: number): number {
   return def.time * g;
 }
 
-/** Higher-quality potions spent on a study shorten it — up to a third off for an all-Legendary payment. */
-export const QUALITY_RESEARCH_BOOST = 0.06;
+/**
+ * Higher-quality potions spent on a study shorten it — a third off for an all-Legendary payment, which
+ * is what the cap in `startResearch` has always allowed. At 0.06 the best reachable cut was 18%.
+ */
+export const QUALITY_RESEARCH_BOOST = 0.11;

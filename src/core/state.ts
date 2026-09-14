@@ -79,7 +79,7 @@ export function newState(prev?: GameState): GameState {
     achievements: {},
     goals: {},
     autoSell: {},
-    settings: { notation: 'suffix', keepReserve: 10, autoSalvage: 0, lootPops: true },
+    settings: { notation: 'suffix', keepReserve: 10, autoSalvage: 0, lootPops: true, fineStudies: false },
     mana: 0,
     spells: {},
     spellSlots: [],

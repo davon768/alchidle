@@ -309,7 +309,7 @@ export interface GameState {
   achievements: Record<string, boolean>;
   goals: Record<string, 'done' | 'claimed'>; // tutorial goals (permanent; rewards pay out once ever)
   autoSell: Record<string, boolean>;
-  settings: { notation: 'suffix' | 'sci'; keepReserve: number; autoSalvage: number; lootPops: boolean };
+  settings: { notation: 'suffix' | 'sci'; keepReserve: number; autoSalvage: number; lootPops: boolean; fineStudies: boolean };
   // Magic
   mana: number;
   spells: Record<string, number>; // learned spell ranks
