@@ -31,6 +31,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'contracts_50', name: 'Reliable Supplier', icon: '📜', desc: 'Complete 50 contracts.', check: (s) => s.stats.contracts >= 50, reward: [{ stat: 'contractReward', value: 0.1 }] },
   { id: 'trades_25', name: 'Caravan Regular', icon: '🐪', desc: 'Complete 25 trades.', check: (s) => s.stats.trades >= 25, reward: [{ stat: 'tradeBonus', value: 0.05 }] },
   { id: 'rift_10', name: 'Into the Abyss', icon: '🌀', desc: 'Reach Rift depth 10.', check: (s) => s.riftDepth >= 10, reward: [{ stat: 'rareFind', value: 0.1 }] },
+  { id: 'delve_10', name: 'Company of the Deep', icon: '🏕️', desc: 'Clear depth 10 with your adventurers.', check: (s) => (s.party?.depth ?? 0) >= 10, reward: [{ stat: 'partyPower', value: 0.05 }] },
+  { id: 'delve_30', name: 'Nothing Down There Sleeps', icon: '🏺', desc: 'Clear depth 30 with your adventurers.', check: (s) => (s.party?.depth ?? 0) >= 30, reward: [{ stat: 'partyPower', value: 0.1 }, { stat: 'rareFind', value: 0.1 }] },
   { id: 'panacea', name: 'The Great Work', icon: '🜔', desc: "Brew a Philosopher's Panacea.", check: (s) => (s.prof['p_panacea'] ?? 0) > 0, reward: sellBonus(0.1) },
   { id: 'prof_25', name: 'Journeyman Artisan', icon: '🎖️', desc: 'Reach proficiency 25 in anything.', check: (s) => bestProf(s) >= 25, reward: [{ stat: 'masteryRate', value: 0.05 }] },
   { id: 'prof_50', name: 'Specialist', icon: '🏅', desc: 'Reach proficiency 50 in anything.', check: (s) => bestProf(s) >= 50, reward: [{ stat: 'masteryRate', value: 0.1 }] },

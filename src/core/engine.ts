@@ -19,6 +19,7 @@ import { dungeonUnlocked, tickCombat } from './combat';
 import { tickMagic } from './magic';
 import { tickEvents } from './events';
 import { tickStaff, unlockApprentice, workXp } from './staff';
+import { tickParty } from './party';
 
 // ── Notifications ────────────────────────────────────────────
 export type ToastKind = 'info' | 'good' | 'warn' | 'epic';
@@ -701,6 +702,7 @@ export function tick(s: GameState, dt: number): void {
   tickEvents(s, m, dt);
   tickCombat(s, m, dt);
   tickStaff(s, m, dt);
+  tickParty(s, m, dt);
 }
 
 export interface OfflineSummary {

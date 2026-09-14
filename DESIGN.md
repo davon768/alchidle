@@ -129,9 +129,43 @@ a use that competes directly with the market, which it previously lacked.
 Slots start at 1 and reach 3 through the Library (*Companion Lore*, *The Menagerie*), so which companion
 is out is a real choice for most of a run. Familiars and their levels survive ascension.
 
+### Adventurer parties (v1.0)
+
+A company you hire, supply from your own cauldrons, and send down the Endless Rift. It is the system that
+ties brewing, quality, exploration, apprentices and ascension into one line of progression.
+
+**The roster.** Six classes (`data/adventurers.ts`) — Warden, Blademaster, Ranger, Rift Mage, Cleric,
+Rogue — trading power against *guard* (who gets hurt), *haul*, *relic luck* and *mend*. Each signing fee is
+4.2× the last (2.5K, 10.5K, 44K…), and seats come from the Library (*Charter a Company* +2, *The Deep Writ*
++2), the Captain's tree (+4) and one relic, capped at 8. Adventurers level 1–60 on delve XP alone, so a
+maxed hero is tens of hours of delving.
+
+**Supplies are the hook.** Each delve drinks one bottle of every kitted potion per adventurer, plus another
+round for every ten depths, *finest bottles first* — so Legendary brewing converts directly into depth
+(`SUPPLY_WEIGHT × potency`, and potency already folds in belt bonuses, proficiency and the quality tier).
+Two kit slots to start, up to six through the Captain and the Everfull Phial.
+
+**The ladder.** Depth *d* demands `30 × 1.18^d` power and takes `100 × 1.04^d` seconds; odds run from 5% at
+half the demanded power to 95% at triple. Winning banks the depth for good — the ladder is a ratchet.
+Losing costs the supplies, pays 30% of the haul and half XP, and puts one adventurer (weighted toward the
+lightly armoured) on a rest timer. **Nobody is ever lost**, which is what lets the company idle safely.
+
+**Bosses and relics.** Every tenth depth is a boss at 2.2× power and 1.5× time, and the only guaranteed
+source of a **relic** (`data/relics.ts`). Relics are permanent stacking *ranks*, not gear: pulling one again
+raises its rank, and they feed `computeMods` like every other bonus. Nine of them, from the Ward Stone at
+depth 10 to the Crown of the Deep at 50. A Rogue turns them up between bosses.
+
+**Interlocks.** The Captain apprentice resupplies and re-sends the company (`autoDelve`); mapped depth pays
+the whole workshop +5% rare finds and +3% expedition loot per 5 depths; delves eat potions and return the
+materials the forge and the Arcanum want, plus player XP. Roster, relics and depth all survive ascension;
+the delve in progress does not.
+
+Bot-measured: first relic inside the first day, depth ~28 after 24 h with two adventurers, and no
+measurable change to the ~90-minute first ascension — the charter costs 120K gold and lands well after it.
+
 ### Goals (v0.5): the tutorial
 
-28 goals in 7 chapters (Workshop basics, Apprentices, Craft & proficiency, Commerce, Adventure, Magic, The long game) teach every mechanic in the order players meet it. Each goal has a one-line *how*, a short explanation of the mechanic, an optional progress bar, a **Show me** button that opens the right tab, and a one-time reward (gold, or items that help with the next step — for example, the reagent goal pays Rune Chalk and Spell Ink toward learning Firebolt). The banner at the top of every tab shows a claimable goal first, otherwise the next unfinished one; the 🎯 Goals tab lists them all. Goals are checked every second, stay done once reached, and survive ascension, so each reward pays out only once. Content lives in `src/data/goals.ts` — add a goal whenever a new system is added.
+31 goals in 8 chapters (Workshop basics, Apprentices, Craft & proficiency, Commerce, Adventure, Magic, The company, The long game) teach every mechanic in the order players meet it. Each goal has a one-line *how*, a short explanation of the mechanic, an optional progress bar, a **Show me** button that opens the right tab, and a one-time reward (gold, or items that help with the next step — for example, the reagent goal pays Rune Chalk and Spell Ink toward learning Firebolt). The banner at the top of every tab shows a claimable goal first, otherwise the next unfinished one; the 🎯 Goals tab lists them all. Goals are checked every second, stay done once reached, and survive ascension, so each reward pays out only once. Content lives in `src/data/goals.ts` — add a goal whenever a new system is added.
 
 ### Apprentices (v0.9): one per craft, shaped by you
 
@@ -179,14 +213,34 @@ Bonuses come from **milestones every 10 levels**, not a small % per level:
 
 Each milestone raises a notification. The 🎖️ Proficiency tab shows every track, its XP bar, its next milestone and the full milestone checklist. Old saves convert recipe mastery into brewing proficiency XP.
 
+### The Magnum Opus gate (v1.0): a target that grows
+
+The first Great Work asks for **200K gold earned in a run and level 12**. Every one after asks for
+**2.5× the gold and three more levels** (`ascGoldTarget` / `ascMinLevel` in `data/ascension.ts`), up to a
+level-45 ceiling.
+
+This replaced a flat 200K gold gate, which had a measurable problem: almost everything that earns gold is
+permanent — research, proficiency, apprentices, familiars, the company, and stone resonance — while
+everything that *paces* a run resets. Bot runs came in at **77, 40, 31 and 22 minutes**: each Great Work
+arrived sooner than the last, and a rich later run could clear the gate before the workshop had reopened
+the Trading Post. With the scaling gate the same policy measures **98, 84, 121, 122, 347 minutes** — runs
+that grow instead of shrinking.
+
+Stones are still `3 × √(runGold / 200K)`, measured against the *first* target rather than the current one,
+so clearing a bigger gate is worth more stones: about 1.6× per ascension at the minimum.
+
+The level requirement is the part that answers "I ascended before I unlocked the merchant". Gold can be
+rushed with permanent multipliers; levels cannot, because every level is content the run has to re-walk.
+
 ### What persists through ascension
-Stones and eternal perks, proficiency, achievements, lifetime stats, settings and your potion belt layout. **Arcane Memory** also keeps spells, and **Heirloom Armory** keeps equipped gear. Everything else resets.
+Stones and eternal perks, proficiency, achievements, lifetime stats, settings, your potion belt layout, research, the seed catalogue, familiars, apprentices, and the adventurer company (roster, relics and depth). **Arcane Memory** also keeps spells, and **Heirloom Armory** keeps equipped gear. Everything else resets.
 
 ## 3. Balance levers (all in `src/data/`)
 
-- `xpToNext` in `core/state.ts`: level curve (`20 × 1.17^(L-1) + 10L`)
-- `stonesFor` in `data/ascension.ts`: prestige formula and the 200K gold minimum
+- `xpToNext` in `core/state.ts`: level curve (`40 × 1.21^(L-1) + 25L` — raised ~1.6× in v1.0, since every system is level-gated and at the old scale they all arrived inside the first half hour)
+- `ascGoldTarget` / `ascMinLevel` / `stonesFor` in `data/ascension.ts`: the prestige gate (200K gold and level 12, ×2.5 gold and +3 levels per ascension) and the stone formula
 - `riftRewardMult` / `riftTimeMult` in `data/zones.ts`: endless scaling
+- `delveReq` / `delveTime` / `delveGold` / `supplyNeed` in `data/adventurers.ts`: the company’s endless ladder
 - `rankThreshold` in `data/guilds.ts`: guild rank curve
 - Recipe `value`/`time`/`xp`, plant `cost`/`time`/`yield`, zone `xp`/`bounty`, upgrade `baseCost`/`growth`
 
@@ -280,10 +334,10 @@ The UI is already mobile-ready: bottom tab bar under 760 px, safe-area insets, t
 
 ## 6. Recommended additions (prioritized)
 
-*Shipped since this list was written: potion quality tiers (v0.6), the Research Library and cross-breeding (v0.7), familiars and bulk buying (v0.8), events (v0.2) and the scripted balance bot — all documented in §2.*
+*Shipped since this list was written: potion quality tiers (v0.6), the Research Library and cross-breeding (v0.7), familiars and bulk buying (v0.8), apprentices rebuilt around unlocks and trees (v0.9), adventurer parties and Rift relics (v1.0), events (v0.2) and the scripted balance bot — all documented in §2.*
 
 ### High impact, fits the current design
-1. **Adventurer parties**: hire heroes with classes for expeditions; brewed potions equip them for deeper Rift runs; Rift **bosses** every 10 depths drop unique relics.
+*(Adventurer parties shipped in v1.0 — see §2.)*
 
 ### Long-term retention
 2. **Second prestige layer, "Transcendence"**: reset ascensions for *Aether*, which opens a new tree, new recipe tier and new zone. It keeps the endless curve fresh after 50+ ascensions.

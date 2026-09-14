@@ -26,13 +26,16 @@ import {
   skillStatus, startExpedition, startResearch, toggleRepeat,
 } from '../src/core/actions.ts';
 import { learnNode, nodeStatus, pointsFree } from '../src/core/staff.ts';
+import { canDelve, canHire, hireAdventurer, partyReport, setKit, startDelve, suppliable } from '../src/core/party.ts';
+import { delveOdds, hireCost } from '../src/data/adventurers.ts';
 import { ROLES, apprenticeLevel } from '../src/data/apprentices.ts';
 import { PLANTS } from '../src/data/plants.ts';
 import { ALL_ITEMS } from '../src/data/items.ts';
 import { UPGRADES, upgradeCost } from '../src/data/upgrades.ts';
 import { SKILLS } from '../src/data/skills.ts';
 import { RESEARCH, researchCost } from '../src/data/research.ts';
-import { ASC_MIN_GOLD } from '../src/data/ascension.ts';
+import { ASC_NODES, ascCost, ascStatus } from '../src/data/ascension.ts';
+import { ascend, buyAscNode } from '../src/core/actions.ts';
 import { QUALITIES } from '../src/data/quality.ts';
 
 /** Simulated seconds between decisions. The engine itself is correct for any dt. */
@@ -75,6 +78,14 @@ export interface BotResult {
   /** Minutes until any item reaches proficiency 50, and until any apprentice reaches level 25. */
   minutesToProf50: number | null;
   minutesToApprenticeCap: number | null; // level 25
+  /** Minutes each completed run took, first ascension onwards (only when the bot is allowed to ascend). */
+  runMinutes: number[];
+  /** What the player actually had in hand the moment the ascension gate opened. */
+  atAscend: { level: number; studies: number; apprentices: number; recipes: number; trade: boolean; guild: boolean; dungeon: boolean; goldPerSec: number } | null;
+  /** The adventurer company: how deep it got, how many signed on, and how many relic ranks it holds. */
+  partyDepth: number;
+  adventurers: number;
+  relicRanks: number;
 }
 
 const last = <T>(arr: T[], ok: (x: T) => boolean): T | undefined => arr.filter(ok).slice(-1)[0];
@@ -115,8 +126,11 @@ function tendCauldrons(s: GameState, m: Mods, opts: BotOptions): void {
 
 /** Sell everything brewed, recording what quality it went out at. */
 function sellStock(s: GameState, tiersSold: number[], sold: { w: number; n: number }): void {
+  // Whatever the company drinks on its way down is not stock. A player does this with Keep in reserve.
+  const reserve = new Map<string, number>();
+  for (const id of s.party.kit) if (id) reserve.set(id, s.party.roster.length * 3);
   for (const r of unlockedRecipes(s)) {
-    const have = Math.floor(count(s, r.id));
+    const have = Math.floor(count(s, r.id)) - (reserve.get(r.id) ?? 0);
     if (have <= 0) continue;
     const tiers = qualCounts(s, r.id);
     let left = have;
@@ -185,14 +199,41 @@ function tendStaff(s: GameState, _m: Mods, _opts: BotOptions): void {
   }
 }
 
+/**
+ * Run the adventurer company: hire while gold allows, keep the two strongest combat potions in the kit,
+ * and descend whenever the odds are worth the supplies. Failed delves still pay a third of the haul and
+ * half the XP, so waiting for certainty is never right — but neither is walking into a 10% chance.
+ */
+function tendCompany(s: GameState, m: Mods, opts: BotOptions): void {
+  if (m.partySlots < 1) return;
+  // A balanced company: the front rank first, then damage, then the extras.
+  const order = opts.starter ? ['blade'] : ['warden', 'mage', 'ranger', 'cleric', 'blade', 'rogue'];
+  // Never spend the last of the purse on a signing fee: upgrades and studies compete for the same gold.
+  while (canHire(s, m) && s.gold >= hireCost(s.party.roster.length) * 3) {
+    const pick = order[s.party.roster.length % order.length];
+    if (!hireAdventurer(s, pick)) break;
+  }
+  const combat = unlockedRecipes(s).filter((r) => suppliable(r.id));
+  for (let i = 0; i < Math.floor(m.kitSlots); i++) {
+    const want = combat[combat.length - 1 - i];
+    if (want && s.party.kit[i] !== want.id) setKit(s, i, want.id);
+  }
+  if (!s.party.repeat && m.autoDelve >= 1) s.party.repeat = true;
+  if (canDelve(s, m) && delveOdds(partyReport(s, m).power, s.party.depth + 1) >= 0.25) startDelve(s, m);
+}
+
+
 export function runBot(opts: BotOptions): BotResult {
-  const s = newState();
+  let s = newState();
   const levelMinutes: Record<string, number> = {};
   const tiersSold = new Array(QUALITIES.length).fill(0);
   const sold = { w: 0, n: 0 };
   let ascendMinutes: number | null = null;
   let minutesToProf50: number | null = null;
   let minutesToApprenticeCap: number | null = null;
+  let atAscend: BotResult['atAscend'] = null;
+  const runMinutes: number[] = [];
+  let runStart = 0;
 
   for (let t = 0; t < opts.hours * 3600; t += STEP) {
     const m = computeMods(s);
@@ -205,6 +246,7 @@ export function runBot(opts: BotOptions): BotResult {
     if (zone) s.expeditions.forEach((e, i) => { if (!e) startExpedition(s, i, zone.id); });
     sellStock(s, tiersSold, sold);
     tendStaff(s, m, opts);
+    tendCompany(s, m, opts);
     spendGold(s, m, opts);
 
     simulate(s, STEP);
@@ -218,9 +260,37 @@ export function runBot(opts: BotOptions): BotResult {
     if (minutesToApprenticeCap === null && Object.values(s.staff.crew).some((a) => a && apprenticeLevel(a.xp) >= 25)) {
       minutesToApprenticeCap = +(t / 60).toFixed(1);
     }
-    if (ascendMinutes === null && s.stats.runGold >= ASC_MIN_GOLD) {
+    if (ascendMinutes === null && ascStatus(s).ok) {
       ascendMinutes = +(t / 60).toFixed(1);
+      atAscend = {
+        level: s.level,
+        studies: Object.values(s.research.done).reduce((a, b) => a + b, 0),
+        apprentices: Object.keys(s.staff.crew).length,
+        recipes: unlockedRecipes(s).length,
+        trade: s.level >= 6,
+        guild: s.level >= 8,
+        dungeon: s.level >= 10,
+        goldPerSec: +(s.stats.runGold / Math.max(1, t)).toFixed(1),
+      };
       if (opts.stopAtAscend) break;
+    }
+    // Perform the Magnum Opus the moment it is available — the cadence a player chasing stones plays at —
+    // then spend every stone on the cheapest node going, and start the next run.
+    if (!opts.stopAtAscend && ascStatus(s).ok) {
+      const next = ascend(s);
+      if (next) {
+        s = next;
+        runMinutes.push(+((t - runStart) / 60).toFixed(1));
+        runStart = t;
+        for (let g = 0; g < 40; g++) {
+          const pick = ASC_NODES
+            .map((n) => ({ n, cost: ascCost(n, s.asc.nodes[n.id] ?? 0), owned: s.asc.nodes[n.id] ?? 0 }))
+            .filter((x) => (x.n.max === 0 || x.owned < x.n.max) && x.cost <= s.asc.stones)
+            .sort((x, y) => x.cost - y.cost)[0];
+          if (!pick) break;
+          buyAscNode(s, pick.n.id);
+        }
+      }
     }
   }
 
@@ -245,6 +315,11 @@ export function runBot(opts: BotOptions): BotResult {
     bestApprenticeLevel: Math.max(0, ...Object.values(s.staff.crew).map((a) => (a ? apprenticeLevel(a.xp) : 0))),
     minutesToProf50,
     minutesToApprenticeCap,
+    runMinutes,
+    atAscend,
+    partyDepth: s.party.depth,
+    adventurers: s.party.roster.length,
+    relicRanks: Object.values(s.party.relics).reduce((a, x) => a + x, 0),
   };
 }
 
@@ -297,6 +372,25 @@ if (flag('json')) {
   const cap = got((r) => r.minutesToApprenticeCap);
   if (p50.length) console.log(`proficiency 50: mean ${mean(p50).toFixed(0)} min (${p50.length}/${runs} runs reached it)`);
   if (cap.length) console.log(`apprentice level 25: mean ${mean(cap).toFixed(0)} min (${cap.length}/${runs} runs reached it)`);
+  const runs2 = results.map((r) => r.runMinutes).filter((x) => x.length > 1);
+  if (runs2.length) {
+    const n = Math.max(...runs2.map((x) => x.length));
+    const per: string[] = [];
+    for (let i = 0; i < Math.min(n, 6); i++) {
+      const xs = runs2.map((x) => x[i]).filter((x): x is number => x !== undefined);
+      per.push(`run ${i + 1}: ${mean(xs).toFixed(1)}m`);
+    }
+    console.log(`run lengths — ${per.join(' · ')}`);
+  }
+  const snaps = results.map((r) => r.atAscend).filter((x): x is NonNullable<BotResult['atAscend']> => !!x);
+  if (snaps.length) {
+    console.log(`at ascension: level ${mean(snaps.map((x) => x.level)).toFixed(1)}`
+      + ` · ${mean(snaps.map((x) => x.studies)).toFixed(1)} studies · ${mean(snaps.map((x) => x.apprentices)).toFixed(1)} apprentices`
+      + ` · ${mean(snaps.map((x) => x.recipes)).toFixed(1)} recipes · ${mean(snaps.map((x) => x.goldPerSec)).toFixed(1)} gold/sec`
+      + ` · trade ${snaps.filter((x) => x.trade).length}/${snaps.length}, guild ${snaps.filter((x) => x.guild).length}/${snaps.length}, dungeons ${snaps.filter((x) => x.dungeon).length}/${snaps.length}`);
+  }
+  console.log(`company: mean depth ${mean(results.map((r) => r.partyDepth)).toFixed(1)}`
+    + ` · ${mean(results.map((r) => r.adventurers)).toFixed(1)} adventurers · ${mean(results.map((r) => r.relicRanks)).toFixed(1)} relic ranks`);
   console.log(`quality multiplier: mean ×${mean(results.map((r) => r.avgSaleQualityMult)).toFixed(3)}`);
   console.log(`strains found: mean ${mean(results.map((r) => r.strainsFound)).toFixed(1)}`
     + ` · studies: mean ${mean(results.map((r) => r.studiesDone)).toFixed(1)}\n`);

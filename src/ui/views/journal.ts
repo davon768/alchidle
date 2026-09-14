@@ -67,7 +67,7 @@ export function journalView(s: GameState): TemplateResult {
     ['Expeditions', fmt(st.expeditions)], ['Contracts', fmt(st.contracts)], ['Trades', fmt(st.trades)],
     ['Monsters slain', fmt(st.kills)], ['Bosses slain', fmt(st.bosses)], ['Defeats', fmt(st.deaths)],
     ['Gear found', fmt(st.gearFound)], ['Spells cast', fmt(st.spellsCast)], ['World events', fmt(st.events)],
-    ['Deepest Rift (this run)', fmt(s.riftDepth)], ['Time this run', fmtTime(st.runTime)], ['Total play time', fmtTime(st.playTime)],
+    ['Rift delves', fmt(st.delves)], ['Deepest company delve', fmt(s.party.depth)], ['Deepest Rift (this run)', fmt(s.riftDepth)], ['Time this run', fmtTime(st.runTime)], ['Total play time', fmtTime(st.playTime)],
   ];
   return html`<div class="view">
     ${sectionTitle('🏆 Achievements', `${earned} / ${ACHIEVEMENTS.length} — each grants a permanent bonus`)}

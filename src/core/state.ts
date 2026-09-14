@@ -1,10 +1,15 @@
 import type { CombatState, GameState, Stats } from './types';
 import { startGoldFor } from '../data/ascension';
 
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
+/**
+ * XP from one level to the next. The shape (21% per level) is unchanged; the scale was raised ~1.6× in
+ * v1.0 because every system — recipes, zones, guilds, dungeons, magic — is gated on level, and at the
+ * old scale all of them arrived inside the first half hour.
+ */
 export function xpToNext(level: number): number {
-  return Math.floor(25 * 1.21 ** (level - 1) + 15 * level);
+  return Math.floor(40 * 1.21 ** (level - 1) + 25 * level);
 }
 
 /** Skill points earned from levels: 1 per level after the first, +2 bonus every 10th level. */
@@ -16,7 +21,7 @@ function freshStats(): Stats {
   return {
     runGold: 0, totalGold: 0, bestRunGold: 0, brewed: 0, harvested: 0, expeditions: 0,
     potionsSold: 0, contracts: 0, trades: 0, playTime: 0, runTime: 0,
-    kills: 0, bosses: 0, deaths: 0, gearFound: 0, bestRarity: 0, spellsCast: 0, events: 0, bestQuality: 0,
+    kills: 0, bosses: 0, deaths: 0, gearFound: 0, bestRarity: 0, spellsCast: 0, events: 0, bestQuality: 0, delves: 0,
   };
 }
 
@@ -30,7 +35,7 @@ export function freshCombat(): CombatState {
 /** Stats that survive ascension (everything except the per-run counters). */
 const LIFETIME_STATS: (keyof Stats)[] = [
   'totalGold', 'brewed', 'harvested', 'expeditions', 'potionsSold', 'contracts', 'trades', 'playTime',
-  'kills', 'bosses', 'deaths', 'gearFound', 'bestRarity', 'spellsCast', 'events', 'bestQuality',
+  'kills', 'bosses', 'deaths', 'gearFound', 'bestRarity', 'spellsCast', 'events', 'bestQuality', 'delves',
 ];
 
 /**
@@ -82,6 +87,7 @@ export function newState(prev?: GameState): GameState {
     research: { queue: [], done: {} },
     familiars: {},
     equippedFamiliars: [],
+    party: { roster: [], kit: [], delve: null, depth: 0, relics: {}, repeat: false, nextId: 1 },
     staff: { crew: {}, repush: 0 },
     lastTick: Date.now(),
   };
@@ -101,6 +107,9 @@ export function newState(prev?: GameState): GameState {
     s.familiars = prev.familiars; // companions stay with you through ascension
     s.equippedFamiliars = prev.equippedFamiliars;
     s.staff = prev.staff; // apprentices and their trees are a lifetime investment
+    // The company keeps its heroes, its relics and everything it has mapped; only the delve in progress
+    // is abandoned, because the world it was walking through no longer exists.
+    s.party = { ...prev.party, delve: null };
     if (s.asc.nodes['arcane_memory']) {
       s.spells = prev.spells;
       s.spellSlots = prev.spellSlots;

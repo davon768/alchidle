@@ -20,7 +20,7 @@ import { fmt } from './format';
 import { UPGRADE_MAP, upgradeCost } from '../data/upgrades';
 import { ROW_POINTS, SKILL_MAP, skillRankCost, type SkillNode } from '../data/skills';
 import { GUILD_MAP, GUILD_UNLOCK_LEVEL, rankFor, rankName } from '../data/guilds';
-import { ASC_MAP, ascCost, stonesFor } from '../data/ascension';
+import { ASC_MAP, ascCost, ascStatus, stonesFor } from '../data/ascension';
 
 // ── Research Library ─────────────────────────────────────────
 /**
@@ -493,7 +493,8 @@ export function buyAscNode(s: GameState, id: string): void {
 
 /** Performs the Magnum Opus. Returns the fresh run state, or null if not yet possible. */
 export function ascend(s: GameState): GameState | null {
-  const stones = stonesFor(s.stats.runGold, computeMods(s).stoneGain);
+  if (!ascStatus(s).ok) return null;
+  const stones = stonesFor(s.stats.runGold, computeMods(s).stoneGain, s.asc.count);
   if (stones <= 0) return null;
   const next = newState(s);
   next.asc.stones += stones;

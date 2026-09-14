@@ -1,7 +1,7 @@
 import type { GameState, ItemStack } from '../core/types';
 import { profLevel } from './proficiency';
 import { REAGENTS } from './spells';
-import { ASC_MIN_GOLD } from './ascension';
+import { ascGoldTarget, ascMinLevel } from './ascension';
 import { apprenticeLevel } from './apprentices';
 
 /**
@@ -24,7 +24,7 @@ export interface GoalDef {
 }
 
 const bestProf = (s: GameState) => Math.max(1, ...Object.values(s.prof).map(profLevel));
-const ascensionOpen = (s: GameState) => s.asc.count > 0 || s.stats.runGold >= ASC_MIN_GOLD * 0.2;
+const ascensionOpen = (s: GameState) => s.asc.count > 0 || s.stats.runGold >= ascGoldTarget(0) * 0.2;
 
 export const GOALS: GoalDef[] = [
   // ── Workshop basics ────────────────────────────────────────
@@ -157,11 +157,28 @@ export const GOALS: GoalDef[] = [
     about: 'Rituals boost a whole system — garden, cauldrons, shop, expeditions — for 5 minutes. A Scribe apprentice can keep them running for you.',
     check: (s) => s.buffs.length > 0, reward: { items: [{ id: 'spellink', qty: 3 }] } },
 
+  // ── The company ────────────────────────────────────────────
+  { id: 'company', chapter: 'The company', title: 'Charter a company', level: 14, tab: 'library',
+    how: 'Finish Charter a Company in the 📚 Library, then hire an adventurer in 🏕️ Company.',
+    about: 'Adventurers delve the Endless Rift for you. Each one you take on costs far more than the last, and every class brings something different — power, protection, bigger hauls or better luck with relics.',
+    check: (s) => s.party.roster.length > 0, reward: { gold: 20000 } },
+  { id: 'delve', chapter: 'The company', title: 'Supply a delve', level: 14, tab: 'party',
+    when: (s) => s.party.roster.length > 0,
+    how: 'Put a combat potion in the supply kit, then send the company down.',
+    about: 'A delve drinks one bottle of every kitted potion per adventurer — and another round every ten depths — best bottles first — so Legendary brewing goes straight into how deep they can reach. Win and the depth is yours for good; lose and they limp home with a third of the haul.',
+    check: (s) => s.stats.delves >= 1, reward: { items: [{ id: 'crystal', qty: 10 }] } },
+  { id: 'relic', chapter: 'The company', title: 'Bring back a relic', level: 14, tab: 'party',
+    when: (s) => s.party.roster.length > 0,
+    how: 'Clear depth 10, where the first Rift boss waits.',
+    about: 'Every tenth depth is a boss holding a relic. Relics are permanent ranks, not gear — pulling the same one again makes it stronger, and they all survive ascension.',
+    check: (s) => Object.keys(s.party.relics).length > 0,
+    progress: (s) => [Math.min(10, s.party.depth), 10], reward: { gold: 250000 } },
+
   // ── The long game ──────────────────────────────────────────
   { id: 'ascend', chapter: 'The long game', title: 'Perform the Magnum Opus', level: 1, when: ascensionOpen, tab: 'ascend',
-    how: `Earn ${(ASC_MIN_GOLD / 1000).toFixed(0)}K gold in one run, then ascend in 🌟 Magnum Opus.`,
-    about: 'Ascending resets your run for Philosopher’s Stones. You keep stones, eternal perks, proficiency, achievements and your Hall of Masters.',
-    check: (s) => s.asc.count >= 1, progress: (s) => [Math.min(ASC_MIN_GOLD, s.stats.runGold), ASC_MIN_GOLD], reward: { gold: 5000 } },
+    how: `Reach level ${ascMinLevel(0)} and earn ${(ascGoldTarget(0) / 1000).toFixed(0)}K gold in one run, then ascend in 🌟 Magnum Opus.`,
+    about: 'Ascending resets your run for Philosopher’s Stones. You keep stones, eternal perks, proficiency, research, apprentices and achievements — and because so much carries over, each Great Work asks for a higher level and 2.5× the gold of the last.',
+    check: (s) => s.asc.count >= 1, progress: (s) => [Math.min(ascGoldTarget(0), s.stats.runGold), ascGoldTarget(0)], reward: { gold: 5000 } },
   { id: 'perk', chapter: 'The long game', title: 'Buy an eternal perk', level: 1, when: (s) => s.asc.count > 0, tab: 'ascend',
     how: 'Spend Philosopher’s Stones in 🌟 Magnum Opus.',
     about: 'Eternal perks never reset. Every stone you’ve ever earned also raises your sell prices by 2%, even after you spend it.',

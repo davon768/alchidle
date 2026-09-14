@@ -6,6 +6,8 @@ import { RESEARCH_MAP } from '../data/research';
 import { TRAIT_MAP, parseSeed } from '../data/mutations';
 import { FAMILIAR_MAP } from '../data/familiars';
 import { ROLE_MAP, apprXpForLevel } from '../data/apprentices';
+import { CLASS_MAP } from '../data/adventurers';
+import { RELIC_MAP } from '../data/relics';
 
 const KEY = 'alchemy-idle-save';
 
@@ -96,6 +98,10 @@ function migrate(raw: LegacySave): GameState {
   for (const dead of ['hired', 'masters', 'candidates', 'refresh', 'nextId']) {
     delete (s.staff as unknown as Record<string, unknown>)[dead];
   }
+  // v9 → v10: the adventurer company. mergeDefaults supplies an empty roster; drop any adventurer or
+  // relic whose definition is gone, since either would throw in the Company view or in computeMods.
+  s.party.roster = s.party.roster.filter((a) => CLASS_MAP[a.cls]);
+  for (const id of Object.keys(s.party.relics)) if (!RELIC_MAP[id]) delete s.party.relics[id];
   s.version = SAVE_VERSION;
   return s;
 }

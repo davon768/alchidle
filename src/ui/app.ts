@@ -13,7 +13,7 @@ import { PLANTS } from '../data/plants';
 import { ZONES } from '../data/zones';
 import { DUNGEONS, DUNGEON_UNLOCK_LEVEL } from '../data/combat';
 import { GUILD_UNLOCK_LEVEL } from '../data/guilds';
-import { ASC_MIN_GOLD } from '../data/ascension';
+import { ascGoldTarget, ascStatus } from '../data/ascension';
 import { EVENT_MAP, raidTarget } from '../data/events';
 import { SPELL_MAP } from '../data/spells';
 import { bar, chip, closeModal, openModal, setRerender, ui, type TabId } from './common';
@@ -30,6 +30,7 @@ import { guildView } from './views/guild';
 import { workshopView } from './views/workshop';
 import { libraryView } from './views/library';
 import { familiarsView } from './views/familiars';
+import { partyView } from './views/party';
 import { skillsView } from './views/skills';
 import { ascendView } from './views/ascend';
 import { journalView } from './views/journal';
@@ -38,6 +39,7 @@ import { staffView } from './views/apprentices';
 import { goalBanner, goalsView } from './views/goals';
 import { GOALS } from '../data/goals';
 import { RESEARCH_UNLOCK_LEVEL } from '../data/research';
+import { companyOpen } from '../data/adventurers';
 
 interface TabDef {
   id: TabId;
@@ -56,6 +58,8 @@ const TABS: TabDef[] = [
   { id: 'staff', icon: '👥', label: 'Apprentices', unlocked: (s) => Object.keys(s.staff.crew).length > 0,
     dot: (s) => Object.values(s.staff.crew).some((a) => a && pointsFree(a) > 0) },
   { id: 'dungeon', icon: '⚔️', label: 'Dungeons', unlocked: (s) => s.level >= DUNGEON_UNLOCK_LEVEL, dot: (s) => !s.combat.dungeonId },
+  { id: 'party', icon: '🏕️', label: 'Company', unlocked: (s) => companyOpen(s, computeMods(s)),
+    dot: (s, m) => !s.party.delve && (s.party.roster.length < Math.floor(m.partySlots) || s.party.roster.some((x) => x.rest <= 0)) },
   { id: 'market', icon: '🏪', label: 'Market', unlocked: () => true },
   { id: 'inventory', icon: '🎒', label: 'Inventory', unlocked: () => true },
   { id: 'proficiency', icon: '🎖️', label: 'Proficiency', unlocked: (s) => Object.keys(s.prof).length > 0 },
@@ -69,7 +73,7 @@ const TABS: TabDef[] = [
     dot: (s, m) => s.equippedFamiliars.length < Math.min(Object.keys(s.familiars).length, Math.floor(m.familiarSlots)) },
   { id: 'trade', icon: '🐪', label: 'Trading Post', unlocked: (s) => s.level >= 6 },
   { id: 'guild', icon: '🛡️', label: 'Guilds', unlocked: (s) => s.level >= GUILD_UNLOCK_LEVEL },
-  { id: 'ascend', icon: '🌟', label: 'Magnum Opus', unlocked: (s) => s.asc.count > 0 || s.stats.runGold >= ASC_MIN_GOLD * 0.2 },
+  { id: 'ascend', icon: '🌟', label: 'Magnum Opus', unlocked: (s) => s.asc.count > 0 || s.stats.runGold >= ascGoldTarget(0) * 0.2 },
   { id: 'goals', icon: '🎯', label: 'Goals', unlocked: () => true, dot: (s) => GOALS.some((g) => s.goals[g.id] === 'done') },
   { id: 'journal', icon: '📓', label: 'Journal', unlocked: () => true },
 ];
@@ -155,7 +159,12 @@ function nextUnlock(s: GameState): string | null {
     const lvl = Math.min(...unlocks.map((u) => u.lvl));
     return `Reach level ${lvl} to unlock ${unlocks.filter((u) => u.lvl === lvl).map((u) => u.text).join(', ')}.`;
   }
-  if (s.asc.count === 0 && s.stats.runGold < ASC_MIN_GOLD) return `Earn ${fmt(ASC_MIN_GOLD)} gold this run to perform the 🌟 Magnum Opus.`;
+  const asc = ascStatus(s);
+  if (s.asc.count === 0 && !asc.ok) {
+    return s.level < asc.levelNeed
+      ? `Reach level ${asc.levelNeed} and earn ${fmt(asc.goldNeed)} gold this run to perform the 🌟 Magnum Opus.`
+      : `Earn ${fmt(asc.goldNeed)} gold this run to perform the 🌟 Magnum Opus.`;
+  }
   return null;
 }
 
@@ -186,6 +195,7 @@ function viewFor(tab: TabId, s: GameState, m: Mods): TemplateResult {
     case 'explore': return exploreView(s, m);
     case 'staff': return staffView(s, m);
     case 'dungeon': return dungeonView(s, m);
+    case 'party': return partyView(s, m);
     case 'market': return marketView(s, m);
     case 'inventory': return inventoryView(s, m);
     case 'proficiency': return proficiencyView(s, m);

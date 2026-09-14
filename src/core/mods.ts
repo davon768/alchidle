@@ -10,6 +10,8 @@ import { EVENT_MAP } from '../data/events';
 import { RESEARCH_MAP } from '../data/research';
 import { CATALOGUE_BONUS } from '../data/mutations';
 import { FAMILIAR_MAP, familiarEffects, familiarLevel } from '../data/familiars';
+import { RELIC_MAP, relicEffects } from '../data/relics';
+import { depthEffects } from '../data/adventurers';
 import type { RoleId } from './types';
 import { apprenticeEffects, capacityOf } from './staff';
 import { apprenticeLevel } from '../data/apprentices';
@@ -24,6 +26,7 @@ export function baseMods(): Mods {
     xpGain: 1, stoneGain: 1, offlineHours: 8,
     plots: 2, cauldrons: 1, expSlots: 1, skillPoints: 0, startGold: 0,
     autoHarvest: 0, autoBrew: 0, autoSell: 0, autoScav: 0, autoRitual: 0, apprenticeXp: 1,
+    partySlots: 0, kitSlots: 2, delveSpeed: 1, partyPower: 1, autoDelve: 0,
     researchSlots: 1, researchSpeed: 1, familiarSlots: 1,
     attack: 0, attackMult: 1, defense: 0, defenseMult: 1, maxHp: 0, hpMult: 1,
     spellPower: 0, spellMult: 1, critChance: 0.05, critDamage: 1.5, dodge: 0,
@@ -66,6 +69,11 @@ export function computeMods(s: GameState): Mods {
     const def = FAMILIAR_MAP[id];
     if (def) apply(m, familiarEffects(def, familiarLevel(s.familiars?.[id] ?? 0)), 1);
   }
+  for (const [id, rank] of Object.entries(s.party?.relics ?? {})) {
+    const def = RELIC_MAP[id];
+    if (def && rank > 0) apply(m, relicEffects(def, rank), 1);
+  }
+  apply(m, depthEffects(s.party?.depth ?? 0), 1);
   for (const a of ACHIEVEMENTS) if (s.achievements[a.id]) apply(m, a.reward, 1);
   for (const uid of Object.values(s.equipped)) {
     const it = uid ? s.gear.find((g) => g.uid === uid) : undefined;
@@ -82,7 +90,7 @@ export function computeMods(s: GameState): Mods {
 
   // Apprentices: one per craft, each contributing whatever its upgrade tree has been spent on.
   // Bonus capacity from skills and guilds only counts while that craft actually has an apprentice.
-  const tended: Record<RoleId, number> = { gardener: 0, brewer: 0, scout: 0, shopkeeper: 0, squire: 0, scribe: 0 };
+  const tended: Record<RoleId, number> = { gardener: 0, brewer: 0, scout: 0, shopkeeper: 0, squire: 0, scribe: 0, captain: 0 };
   for (const a of Object.values(s.staff?.crew ?? {})) {
     if (!a) continue;
     tended[a.role] = capacityOf(a);
@@ -95,6 +103,7 @@ export function computeMods(s: GameState): Mods {
   m.autoScav = tended.scout ? m.autoScav + tended.scout : 0;
   m.autoSell = tended.shopkeeper ? m.autoSell + tended.shopkeeper : 0;
   m.autoRitual = tended.scribe ? m.autoRitual + tended.scribe : 0;
+  m.autoDelve = tended.captain ? m.autoDelve + tended.captain : 0;
 
   m.seedDiscount = Math.min(0.75, m.seedDiscount);
   m.doubleBrew = Math.min(1, m.doubleBrew);
@@ -104,6 +113,8 @@ export function computeMods(s: GameState): Mods {
   m.sellPrice = Math.max(0.1, m.sellPrice);
   m.tradeBonus = Math.max(0.1, m.tradeBonus);
   m.attackMult = Math.max(0.1, m.attackMult);
+  m.kitSlots = Math.min(6, m.kitSlots);
+  m.partySlots = Math.min(8, m.partySlots);
   return m;
 }
 
@@ -123,6 +134,11 @@ export const STAT_INFO: Record<StatKey, { label: string; fmt: StatFormat }> = {
   researchSlots: { label: 'research desks', fmt: 'flat' },
   researchSpeed: { label: 'research speed', fmt: 'pct' },
   familiarSlots: { label: 'familiars equipped', fmt: 'flat' },
+  partySlots: { label: 'adventurer', fmt: 'flat' },
+  kitSlots: { label: 'supply kit slot', fmt: 'flat' },
+  delveSpeed: { label: 'delve speed', fmt: 'pct' },
+  partyPower: { label: 'party power', fmt: 'pct' },
+  autoDelve: { label: 'delves your Captain leads', fmt: 'flat' },
   sellPrice: { label: 'sell price', fmt: 'pct' },
   demandRecovery: { label: 'demand recovery', fmt: 'pct' },
   tradeBonus: { label: 'trade rewards', fmt: 'pct' },

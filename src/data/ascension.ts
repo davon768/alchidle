@@ -1,4 +1,4 @@
-import type { Effect } from '../core/types';
+import type { Effect, GameState } from '../core/types';
 
 export interface AscNode {
   id: string;
@@ -11,14 +11,54 @@ export interface AscNode {
   effects: Effect[];
 }
 
-/** Minimum gold earned in a run before the Magnum Opus can be performed. */
+/** Gold earned in a run before the *first* Magnum Opus. Later ones ask for far more — see ascGoldTarget. */
 export const ASC_MIN_GOLD = 200_000;
+
+/**
+ * What each further ascension demands. Nearly everything that earns gold is permanent — research,
+ * proficiency, apprentices, familiars, stone resonance — so a flat target made every run shorter than
+ * the last: measured at 77, 40, 31 and 22 minutes. The target has to outgrow the compounding, or the
+ * Great Work stops being a milestone and becomes a lap counter.
+ */
+export const ASC_GOLD_GROWTH = 2.5;
+export function ascGoldTarget(count: number): number {
+  return Math.round(ASC_MIN_GOLD * ASC_GOLD_GROWTH ** count);
+}
+
+/**
+ * The level the Great Work demands, rising with every ascension. Gold alone let a rich later run end
+ * before the workshop had even reopened the Trading Post; this makes each run re-walk a little more of
+ * the content than the one before it.
+ */
+export function ascMinLevel(count: number): number {
+  return Math.min(45, 12 + 3 * count);
+}
+
+/** Whether the Magnum Opus can be performed, and what is still missing. */
+export function ascStatus(s: GameState): { ok: boolean; goldNeed: number; levelNeed: number; reason: string } {
+  const goldNeed = ascGoldTarget(s.asc.count);
+  const levelNeed = ascMinLevel(s.asc.count);
+  const shortGold = s.stats.runGold < goldNeed;
+  const shortLevel = s.level < levelNeed;
+  return {
+    ok: !shortGold && !shortLevel,
+    goldNeed,
+    levelNeed,
+    reason: shortGold && shortLevel ? `Needs level ${levelNeed} and more gold this run`
+      : shortGold ? 'Not enough gold earned this run'
+      : shortLevel ? `Needs level ${levelNeed}` : '',
+  };
+}
 /** Each Philosopher's Stone ever earned permanently adds this much sell price (never lost by spending). */
 export const STONE_RESONANCE = 0.02;
 
-/** 3 stones at the minimum, then grows with the square root of gold earned (4x gold = 2x stones). */
-export function stonesFor(runGold: number, stoneGain: number): number {
-  if (runGold < ASC_MIN_GOLD) return 0;
+/**
+ * 3 stones at the first target, then the square root of gold earned (4× gold = 2× stones). Measured
+ * against the *first* target rather than the current one, so a run that clears a bigger gate is worth
+ * more stones: roughly 1.6× per ascension at the minimum.
+ */
+export function stonesFor(runGold: number, stoneGain: number, count = 0): number {
+  if (runGold < ascGoldTarget(count)) return 0;
   return Math.floor(3 * Math.sqrt(runGold / ASC_MIN_GOLD) * stoneGain);
 }
 

@@ -7,7 +7,7 @@ import { quality } from '../data/quality';
 import { fmt } from '../core/format';
 
 export type TabId =
-  | 'garden' | 'brew' | 'explore' | 'staff' | 'dungeon' | 'market' | 'inventory' | 'proficiency' | 'arcanum' | 'armory'
+  | 'garden' | 'brew' | 'explore' | 'staff' | 'dungeon' | 'party' | 'market' | 'inventory' | 'proficiency' | 'arcanum' | 'armory'
   | 'trade' | 'guild' | 'workshop' | 'library' | 'familiars' | 'skills' | 'ascend' | 'goals' | 'journal';
 
 export const ui = {

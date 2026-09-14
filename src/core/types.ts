@@ -41,6 +41,12 @@ export interface Mods {
   autoRitual: number;
   apprenticeXp: number;
   // Research Library
+  // Adventurer company
+  partySlots: number; // adventurers who can be on the roster at once (0 = company not chartered)
+  kitSlots: number; // potion types the supply kit carries
+  delveSpeed: number;
+  partyPower: number; // multiplies everything the company brings to a depth
+  autoDelve: number; // delves a Captain sends back down on their own
   researchSlots: number; // studies that can run at once
   researchSpeed: number;
   familiarSlots: number; // familiars that can be equipped at once
@@ -140,6 +146,7 @@ export interface Stats {
   spellsCast: number;
   events: number;
   bestQuality: number; // best potion quality tier ever brewed
+  delves: number; // Rift delves the company has run
 }
 
 // ── Combat & magic ───────────────────────────────────────────
@@ -231,7 +238,7 @@ export interface EventState {
 }
 
 // ── Apprentices ──────────────────────────────────────────────
-export type RoleId = 'gardener' | 'brewer' | 'scout' | 'shopkeeper' | 'squire' | 'scribe';
+export type RoleId = 'gardener' | 'brewer' | 'scout' | 'shopkeeper' | 'squire' | 'scribe' | 'captain';
 
 /** One craft's apprentice. There is exactly one per role, unlocked through the Library. */
 export interface Apprentice {
@@ -243,6 +250,34 @@ export interface Apprentice {
 export interface StaffState {
   crew: Partial<Record<RoleId, Apprentice>>;
   repush: number; // Squire timer
+}
+
+// ── Adventurer company ───────────────────────────────────────
+/** One hired hero. Level and the skills that come with it are derived from delve XP. */
+export interface Adventurer {
+  uid: string;
+  cls: string; // data/adventurers.ts class id
+  xp: number;
+  rest: number; // seconds of injury left; an injured adventurer adds nothing to the party
+}
+
+/** A delve in progress. Depth is fixed when it sets out, so a relic run cannot be re-aimed mid-descent. */
+export interface Delve {
+  depth: number;
+  progress: number;
+  time: number; // total seconds this delve takes, banked at departure
+  power: number; // party power at departure, supplies included
+  supplied: number; // kit slots that were actually filled
+}
+
+export interface PartyState {
+  roster: Adventurer[];
+  kit: (string | null)[]; // potion ids the company drinks on the way down
+  delve: Delve | null;
+  depth: number; // deepest depth cleared; the next delve goes one lower
+  relics: Record<string, number>; // relic id → rank
+  repeat: boolean; // a Captain sends them straight back down
+  nextId: number;
 }
 
 export interface GameState {
@@ -294,6 +329,8 @@ export interface GameState {
   /** Familiars found so far, by id, with the XP fed into each. */
   familiars: Record<string, number>;
   equippedFamiliars: string[];
+  // Adventurer company (survives ascension, like familiars and apprentices)
+  party: PartyState;
   // Apprentices
   staff: StaffState;
   lastTick: number;

@@ -130,6 +130,22 @@ export const ROLES: RoleDef[] = [
       endless('c_endless', 'Ink Without End', '♾️', [e('manaRegen', 0.08), e('spellMult', 0.015)], 'Infinite rank.'),
     ],
   },
+  {
+    id: 'captain', name: 'Captain', icon: '🎖️', unit: 'company', baseCapacity: 1,
+    desc: 'Resupplies the adventurer company and marches it back down the Rift on 🔁 repeat.',
+    tree: [
+      { id: 'p_company', name: 'Wider Charter', icon: '🏕️', row: 0, maxRank: 4, cost: 3, effects: [e('partySlots', 1)],
+        flavor: 'Room on the roster for one more adventurer.' },
+      { id: 'p_march', name: 'Forced March', icon: '🥾', row: 0, maxRank: 10, cost: 1, effects: [e('delveSpeed', 0.04)] },
+      { id: 'p_drill', name: 'Drill and Discipline', icon: '⚔️', row: 1, maxRank: 10, cost: 1, effects: [e('partyPower', 0.04)] },
+      { id: 'p_packs', name: 'Deeper Packs', icon: '🎒', row: 1, maxRank: 2, cost: 4, effects: [e('kitSlots', 1)],
+        flavor: 'One more potion goes down with them.' },
+      { id: 'p_supply', name: 'Supply Lines', icon: '🛒', row: 2, maxRank: 8, cost: 2, effects: [e('scavYield', 0.05), e('partyPower', 0.02)],
+        flavor: 'The same routes that feed the company feed your expeditions.' },
+      { id: 'p_salvage', name: 'Salvage Rights', icon: '🏺', row: 2, maxRank: 6, cost: 2, effects: [e('rareFind', 0.06)] },
+      endless('p_endless', 'Ever Downward', '♾️', [e('partyPower', 0.015), e('delveSpeed', 0.015)], 'Infinite rank.'),
+    ],
+  },
 ];
 
 export const ROLE_MAP: Record<RoleId, RoleDef> = Object.fromEntries(ROLES.map((r) => [r.id, r])) as Record<RoleId, RoleDef>;
@@ -137,7 +153,7 @@ export const NODE_MAP: Record<string, ApprenticeNode> = Object.fromEntries(ROLES
 export const roleOfNode: Record<string, RoleId> = Object.fromEntries(ROLES.flatMap((r) => r.tree.map((n) => [n.id, r.id])));
 
 export const NAMES: Record<RoleId, string> = {
-  gardener: 'Bramble', brewer: 'Cinder', scout: 'Talon', shopkeeper: 'Pip', squire: 'Rook', scribe: 'Quill',
+  gardener: 'Bramble', brewer: 'Cinder', scout: 'Talon', shopkeeper: 'Pip', squire: 'Rook', scribe: 'Quill', captain: 'Vale',
 };
 
 // ── Levels and points ────────────────────────────────────────
