@@ -4,7 +4,7 @@ import { computeMods } from './mods';
 import { newState } from './state';
 import {
   addGold, addItem, buyUnitPrice, count, doSell, generateContract, generateOffers, hasAll, harvestPlot, plantCost,
-  removeItem, offerGetQty, gainXp, feedFamiliar, researchDone, researchStatus, skillPointsFree, startBrew, toast,
+  removeItem, offerGetQty, gainXp, feedFamiliar, researchDone, researchStatus, skillPointsFree, startBrew, toast, autoStirQ,
 } from './engine';
 import { STIR_MAX, STIR_WINDOW, quality, stirBonus, stirElapsed, stirPos } from '../data/quality';
 import { QUALITY_RESEARCH_BOOST, RESEARCH_MAP, researchCost, researchTime } from '../data/research';
@@ -181,7 +181,7 @@ export function stir(s: GameState, ci: number, pos?: number): void {
     toast('The brew clouds for a moment — no quality bonus.', 'warn');
     return;
   }
-  c.stirQ += bonus;
+  c.stirQ += Math.max(0, bonus - autoStirQ(computeMods(s)));
   toast(bonus >= STIR_MAX * 0.9 ? '🥄 A perfect stir! The mixture gleams.' : '🥄 A good stir.', 'good');
 }
 

@@ -12,12 +12,13 @@ import { CATALOGUE_BONUS } from '../data/mutations';
 import { FAMILIAR_MAP, familiarEffects, familiarLevel } from '../data/familiars';
 import type { RoleId } from './types';
 import { apprenticeEffects, capacityOf } from './staff';
+import { apprenticeLevel } from '../data/apprentices';
 import { fmt } from './format';
 
 export function baseMods(): Mods {
   return {
     growSpeed: 1, harvestYield: 1, seedDiscount: 0, mutationChance: 1,
-    brewSpeed: 1, doubleBrew: 0, ingredientSave: 0, masteryRate: 1, brewQuality: 0,
+    brewSpeed: 1, doubleBrew: 0, ingredientSave: 0, masteryRate: 1, brewQuality: 0, autoStir: 0,
     sellPrice: 1, demandRecovery: 1, tradeBonus: 1, contractReward: 1, repGain: 1,
     scavSpeed: 1, scavYield: 1, rareFind: 1,
     xpGain: 1, stoneGain: 1, offlineHours: 8,
@@ -86,6 +87,8 @@ export function computeMods(s: GameState): Mods {
     if (!a) continue;
     tended[a.role] = capacityOf(a);
     apply(m, apprenticeEffects(a) as Effect[], 1);
+    // A Brewer stirs the pots they tend, and gets better at it with training: half a perfect stir by level 40.
+    if (a.role === 'brewer') m.autoStir += Math.min(0.5, apprenticeLevel(a.xp) / 80);
   }
   m.autoHarvest = tended.gardener ? m.autoHarvest + tended.gardener : 0;
   m.autoBrew = tended.brewer ? m.autoBrew + tended.brewer : 0;
@@ -115,6 +118,7 @@ export const STAT_INFO: Record<StatKey, { label: string; fmt: StatFormat }> = {
   ingredientSave: { label: 'ingredient save chance', fmt: 'pct' },
   masteryRate: { label: 'proficiency gain', fmt: 'pct' },
   brewQuality: { label: 'potion quality', fmt: 'pct' },
+  autoStir: { label: 'stirring done for you', fmt: 'pct' },
   mutationChance: { label: 'cross-breeding chance', fmt: 'pct' },
   researchSlots: { label: 'research desks', fmt: 'flat' },
   researchSpeed: { label: 'research speed', fmt: 'pct' },

@@ -3,7 +3,7 @@ import type { GameState, Mods } from '../../core/types';
 import { RECIPES, RECIPE_MAP } from '../../data/recipes';
 import { profProgress } from '../../data/proficiency';
 import { QUALITIES, STIR_BAND, STIR_WINDOW, qualityChances, stirElapsed } from '../../data/quality';
-import { brewQualityScore, brewRate, count, hasAll, potionBasePrice, profLevelOf, unlockedRecipes } from '../../core/engine';
+import { brewQualityScore, brewRate, count, hasAll, potionBasePrice, profLevelOf, unlockedRecipes, autoStirQ } from '../../core/engine';
 import { brew, cancelBrew, selectRecipe, stir, toggleRepeat } from '../../core/actions';
 import { fmt, fmtTime } from '../../core/format';
 import { act, bar, chip, gold, qualityChips, sectionTitle } from '../common';
@@ -48,10 +48,12 @@ function stirBar(ci: number, target: number, remaining: number): TemplateResult 
 function qualityOdds(s: GameState, m: Mods, recipeId: string, banked: number): TemplateResult {
   const c = qualityChances(brewQualityScore(s, m, recipeId, banked));
   const pct = (v: number) => `${(v * 100).toFixed(v >= 0.1 ? 0 : 1)}%`;
-  if (c.fine <= 0) return html`<div class="small muted">Always Common — raise brewing proficiency or stir to improve quality.</div>`;
+  if (c.fine <= 0) return html`<div class="small muted">Always Common — stir by hand, raise brewing proficiency, or train a Brewer to stir for you.</div>`;
   return html`<div class="small muted qual-odds">
     ${QUALITIES.slice(1).map((q, i) => html`<span style="color:${q.color}">${q.mark} ${pct([c.fine, c.master, c.legend][i])}</span>`)}
-    ${banked > 0 ? html`<span class="good">· stirred</span>` : ''}
+    ${banked > autoStirQ(m) + 1e-6
+      ? html`<span class="good">· stirred</span>`
+      : m.autoStir > 0 ? html`<span class="good">· your Brewer stirs</span>` : ''}
   </div>`;
 }
 
@@ -82,7 +84,7 @@ export function brewView(s: GameState, m: Mods): TemplateResult {
           </select>
           ${r ? html`
             <div class="row">${r.inputs.map((inp) => chip(inp, count(s, inp.id)))} <span class="muted">→</span> ${chip({ id: r.id, qty: 1 })}</div>
-            ${c.stirStart > 0 ? stirBar(i, c.stirTarget, Math.max(0, STIR_WINDOW - stirElapsed(c.stirStart))) : qualityOdds(s, m, r.id, c.active ? c.stirQ : 0)}
+            ${c.stirStart > 0 ? stirBar(i, c.stirTarget, Math.max(0, STIR_WINDOW - stirElapsed(c.stirStart))) : qualityOdds(s, m, r.id, c.active ? c.stirQ : autoStirQ(m))}
             <div class="row between small muted">
               <span>⏱ ${c.active ? fmtTime((r.time - c.progress) / rate) : fmtTime(r.time / rate)}</span>
               <span>Sells ~${gold(potionBasePrice(s, m, r.id))}</span>

@@ -69,8 +69,12 @@ so top tiers stay rare. Expected sale-value multiplier: ×1.00 for a fresh playe
 
 **Stirring** is a one-shot window: pressing Brew by hand opens a 3-second sweep bar, and one tap inside the
 glowing band banks a bonus for that brew (dead centre pays double the band floor). A miss costs nothing and the
-brew proceeds normally, so it never punishes idling; apprentice-repeated brews skip the window entirely and roll
-from proficiency and skills alone. This is the game's only active-play minigame — deliberately a single tap at
+brew proceeds normally, so it never punishes idling.
+
+**Your Brewer stirs too.** Quality used to be reachable only by hand, which left idle players — the game's core
+audience — at about ×1.04 after six hours. A Brewer apprentice now stirs the pots they tend: half a perfect stir
+by level 40 (`min(0.5, level/80)` of `STIR_MAX`), plus 0.12 per rank of their *Practised Stir* node. Hand-stirring
+still pays more, and a hand stir replaces the apprentice's effort rather than stacking with it. This is the game's only active-play minigame — deliberately a single tap at
 brew start rather than prompts during the brew, so a 10-minute Panacea never asks to be babysat.
 
 **Interlocks.** Quality raises market price, contract payouts (the guild pays half the quality value on top),

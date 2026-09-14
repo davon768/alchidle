@@ -69,6 +69,8 @@ export const ROLES: RoleDef[] = [
         flavor: 'Tends one more cauldron.' },
       { id: 'b_steady', name: 'Even Heat', icon: '🔥', row: 0, maxRank: 10, cost: 1, effects: [e('brewSpeed', 0.04)] },
       { id: 'b_double', name: 'Double Distillation', icon: '💧', row: 1, maxRank: 10, cost: 1, effects: [e('doubleBrew', 0.02)] },
+      { id: 'b_stir', name: 'Practised Stir', icon: '🥄', row: 1, maxRank: 5, cost: 1, effects: [e('autoStir', 0.12)],
+        flavor: 'Stirs the pot unprompted, so brews you never touch still come out finer.' },
       { id: 'b_thrift', name: 'Careful Measures', icon: '⚖️', row: 2, maxRank: 8, cost: 2, effects: [e('ingredientSave', 0.02)] },
       { id: 'b_fine', name: 'Fine Hand', icon: '✦', row: 2, maxRank: 8, cost: 2, effects: [e('brewQuality', 0.02)],
         flavor: 'Better odds of Fine, Masterwork and Legendary.' },

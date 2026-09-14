@@ -11,6 +11,7 @@ export interface Mods {
   ingredientSave: number;
   masteryRate: number;
   brewQuality: number; // raises the odds of Fine / Masterwork / Legendary potions
+  autoStir: number; // share of a hand stir a trained Brewer supplies on brews you never stirred
   // Commerce
   sellPrice: number;
   demandRecovery: number;

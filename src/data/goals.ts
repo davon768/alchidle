@@ -82,7 +82,7 @@ export const GOALS: GoalDef[] = [
     check: (s) => bestProf(s) >= 10, progress: (s) => [Math.min(10, bestProf(s)), 10], reward: { gold: 400 } },
   { id: 'stir', chapter: 'Craft & proficiency', title: 'Stir a finer potion', level: 2, tab: 'brew',
     how: 'Press Brew by hand, then tap 🥄 Stir while the marker is inside the glowing band.',
-    about: 'Every brew rolls a quality: Common, ✦ Fine, ✦✦ Masterwork or ★ Legendary. Better bottles sell for more and hit harder in a fight. Stirring is optional — a miss costs nothing — and apprentices roll quality from brewing proficiency alone.',
+    about: 'Every brew rolls a quality: Common, ✦ Fine, ✦✦ Masterwork or ★ Legendary. Better bottles sell for more and hit harder in a fight. Stirring is optional — a miss costs nothing — and a trained Brewer apprentice stirs the pots they tend for you.',
     check: (s) => (s.stats.bestQuality ?? 0) >= 1, reward: { gold: 300 } },
 
   { id: 'crossbreed', chapter: 'Craft & proficiency', title: 'Breed a new strain', level: 3, tab: 'garden',

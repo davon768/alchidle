@@ -11,7 +11,7 @@ import { ACHIEVEMENTS } from '../data/achievements';
 import { CONTRACT_COUNT } from '../data/guilds';
 import { DUNGEONS, REWARD_GROWTH } from '../data/combat';
 import { MILESTONES, PROF_MAP, emptyBonus, profBonus, profLevel, type ProfBonus } from '../data/proficiency';
-import { QUAL_MAX, quality, qualityName, rollQuality, rollStirTarget, stirElapsed, STIR_WINDOW } from '../data/quality';
+import { QUAL_MAX, quality, qualityName, rollQuality, rollStirTarget, stirElapsed, STIR_MAX, STIR_WINDOW } from '../data/quality';
 import { RESEARCH_MAP } from '../data/research';
 import { CROSS_CHANCE, TRAITS, seedKey, traitEffect } from '../data/mutations';
 import { FAMILIAR_MAP, familiarLevel, familiarsOfZone, feedXp, milestonesAt } from '../data/familiars';
@@ -364,7 +364,7 @@ export function syncSlots(s: GameState, m: Mods): void {
  * Consume a recipe's inputs and start the brew.
  * `byHand` opens the stirring window; apprentice-repeated brews skip it and roll quality from skill alone.
  */
-export function startBrew(s: GameState, c: Cauldron, byHand = false): boolean {
+export function startBrew(s: GameState, c: Cauldron, byHand = false, m?: Mods): boolean {
   const r = c.recipeId ? RECIPE_MAP[c.recipeId] : null;
   if (!r || !hasAll(s, r.inputs)) return false;
   // Brewing a potion out of better potions carries some of that quality into the result.
@@ -379,10 +379,18 @@ export function startBrew(s: GameState, c: Cauldron, byHand = false): boolean {
   }
   c.active = true;
   c.progress = 0;
-  c.stirQ = carried > 0 ? carry / Math.max(1, carried) : 0;
+  c.stirQ = (carried > 0 ? carry / Math.max(1, carried) : 0) + autoStirQ(m ?? computeMods(s));
   c.stirStart = byHand ? Date.now() : 0;
   c.stirTarget = rollStirTarget();
   return true;
+}
+
+/**
+ * What a trained Brewer stirs in by themselves. Hand-stirring still pays more (STIR_MAX for a perfect
+ * tap), but an apprentice means quality is no longer locked behind active play.
+ */
+export function autoStirQ(m: Mods): number {
+  return Math.max(0, Math.min(1, m.autoStir)) * STIR_MAX;
 }
 
 /** Quality score for a brew about to finish: standing bonuses + proficiency + whatever the cauldron banked. */
@@ -644,7 +652,7 @@ export function tick(s: GameState, dt: number): void {
       c.stirQ = 0;
       if (ci < m.autoBrew) {
         workXp(s, m, 'brewer', ci, r.time / 40);
-        if (c.repeat) startBrew(s, c);
+        if (c.repeat) startBrew(s, c, false, m);
       }
     }
   });
