@@ -58,6 +58,19 @@ function confirmWipe(): void {
   </div>`);
 }
 
+/** Save size, sampled rather than measured every frame: serialising the whole state at 10 fps is exactly
+ *  the kind of waste this panel exists to find. */
+let sizeKB = 0;
+let sizeAt = 0;
+function saveKB(s: GameState): number {
+  const now = Date.now();
+  if (now - sizeAt > 5000) {
+    sizeAt = now;
+    sizeKB = Math.round(exportSave(s).length / 1024);
+  }
+  return sizeKB;
+}
+
 export function journalView(s: GameState): TemplateResult {
   const earned = ACHIEVEMENTS.filter((a) => s.achievements[a.id]).length;
   const st = s.stats;
@@ -88,7 +101,7 @@ export function journalView(s: GameState): TemplateResult {
         <div>⏱ ${fmtTime((Date.now() - runtime.started) / 1000)} this session</div>
         <div>🖼 ${rendersPerSecond().toFixed(1)} draws/sec</div>
         <div>🧩 ${fmt(domNodes())} elements (peak ${fmt(runtime.peakNodes)})</div>
-        <div>💾 ${fmt(Math.round(exportSave(game.s).length / 1024))} KB save</div>
+        <div>💾 ${fmt(saveKB(s))} KB save</div>
         <div>🧠 ${heapMB() === null ? 'n/a in this browser' : `${heapMB()} MB heap`}</div>
         <div class=${runtime.renderErrors > 0 ? 'warn' : ''}>⚠️ ${runtime.renderErrors} draw error${runtime.renderErrors === 1 ? '' : 's'}</div>
       </div>

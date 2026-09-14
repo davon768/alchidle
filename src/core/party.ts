@@ -96,6 +96,17 @@ export function partyReport(s: GameState, m: Mods): PartyReport {
   };
 }
 
+/**
+ * Bottles of a potion the company is holding for its next delve. Selling — by hand in bulk, or by a
+ * Shopkeeper on auto — keeps this back on top of the player's own reserve, so supplying the party and
+ * running a potion shop are not silently at war.
+ */
+export function kitReserve(s: GameState, m: Mods, id: string): number {
+  const p = s.party;
+  if (!p || !id || !p.kit.slice(0, Math.floor(m.kitSlots)).includes(id)) return 0;
+  return supplyNeed(p.roster.filter(advReady).length, nextDepth(s));
+}
+
 /** The depth the next delve goes to. */
 export const nextDepth = (s: GameState): number => s.party.depth + 1;
 

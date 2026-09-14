@@ -417,3 +417,12 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .appr-node.ready { border-color: var(--accent); }
 .appr-node.maxed { border-color: var(--good); opacity: 0.8; }
 .appr-node.locked { opacity: 0.6; }
+
+/* Touch devices: the game is browser-first but headed for Android, and a 29px control is a miss
+   waiting to happen on a phone. Only coarse pointers pay for the extra height, so desktop keeps its
+   density. `select` gets the same treatment — the supply kit and potion belt are both dropdowns. */
+@media (pointer: coarse) {
+  .btn, select { min-height: 40px; }
+  .btn.small { min-height: 36px; padding: 7px 11px; font-size: 13px; }
+  .pill-tabs .btn.small { min-height: 34px; }
+}

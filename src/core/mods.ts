@@ -50,8 +50,9 @@ export function computeMods(s: GameState): Mods {
     const u = UPGRADE_MAP[id];
     if (u) apply(m, u.effects, lvl);
   }
-  if (s.guild.id) {
-    const g = GUILD_MAP[s.guild.id];
+  const guild = s.guild.id ? GUILD_MAP[s.guild.id] : undefined;
+  if (guild) {
+    const g = guild;
     const rank = rankFor(s.guild.rep);
     apply(m, g.perRank, rank);
     for (const ms of g.milestones) if (rank >= ms.rank) apply(m, ms.effects, 1);

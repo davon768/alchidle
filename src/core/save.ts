@@ -1,5 +1,6 @@
 import type { GameState } from './types';
-import { newState, SAVE_VERSION } from './state';
+import { freshCombat, newState, SAVE_VERSION } from './state';
+import { DUNGEON_MAP } from '../data/combat';
 import type { RoleId } from './types';
 import { PROF_MAP } from '../data/proficiency';
 import { RESEARCH_MAP } from '../data/research';
@@ -7,6 +8,11 @@ import { TRAIT_MAP, parseSeed } from '../data/mutations';
 import { FAMILIAR_MAP } from '../data/familiars';
 import { ROLE_MAP, apprXpForLevel } from '../data/apprentices';
 import { CLASS_MAP } from '../data/adventurers';
+import { PLANT_MAP } from '../data/plants';
+import { RECIPE_MAP } from '../data/recipes';
+import { ZONE_MAP } from '../data/zones';
+import { SPELL_MAP } from '../data/spells';
+import { GUILD_MAP } from '../data/guilds';
 import { RELIC_MAP } from '../data/relics';
 
 const KEY = 'alchemy-idle-save';
@@ -102,6 +108,21 @@ function migrate(raw: LegacySave): GameState {
   // relic whose definition is gone, since either would throw in the Company view or in computeMods.
   s.party.roster = s.party.roster.filter((a) => CLASS_MAP[a.cls]);
   for (const id of Object.keys(s.party.relics)) if (!RELIC_MAP[id]) delete s.party.relics[id];
+  // Every id that indexes into game data, checked once here rather than defended at each of the dozens
+  // of places that read it. An id whose content is gone is dropped; nothing else about the save changes.
+  s.party.kit = s.party.kit.map((id) => (id && RECIPE_MAP[id]?.combat ? id : null));
+  for (const plot of s.plots) if (plot.plantId && !PLANT_MAP[plot.plantId]) Object.assign(plot, { plantId: null, progress: 0, ready: false });
+  for (const c of s.cauldrons) {
+    if (c.recipeId && !RECIPE_MAP[c.recipeId]) Object.assign(c, { recipeId: null, active: false, progress: 0, repeat: false, stirQ: 0 });
+  }
+  s.expeditions = s.expeditions.map((e) => (e && ZONE_MAP[e.zoneId] ? e : null));
+  s.belt = s.belt.map((id) => (id && RECIPE_MAP[id] ? id : null));
+  s.spellSlots = s.spellSlots.filter((id) => SPELL_MAP[id]);
+  for (const id of Object.keys(s.spells)) if (!SPELL_MAP[id]) delete s.spells[id];
+  for (const id of Object.keys(s.autoSell)) if (!RECIPE_MAP[id]) delete s.autoSell[id];
+  if (s.guild.id && !GUILD_MAP[s.guild.id]) s.guild = { id: null, rep: 0, contracts: [] };
+  s.guild.contracts = s.guild.contracts.filter((c) => (c.recipeId ? !!RECIPE_MAP[c.recipeId] : true));
+  if (s.combat.dungeonId && !DUNGEON_MAP[s.combat.dungeonId]) s.combat = freshCombat();
   s.version = SAVE_VERSION;
   return s;
 }

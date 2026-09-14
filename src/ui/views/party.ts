@@ -3,20 +3,51 @@ import type { GameState, Mods } from '../../core/types';
 import { CLASSES, CLASS_MAP, ADV_MAX, advProgress, delveGold, hireCost, isBossDepth } from '../../data/adventurers';
 import { RELIC_MAP, relicEffects } from '../../data/relics';
 import { RECIPES, RECIPE_MAP, describeCombatEffect } from '../../data/recipes';
-import { count, potionPotency } from '../../core/engine';
+import { RESEARCH_MAP, type ResearchDef } from '../../data/research';
+import { count, potionPotency, researchDone } from '../../core/engine';
 import { canDelve, canHire, dismissAdventurer, hireAdventurer, nextDepth, partyReport, setKit, startDelve, suppliable } from '../../core/party';
 import { delveOdds, delveReq } from '../../data/adventurers';
 import { describeEffects } from '../../core/mods';
 import { quality } from '../../data/quality';
 import { fmt, fmtPct, fmtTime } from '../../core/format';
-import { act, bar, sectionTitle, ui } from '../common';
+import { act, bar, costChips, sectionTitle, ui } from '../common';
 
-function lockedCard(): TemplateResult {
-  return html`<div class="card locked">
+/** The whole chain of studies that ends at the charter, so the wait is legible rather than mysterious. */
+function charterChain(s: GameState): { def: ResearchDef; done: boolean; open: boolean }[] {
+  const chain: string[] = [];
+  const walk = (id: string) => {
+    const def = RESEARCH_MAP[id];
+    if (!def) return;
+    for (const r of def.req ?? []) walk(r);
+    if (!chain.includes(id)) chain.push(id);
+  };
+  walk('company');
+  return chain.map((id) => {
+    const def = RESEARCH_MAP[id];
+    const done = researchDone(s, id) > 0;
+    return { def, done, open: !done && def.level <= s.level && (def.req ?? []).every((r) => researchDone(s, r) > 0) };
+  });
+}
+
+function lockedCard(s: GameState): TemplateResult {
+  const chain = charterChain(s);
+  const charter = RESEARCH_MAP['company'];
+  const next = chain.find((x) => !x.done);
+  return html`<div class="card">
     <h3>🏕️ No company yet</h3>
-    <div class="muted small">Adventurers sign articles, not contracts of employment. Finish
-      <b>Charter a Company</b> in the 📚 Library to open the roster, and it brings your Captain with it.</div>
-    <button class="btn" @click=${act(() => (ui.tab = 'library'))}>Open the Library</button>
+    <div class="muted small">Adventurers sign articles, not contracts of employment. The charter is a study:
+      finish <b>${charter.icon} ${charter.name}</b> in the 📚 Library and the roster opens — and your Captain
+      comes with it, so the company can keep delving while you work.</div>
+    <div class="col" style="gap:4px">
+      ${chain.map((x) => html`<div class="small ${x.done ? 'good' : x.open ? '' : 'dim'}">
+        ${x.done ? '✅' : x.open ? '📖' : '🔒'} ${x.def.icon} ${x.def.name}
+        <span class="dim">· level ${x.def.level}${x.done ? ' · done' : x.def.level > s.level ? ` (you are ${s.level})` : ''}</span>
+      </div>`)}
+    </div>
+    <div class="row"><span class="small muted">Charter costs:</span>${costChips(s, charter.cost)}</div>
+    <div class="dim small">🏺 Relics turn up on expeditions from the Old Forest onwards, and far more often in the Sunken Ruins.</div>
+    <button class="btn primary" @click=${act(() => (ui.tab = next && next.def.level > s.level ? 'goals' : 'library'))}>
+      ${next && next.def.level > s.level ? `Level ${next.def.level} needed — see Goals` : 'Open the Library'}</button>
   </div>`;
 }
 
@@ -111,10 +142,13 @@ function delveCard(s: GameState, m: Mods): TemplateResult {
 export function partyView(s: GameState, m: Mods): TemplateResult {
   const slots = Math.floor(m.partySlots);
   const relics = Object.entries(s.party.relics).filter(([id, r]) => RELIC_MAP[id] && r > 0);
+  const chartered = slots >= 1 || s.party.roster.length > 0;
   return html`<div class="view">
-    ${sectionTitle('🏕️ The Company', html`Deepest cleared: <b>${s.party.depth}</b> · ${s.party.roster.length} / ${slots} adventurers · ${fmt(s.stats.delves)} delves run`)}
+    ${sectionTitle('🏕️ The Company', chartered
+      ? html`Deepest cleared: <b>${s.party.depth}</b> · ${s.party.roster.length} / ${slots} adventurers · ${fmt(s.stats.delves)} delves run`
+      : 'Heroes you hire, supply from your own cauldrons, and send down the Endless Rift.')}
 
-    ${slots < 1 && s.party.roster.length === 0 ? lockedCard() : html`
+    ${!chartered ? lockedCard(s) : html`
       ${delveCard(s, m)}
       ${kitSection(s, m)}
 

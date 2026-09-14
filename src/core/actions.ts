@@ -21,6 +21,7 @@ import { UPGRADE_MAP, upgradeCost } from '../data/upgrades';
 import { ROW_POINTS, SKILL_MAP, skillRankCost, type SkillNode } from '../data/skills';
 import { GUILD_MAP, GUILD_UNLOCK_LEVEL, rankFor, rankName } from '../data/guilds';
 import { ASC_MAP, ascCost, ascStatus, stonesFor } from '../data/ascension';
+import { kitReserve } from './party';
 
 // ── Research Library ─────────────────────────────────────────
 /**
@@ -135,7 +136,8 @@ export function plantAll(s: GameState, plantId: string): void {
 export function harvest(s: GameState, idx: number): void {
   // The index matters: cross-breeding looks at the plot's neighbours, so harvesting by hand must
   // roll for mutations exactly as an apprentice-tended harvest does.
-  harvestPlot(s, computeMods(s), s.plots[idx], idx);
+  const plot = s.plots[idx];
+  if (plot) harvestPlot(s, computeMods(s), plot, idx);
 }
 
 export function harvestAll(s: GameState): void {
@@ -260,7 +262,7 @@ export function sellAllPotions(s: GameState): void {
     if (item(id).kind !== 'potion') continue;
     const have = Math.floor(count(s, id));
     if (have <= 0) continue;
-    const sellable = have - s.settings.keepReserve;
+    const sellable = have - s.settings.keepReserve - kitReserve(s, m, id);
     if (sellable <= 0) {
       heldInReserve.push(item(id).name);
       continue;
@@ -275,7 +277,7 @@ export function sellAllPotions(s: GameState): void {
     return;
   }
   if (heldInReserve.length) {
-    toast(`Nothing sold — every potion is within your reserve of ${s.settings.keepReserve}. Lower it to sell more.`, 'warn');
+    toast(`Nothing sold — every potion is within your reserve of ${s.settings.keepReserve}, or held back for the company's next delve. Lower the reserve to sell more.`, 'warn');
     return;
   }
   toast('No potions to sell.', 'warn');
@@ -283,7 +285,9 @@ export function sellAllPotions(s: GameState): void {
 
 export function buy(s: GameState, id: string, qty: number): void {
   const def = item(id);
-  if (def.buyLevel === undefined || def.buyLevel > s.level) return;
+  qty = Math.floor(qty);
+  // A negative quantity would run every line below backwards and pay the player to take stock away.
+  if (qty <= 0 || def.buyLevel === undefined || def.buyLevel > s.level) return;
   const cost = buyUnitPrice(id) * qty;
   if (s.gold < cost) {
     toast('Not enough gold.', 'warn');

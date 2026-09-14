@@ -155,7 +155,7 @@ source of a **relic** (`data/relics.ts`). Relics are permanent stacking *ranks*,
 raises its rank, and they feed `computeMods` like every other bonus. Nine of them, from the Ward Stone at
 depth 10 to the Crown of the Deep at 50. A Rogue turns them up between bosses.
 
-**Interlocks.** The Captain apprentice resupplies and re-sends the company (`autoDelve`); mapped depth pays
+**Interlocks.** Selling — in bulk or by a Shopkeeper on auto — holds back what the kit needs on top of the player's own reserve, so supplying the party and running a potion shop are not silently at war. The Captain apprentice resupplies and re-sends the company (`autoDelve`); mapped depth pays
 the whole workshop +5% rare finds and +3% expedition loot per 5 depths; delves eat potions and return the
 materials the forge and the Arcanum want, plus player XP. Roster, relics and depth all survive ascension;
 the delve in progress does not.

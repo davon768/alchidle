@@ -19,7 +19,7 @@ import { dungeonUnlocked, tickCombat } from './combat';
 import { tickMagic } from './magic';
 import { tickEvents } from './events';
 import { tickStaff, unlockApprentice, workXp } from './staff';
-import { tickParty } from './party';
+import { kitReserve, tickParty } from './party';
 
 // ── Notifications ────────────────────────────────────────────
 export type ToastKind = 'info' | 'good' | 'warn' | 'epic';
@@ -413,7 +413,7 @@ function completeBrew(s: GameState, m: Mods, r: Recipe, banked: number): void {
   gainProf(s, m, r.id);
   if (Math.random() < Math.min(0.75, m.ingredientSave + b.save)) for (const inp of r.inputs) addItem(s, inp.id, inp.qty);
   if (autoSellActive(s, m, r.id)) {
-    const extra = count(s, r.id) - s.settings.keepReserve;
+    const extra = count(s, r.id) - s.settings.keepReserve - kitReserve(s, m, r.id);
     if (extra > 0) {
       const gold = doSell(s, m, r.id, extra);
       workXp(s, m, 'shopkeeper', 0, 0.3 + Math.log10(1 + gold) * 0.3);

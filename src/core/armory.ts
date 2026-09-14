@@ -23,6 +23,10 @@ export function addGear(s: GameState, it: GearItem): void {
   s.stats.gearFound++;
   s.stats.bestRarity = Math.max(s.stats.bestRarity, it.rarity);
   if (it.rarity < s.settings.autoSalvage || s.gear.length >= GEAR_CAP) {
+    // A full bag used to swallow drops without a word, which reads as loot simply stopping.
+    if (s.gear.length >= GEAR_CAP && it.rarity >= s.settings.autoSalvage) {
+      toast(`🎒 Your armory is full (${GEAR_CAP}) — ${gearName(it)} was salvaged for dust. Salvage some gear to keep new finds.`, 'warn');
+    }
     addItem(s, 'arcanedust', salvageDust(it));
     return;
   }

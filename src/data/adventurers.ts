@@ -175,5 +175,12 @@ export function depthEffects(depth: number): Effect[] {
   return bands > 0 ? [e('rareFind', 0.05 * bands), e('scavYield', 0.03 * bands)] : [];
 }
 
+/**
+ * Level at which the Company tab appears, before anything can be hired. The charter is a deep unlock —
+ * a level-16 study behind Cartography — and a tab that simply does not exist gives the player nothing to
+ * aim at, so the tab arrives early and explains what it is waiting for.
+ */
+export const COMPANY_HINT_LEVEL = 12;
+
 /** Is the company chartered yet? Used by the tab, the goal and the bot. */
 export const companyOpen = (s: GameState, m: Mods): boolean => m.partySlots >= 1 || (s.party?.roster.length ?? 0) > 0;

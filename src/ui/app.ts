@@ -39,7 +39,7 @@ import { staffView } from './views/apprentices';
 import { goalBanner, goalsView } from './views/goals';
 import { GOALS } from '../data/goals';
 import { RESEARCH_UNLOCK_LEVEL } from '../data/research';
-import { companyOpen } from '../data/adventurers';
+import { COMPANY_HINT_LEVEL, companyOpen } from '../data/adventurers';
 
 interface TabDef {
   id: TabId;
@@ -58,7 +58,7 @@ const TABS: TabDef[] = [
   { id: 'staff', icon: '👥', label: 'Apprentices', unlocked: (s) => Object.keys(s.staff.crew).length > 0,
     dot: (s) => Object.values(s.staff.crew).some((a) => a && pointsFree(a) > 0) },
   { id: 'dungeon', icon: '⚔️', label: 'Dungeons', unlocked: (s) => s.level >= DUNGEON_UNLOCK_LEVEL, dot: (s) => !s.combat.dungeonId },
-  { id: 'party', icon: '🏕️', label: 'Company', unlocked: (s) => companyOpen(s, computeMods(s)),
+  { id: 'party', icon: '🏕️', label: 'Company', unlocked: (s) => s.level >= COMPANY_HINT_LEVEL || companyOpen(s, computeMods(s)),
     dot: (s, m) => !s.party.delve && (s.party.roster.length < Math.floor(m.partySlots) || s.party.roster.some((x) => x.rest <= 0)) },
   { id: 'market', icon: '🏪', label: 'Market', unlocked: () => true },
   { id: 'inventory', icon: '🎒', label: 'Inventory', unlocked: () => true },
