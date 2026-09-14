@@ -156,3 +156,5 @@ export function researchTime(def: ResearchDef, done: number): number {
  * is what the cap in `startResearch` has always allowed. At 0.06 the best reachable cut was 18%.
  */
 export const QUALITY_RESEARCH_BOOST = 0.11;
+/** Hard ceiling on that cut, whatever the payment. */
+export const QUALITY_RESEARCH_MAX = 0.35;

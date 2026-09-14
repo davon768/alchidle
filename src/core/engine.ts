@@ -12,7 +12,7 @@ import { CONTRACT_COUNT } from '../data/guilds';
 import { DUNGEONS, REWARD_GROWTH } from '../data/combat';
 import { MILESTONES, PROF_MAP, emptyBonus, profBonus, profLevel, type ProfBonus } from '../data/proficiency';
 import { QUAL_MAX, quality, qualityName, rollQuality, rollStirTarget, stirElapsed, STIR_MAX, STIR_WINDOW } from '../data/quality';
-import { RESEARCH_MAP } from '../data/research';
+import { QUALITY_RESEARCH_BOOST, QUALITY_RESEARCH_MAX, RESEARCH_MAP } from '../data/research';
 import { CROSS_CHANCE, TRAITS, seedKey, traitEffect } from '../data/mutations';
 import { FAMILIAR_MAP, familiarLevel, familiarsOfZone, feedXp, milestonesAt } from '../data/familiars';
 import { dungeonUnlocked, tickCombat } from './combat';
@@ -594,6 +594,31 @@ export function tickResearch(s: GameState, m: Mods, dt: number): void {
 }
 
 /** Studies already finished (repeatables count their completions). */
+/**
+ * The share a study's time is cut by, from the quality of the potions its cost would draw.
+ *
+ * Pure, and it models exactly the order `removeItem` takes — cheapest-first normally, finest-first when
+ * the player has turned that on — so the percentage shown in the Library and the one actually applied
+ * when the study begins cannot drift apart.
+ */
+export function studyCut(s: GameState, cost: ItemStack[], fine = s.settings.fineStudies): number {
+  let credit = 0;
+  let potions = 0;
+  for (const c of cost) {
+    if (c.id === 'gold' || !isPotion(c.id)) continue;
+    const tiers = qualCounts(s, c.id);
+    let left = Math.min(c.qty, count(s, c.id));
+    for (const t of fine ? [3, 2, 1, 0] : [0, 1, 2, 3]) {
+      if (left <= 0) break;
+      const take = Math.min(left, tiers[t]);
+      credit += take * t;
+      potions += take;
+      left -= take;
+    }
+  }
+  return potions > 0 ? Math.min(QUALITY_RESEARCH_MAX, (credit / potions) * QUALITY_RESEARCH_BOOST) : 0;
+}
+
 export function researchDone(s: GameState, id: string): number {
   return s.research?.done[id] ?? 0;
 }

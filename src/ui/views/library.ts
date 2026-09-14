@@ -1,12 +1,16 @@
 import { html, type TemplateResult } from 'lit-html';
 import type { GameState, Mods } from '../../core/types';
 import { RESEARCH, RESEARCH_MAP, researchCost, researchTime } from '../../data/research';
-import { researchActive, researchDone, researchStatus } from '../../core/engine';
+import { researchActive, researchDone, researchStatus, studyCut } from '../../core/engine';
 import { cancelResearch, startResearch } from '../../core/actions';
 import { fmtTime } from '../../core/format';
 import { act, bar, costChips, sectionTitle } from '../common';
 import { QUALITY_RESEARCH_BOOST } from '../../data/research';
 import { QUAL_MAX } from '../../data/quality';
+import { RECIPE_MAP } from '../../data/recipes';
+
+/** Does this study charge in potions at all? Only those can earn the quality time-cut. */
+const hasPotionCost = (cost: { id: string }[]): boolean => cost.some((c) => RECIPE_MAP[c.id]);
 
 export function libraryView(s: GameState, m: Mods): TemplateResult {
   const desks = Math.floor(m.researchSlots);
@@ -60,14 +64,22 @@ export function libraryView(s: GameState, m: Mods): TemplateResult {
           const status = researchStatus(s, m, r.id);
           const busy = researchActive(s, r.id);
           const complete = done > 0 && !r.repeat;
+          const cost = researchCost(r, done);
+          const cut = studyCut(s, cost);
+          const full = researchTime(r, done) / Math.max(0.0001, m.researchSpeed);
           return html`<tr style=${complete ? 'opacity:.5' : ''}>
             <td class="big-icon" style="font-size:20px">${r.icon}</td>
             <td>
               <b>${r.name}</b>${r.repeat ? html` <span class="dim">×${done}</span>` : ''}
               <div class="dim">${r.desc}</div>
             </td>
-            <td><div class="row">${costChips(s, researchCost(r, done))}</div></td>
-            <td>${fmtTime(researchTime(r, done) / Math.max(0.0001, m.researchSpeed))}</td>
+            <td><div class="row">${costChips(s, cost)}</div></td>
+            <td>${fmtTime(full * (1 - cut))}
+              ${cut > 0.005
+                ? html`<div class="good small" title=${`Your finest bottles cut ${Math.round(cut * 100)}% off the ${fmtTime(full)} this would otherwise take`}>−${Math.round(cut * 100)}% quality</div>`
+                : hasPotionCost(cost) && !s.settings.fineStudies
+                  ? html`<div class="dim small" title="Turn on 'Pay studies with your finest bottles' above to spend fine bottles here instead of Commons">no quality bonus</div>`
+                  : ''}</td>
             <td>${complete
               ? html`<span class="good">✓ Done</span>`
               : busy

@@ -101,7 +101,7 @@ It interlocks with quality in both directions: several studies grant `brewQualit
 in higher-quality potions shortens it** — up to 35% off, 18% for an all-Legendary payment — which gives
 Masterworks a use other than the market.
 
-**Study time** responds to two things: the `researchSpeed` stat (Archive Owl, the Scribe's Careful Copyist, Library studies), and the quality of the potions paid as cost. The quality cut reaches a third off for an all-Legendary payment, but only when **Pay studies with your finest bottles** is on in the Library — every other system spends cheapest-first, and that default made the bonus unreachable in practice. Off by default: handing the Library your best bottles is a real trade against selling them.
+**Study time** responds to two things: the `researchSpeed` stat (Archive Owl, the Scribe's Careful Copyist, Library studies), and the quality of the potions paid as cost. The quality cut reaches a third off for an all-Legendary payment, but only when **Pay studies with your finest bottles** is on in the Library — every other system spends cheapest-first, and that default made the bonus unreachable in practice. Off by default: handing the Library your best bottles is a real trade against selling them. The Library shows the cut per study (`−33% quality`) and, when a study charges in potions but the toggle is off, says `no quality bonus` rather than quietly showing the full time. Display and payout share one pure model — `studyCut` in `core/engine.ts` — so the number on the row is the number banked when the study starts.
 
 ### Cross-breeding (v0.7, seed tray reworked in v1.0)
 

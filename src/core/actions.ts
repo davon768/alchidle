@@ -4,10 +4,10 @@ import { computeMods } from './mods';
 import { newState } from './state';
 import {
   addGold, addItem, buyUnitPrice, count, doSell, generateContract, generateOffers, hasAll, harvestPlot, plantCost,
-  removeItem, offerGetQty, gainXp, feedFamiliar, researchDone, researchStatus, skillPointsFree, startBrew, toast, autoStirQ,
+  removeItem, offerGetQty, gainXp, feedFamiliar, researchDone, researchStatus, skillPointsFree, startBrew, studyCut, toast, autoStirQ,
 } from './engine';
 import { STIR_MAX, STIR_WINDOW, quality, stirBonus, stirElapsed, stirPos } from '../data/quality';
-import { QUALITY_RESEARCH_BOOST, RESEARCH_MAP, researchCost, researchTime } from '../data/research';
+import { RESEARCH_MAP, researchCost, researchTime } from '../data/research';
 
 /** How much of a potion's quality value the guild pays on top of a contract. */
 const CONTRACT_QUALITY_WEIGHT = 0.5;
@@ -42,20 +42,16 @@ export function startResearch(s: GameState, id: string): void {
     toast('You cannot cover the cost of that study.', 'warn');
     return;
   }
-  let qualityCredit = 0;
-  let potions = 0;
   // Which end of the stock a study draws from is the whole mechanic. Drawing the cheapest bottles first
   // is right everywhere else, but here it meant the shortening never fired: any Commons on the shelf
   // were spent before a single Masterwork, so the bonus that exists to give fine bottles a use outside
   // the market was unreachable unless you happened to hold nothing else.
   const from = s.settings.fineStudies ? 'high' : 'low';
+  const cut = studyCut(s, cost); // measured before anything is spent — the Library shows this same number
   for (const c of cost) {
     if (c.id === 'gold') { addGold(s, -c.qty, false); continue; }
-    const taken = removeItem(s, c.id, c.qty, from);
-    for (let t = 1; t <= 3; t++) { qualityCredit += taken[t] * t; potions += taken[t]; }
-    potions += taken[0];
+    removeItem(s, c.id, c.qty, from);
   }
-  const cut = potions > 0 ? Math.min(0.35, (qualityCredit / potions) * QUALITY_RESEARCH_BOOST) : 0;
   s.research.queue.push({ id, progress: 0, time: researchTime(def, done) * (1 - cut) });
   toast(cut > 0.01 ? `📚 Study begun — fine reagents cut ${Math.round(cut * 100)}% off the work.` : '📚 Study begun.', 'good');
 }
