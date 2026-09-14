@@ -150,4 +150,6 @@ export const FORGE_TIERS: { tier: number; dungeon: string; cost: ItemStack[] }[]
   { tier: 4, dungeon: 'temple', cost: [{ id: 'sirenscale', qty: 6 }, { id: 'krakenink', qty: 3 }, { id: 'mithril', qty: 10 }, { id: 'gold', qty: 80000 }] },
   { tier: 5, dungeon: 'lair', cost: [{ id: 'adamant', qty: 6 }, { id: 'dragonheart', qty: 2 }, { id: 'gold', qty: 500000 }] },
   { tier: 6, dungeon: 'void', cost: [{ id: 'starmetal', qty: 5 }, { id: 'voidshard', qty: 3 }, { id: 'adamant', qty: 8 }, { id: 'gold', qty: 4e6 }] },
+  { tier: 7, dungeon: 'bastion', cost: [{ id: 'runesteel', qty: 5 }, { id: 'glyphstone', qty: 4 }, { id: 'starmetal', qty: 6 }, { id: 'gold', qty: 3e7 }] },
+  { tier: 8, dungeon: 'titan', cost: [{ id: 'titanheart', qty: 3 }, { id: 'aethersteel', qty: 5 }, { id: 'runesteel', qty: 8 }, { id: 'gold', qty: 2.5e8 }] },
 ];

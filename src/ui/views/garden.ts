@@ -1,10 +1,10 @@
 import { html, type TemplateResult } from 'lit-html';
 import type { GameState, Mods } from '../../core/types';
 import { PLANT_MAP } from '../../data/plants';
-import { TRAITS, TRAIT_MAP, parseSeed } from '../../data/mutations';
+import { TRAITS, TRAIT_MAP, describeTrait, parseSeed } from '../../data/mutations';
 import { item } from '../../data/items';
-import { growRate, plantCost, profBonusOf, profLevelOf, unlockedPlants } from '../../core/engine';
-import { clearPlot, harvest, harvestAll, plant, plantAll, plantSeed } from '../../core/actions';
+import { growRate, plantCost, profBonusOf, profLevelOf, strainRank, unlockedPlants } from '../../core/engine';
+import { clearPlot, harvest, harvestAll, plant, plantAll, sowAll, sowBest } from '../../core/actions';
 import { fmt, fmtTime } from '../../core/format';
 import { act, bar, gold, sectionTitle, ui } from '../common';
 
@@ -13,23 +13,35 @@ function seedTray(s: GameState): TemplateResult | string {
   const held = Object.entries(s.seeds).filter(([, n]) => n > 0);
   const found = Object.keys(s.catalogue).length;
   const total = unlockedPlants(s).length * TRAITS.length;
+  const sown = s.plots.filter((p) => p.trait).length;
   if (!held.length && !found) return '';
   return html`<div class="card">
     <div class="row between">
       <b>🌾 Seed Tray</b>
       <span class="dim" title="Every strain you discover pays +1% growth and +1% yield, forever">
-        Catalogue ${found}/${total} strains · +${found}% growth and yield</span>
+        ${sown}/${s.plots.length} beds sown · catalogue ${found}/${total} strains · +${found}% growth and yield</span>
     </div>
+    <div class="dim small">A sown strain belongs to the bed and survives every replant, your Gardener's included.
+      A seed goes into a bed of that herb that has none; once they all carry it, further seeds breed the
+      strain deeper and every bed carrying it grows stronger.</div>
     ${held.length
       ? html`<div class="row wrap">${held.map(([key, n]) => {
           const { plantId, trait } = parseSeed(key);
           const t = TRAIT_MAP[trait];
           const pl = PLANT_MAP[plantId];
           if (!t || !pl) return '';
-          return html`<button class="btn small seed-chip" style="--t:${t.color}" title=${`${t.desc} — click to sow in the first empty plot`}
-            @click=${act((st) => { const i = st.plots.findIndex((q) => !q.plantId); if (i >= 0) plantSeed(st, i, key); })}>
-            ${t.icon} ${t.name} ${pl.name} <span class="dim">×${n}</span>
-          </button>`;
+          const rank = strainRank(s, plantId, trait);
+          const beds = s.plots.filter((q) => q.plantId === plantId && q.trait === trait).length;
+          const needsBed = s.plots.some((q) => (q.plantId === plantId && !q.trait) || !q.plantId);
+          return html`<span class="seed-group">
+            <button class="btn small seed-chip" style="--t:${t.color}"
+              title=${`${describeTrait(trait, rank)} ${needsBed ? `Sows into a ${pl.name} bed and stays there.` : `Every bed that can carry it does (${beds}) — this breeds the strain deeper.`}`}
+              @click=${act((st) => sowBest(st, key))}>
+              ${t.icon} ${t.name} ${pl.name}
+              <span class="dim">×${n}${rank > 1 ? ` · rank ${rank}` : ''}</span>
+            </button>
+            ${n > 1 ? html`<button class="btn small" title=${`Sow all ${n}`} @click=${act((st) => sowAll(st, key))}>All</button>` : ''}
+          </span>`;
         })}</div>`
       : html`<div class="dim">No seeds on hand. Grow two different herbs side by side and a mutation may turn up at harvest.</div>`}
   </div>`;
@@ -83,11 +95,15 @@ export function gardenView(s: GameState, m: Mods): TemplateResult {
           ${i < m.autoHarvest ? html`<span class="tend-badge" title="Tended by your Gardeners">🧑‍🌾</span>` : ''}
           <div class="sprout" style="transform:scale(${plot.ready ? 1.15 : 0.6 + frac * 0.5})">${icon}</div>
           <div class="small">${p.name} <span class="dim">Lv ${profLevelOf(s, p.id)}</span></div>
-          ${trait ? html`<div class="trait-badge" style="--t:${trait.color}" title=${trait.desc}>${trait.icon} ${trait.name}</div>` : ''}
+          ${trait ? (() => {
+            const rk = strainRank(s, plot.plantId, plot.trait);
+            return html`<div class="trait-badge" style="--t:${trait.color}"
+              title=${`${describeTrait(plot.trait as string, rk)} This bed keeps the strain through every replant.`}>${trait.icon} ${trait.name}${rk > 1 ? html` <span class="dim">${rk}</span>` : ''}</div>`;
+          })() : ''}
           ${plot.ready
             ? html`<button class="btn small primary">Harvest</button>`
             : html`${bar(frac, trait ? trait.color : '#5fd068')}<span class="dim">${fmtTime((p.time - plot.progress) / growRate(s, m, p.id, plot.trait))}</span>`}
-          <button class="plot-clear" title="Clear plot (no refund)" @click=${act((st) => clearPlot(st, i))}>✕</button>
+          <button class="plot-clear" title=${plot.trait ? 'Clear this bed — the sown strain is lost' : 'Clear plot (no refund)'} @click=${act((st) => clearPlot(st, i))}>✕</button>
         </div>`;
       })}
     </div>

@@ -32,6 +32,18 @@ export function parseSeed(key: string): { plantId: string; trait: string } {
   return { plantId, trait };
 }
 
+/**
+ * How strong a strain is at a given rank. The first seed of a strain puts it in a bed; every seed after
+ * that deepens the strain itself, and every bed carrying it gets the benefit.
+ *
+ * This exists because seeds outgrow their use otherwise. A mature garden throws thousands of seeds a day
+ * against a handful of beds, so without somewhere for the surplus to go the tray just fills up — which is
+ * exactly what it used to do. The curve is logarithmic: always worth another seed, never running away.
+ */
+export function strainStrength(rank: number): number {
+  return 1 + 0.35 * Math.log2(Math.max(1, rank));
+}
+
 /** What a trait does to the plot it is sown in. */
 export interface TraitEffect {
   speed: number; // multiplies growth rate
@@ -40,13 +52,28 @@ export interface TraitEffect {
   free: boolean; // sowing (and the automatic replant after harvest) costs no gold
 }
 
-export function traitEffect(trait: string | null): TraitEffect {
+export function traitEffect(trait: string | null, rank = 1): TraitEffect {
+  const st = strainStrength(rank);
   switch (trait) {
-    case 'swift': return { speed: 1.4, yield: 0, double: 0, free: false };
-    case 'bountiful': return { speed: 1, yield: 2, double: 0, free: false };
-    case 'radiant': return { speed: 1, yield: 0, double: 0.35, free: false };
-    case 'hardy': return { speed: 1, yield: 0, double: 0, free: true };
+    case 'swift': return { speed: 1 + 0.4 * st, yield: 0, double: 0, free: false };
+    case 'bountiful': return { speed: 1, yield: 2 * st, double: 0, free: false };
+    case 'radiant': return { speed: 1, yield: 0, double: Math.min(1, 0.35 * st), free: false };
+    // Hardy pays in gold saved, which cannot grow past free — so its deeper ranks pay in herbs instead,
+    // or every Hardy seed after the first would be worth nothing.
+    case 'hardy': return { speed: 1, yield: 0.8 * (st - 1), double: 0, free: true };
     default: return { speed: 1, yield: 0, double: 0, free: false };
+  }
+}
+
+/** Traits described with their current rank folded in, for the tray and the plot badges. */
+export function describeTrait(trait: string, rank: number): string {
+  const e = traitEffect(trait, rank);
+  switch (trait) {
+    case 'swift': return `Grows ${Math.round((e.speed - 1) * 100)}% faster.`;
+    case 'bountiful': return `+${e.yield.toFixed(1)} herbs per harvest.`;
+    case 'radiant': return `${Math.round(e.double * 100)}% chance of a bonus herb.`;
+    case 'hardy': return `Free to sow and free to replant${e.yield > 0.05 ? `, +${e.yield.toFixed(1)} herbs per harvest` : ''}.`;
+    default: return '';
   }
 }
 

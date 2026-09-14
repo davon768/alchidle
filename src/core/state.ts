@@ -4,12 +4,20 @@ import { startGoldFor } from '../data/ascension';
 export const SAVE_VERSION = 10;
 
 /**
- * XP from one level to the next. The shape (21% per level) is unchanged; the scale was raised ~1.6× in
- * v1.0 because every system — recipes, zones, guilds, dungeons, magic — is gated on level, and at the
- * old scale all of them arrived inside the first half hour.
+ * XP from one level to the next.
+ *
+ * Two pieces. Up to SOFTEN_AT the curve climbs 21% a level, which is what paces the first run through
+ * the content; after that it eases to 16% so the hundred-level ceiling is a long climb rather than a
+ * wall — at a flat 21% the last level alone would cost more XP than the entire run before it.
+ *
+ * The scale has been raised twice: every system in the game is gated on level, and at the original
+ * numbers all of them arrived inside the first half hour.
  */
+const SOFTEN_AT = 40;
 export function xpToNext(level: number): number {
-  return Math.floor(40 * 1.21 ** (level - 1) + 25 * level);
+  const early = 1.21 ** (Math.min(level, SOFTEN_AT) - 1);
+  const late = 1.16 ** Math.max(0, level - SOFTEN_AT);
+  return Math.floor(65 * early * late + 40 * level);
 }
 
 /** Skill points earned from levels: 1 per level after the first, +2 bonus every 10th level. */
@@ -51,6 +59,7 @@ export function newState(prev?: GameState): GameState {
     qual: {},
     seeds: {},
     catalogue: {},
+    strains: {},
     level: 1,
     xp: 0,
     skills: {},
@@ -104,6 +113,7 @@ export function newState(prev?: GameState): GameState {
     s.gold += startGoldFor(s.asc.nodes['head_start'] ?? 0);
     s.research = prev.research; // studies and their bonuses are permanent, like proficiency
     s.catalogue = prev.catalogue; // the seed catalogue is a lifetime record
+    s.strains = prev.strains; // and so is how deeply each strain has been bred
     s.familiars = prev.familiars; // companions stay with you through ascension
     s.equippedFamiliars = prev.equippedFamiliars;
     s.staff = prev.staff; // apprentices and their trees are a lifetime investment

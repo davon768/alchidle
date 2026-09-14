@@ -32,6 +32,33 @@ export function heroStatGrid(hero: HeroStats, m: Mods): TemplateResult {
  * identical, so lit-html leaves the attribute alone and the animation keeps running untouched.
  */
 const swingSync = new Map<string, { period: number; css: string; syncT: number; f0: number }>();
+
+/**
+ * Who has just been hit. The views are pure functions of state, and a hit leaves no trace in the state
+ * beyond a lower HP number, so this remembers the HP it last drew and flashes the fighter whose number
+ * went down. Keyed on the enemy's identity so a fresh spawn is not read as a heal.
+ */
+/** Kept under the gap between renders so the class drops off between swings: a class that never
+ *  clears never re-triggers the animation, and one shake at the start of a beating is not feedback. */
+const HIT_FLASH_MS = 150;
+/** Ignore drift smaller than this share of max HP — only real swings should flash. */
+const HIT_MIN = 0.005;
+const lastHp = { hero: -1, enemy: -1, enemyKey: '', heroAt: 0, enemyAt: 0 };
+
+function hitFlash(heroHp: number, heroMax: number, enemy: Enemy | null): { hero: boolean; enemy: boolean } {
+  const now = performance.now();
+  if (lastHp.hero >= 0 && heroHp < lastHp.hero - Math.max(1e-6, heroMax * HIT_MIN)) lastHp.heroAt = now;
+  lastHp.hero = heroHp;
+  const key = enemy ? `${enemy.name}#${Math.round(enemy.maxHp)}` : '';
+  if (!enemy || key !== lastHp.enemyKey) {
+    lastHp.enemyKey = key;
+    lastHp.enemy = enemy ? enemy.hp : -1;
+  } else {
+    if (enemy.hp < lastHp.enemy - enemy.maxHp * HIT_MIN) lastHp.enemyAt = now;
+    lastHp.enemy = enemy.hp;
+  }
+  return { hero: now - lastHp.heroAt < HIT_FLASH_MS, enemy: now - lastHp.enemyAt < HIT_FLASH_MS };
+}
 const SWING_DRIFT = 0.08; // fraction of a cycle we tolerate before re-phasing
 
 export function swingCss(key: string, fraction: number, period: number): string {
@@ -163,6 +190,7 @@ function battlePanel(s: GameState, m: Mods, d: DungeonDef): TemplateResult {
   const mMax = manaMax(s, m);
   const top = maxFloor(s, d);
   const slots = s.spellSlots.slice(0, Math.floor(m.spellSlots));
+  const flash = hitFlash(c.hp, hero.maxHp, e);
   const emptySlots = Math.max(0, Math.floor(m.spellSlots) - slots.length);
 
   return html`<div class="card">
@@ -183,7 +211,7 @@ function battlePanel(s: GameState, m: Mods, d: DungeonDef): TemplateResult {
             : `${c.kills} / ${FLOOR_KILLS} foes cleared on floor ${c.floor}`, 'tall')}</div>`}
 
     <div class="arena">
-      <div class="card fighter">
+      <div class="card fighter ${flash.hero ? 'hit' : ''}">
         <div class="avatar">🧙</div>
         <b>You · Lv ${s.level}</b>
         ${bar(Math.max(0, c.hp) / hero.maxHp, undefined, `${fmt(Math.max(0, c.hp))} / ${fmt(hero.maxHp)} HP`, 'hp tall')}
@@ -194,13 +222,13 @@ function battlePanel(s: GameState, m: Mods, d: DungeonDef): TemplateResult {
         </div>
       </div>
       <div class="vs">VS</div>
-      <div class="card fighter">
+      <div class="card fighter ${flash.enemy ? 'hit' : ''}">
         ${c.dead > 0
           ? html`<div class="avatar">☠️</div><b>Recovering…</b><div class="muted">${fmtTime(c.dead)}</div>`
           : e
             ? html`<div class="avatar">${e.icon}</div>
                 <div><b>${e.name}</b> ${e.rank !== 'normal' ? html`<span class="rank-tag ${e.rank}">${e.rank}</span>` : ''}</div>
-                ${bar(Math.max(0, e.hp) / e.maxHp, undefined, `${fmt(Math.max(0, e.hp))} / ${fmt(e.maxHp)}`, 'enemy tall')}
+                ${bar(Math.max(0, e.hp) / e.maxHp, undefined, `${fmt(Math.max(0, e.hp))} / ${fmt(e.maxHp)} HP`, 'enemy tall')}
                 <div class="dim">⚔️ ${fmt(e.atk)} · 🛡️ ${fmt(e.def)}${c.slow > 0 ? ' · ❄️ slowed' : ''}</div>`
             : html`<div class="avatar">…</div>`}
       </div>

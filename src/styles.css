@@ -263,6 +263,11 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .arena { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: stretch; }
 .arena .vs { align-self: center; font-family: var(--font-head); color: var(--dim); font-size: 18px; }
 .fighter { text-align: center; align-items: center; }
+/* A bar's only content is its label, which is absolutely positioned — so inside a centred flex column
+   it has nothing to be as wide as and collapses to its own borders. The HP, shield and mana bars were
+   rendering 1.6px wide. Same fix as .plot .bar above; anything that puts a bar in a centred column
+   needs it. */
+.fighter .bar { width: 100%; }
 .fighter .avatar { font-size: 48px; line-height: 1.1; }
 .fighter.hit .avatar { animation: shake 0.2s; }
 @keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
@@ -426,3 +431,31 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
   .btn.small { min-height: 36px; padding: 7px 11px; font-size: 13px; }
   .pill-tabs .btn.small { min-height: 34px; }
 }
+
+/* Compact combat readout: the fight in one line, shown on every tab except Dungeons itself.
+   The bars need an explicit width for the same reason the arena's do — their only content is an
+   absolutely positioned label, so they would otherwise collapse to their borders. */
+.combat-mini {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 7px 12px; text-align: left; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  color: inherit; font: inherit;
+}
+.combat-mini:hover { border-color: var(--accent); }
+.combat-mini .cm-where { font-weight: 600; white-space: nowrap; }
+.combat-mini .cm-side { display: flex; align-items: center; gap: 8px; flex: 1 1 200px; min-width: 0; }
+.combat-mini .cm-who {
+  font-size: 12px; color: var(--dim); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 40%;
+}
+.combat-mini .bar { flex: 1 1 auto; min-width: 70px; height: 16px; }
+@media (max-width: 620px) {
+  /* Let the two fighters share a row where they fit and wrap where they do not, rather than forcing
+     three stacked rows of HUD above every tab on a phone. */
+  .combat-mini { flex-wrap: wrap; gap: 6px 10px; padding: 6px 10px; }
+  .combat-mini .cm-side { flex: 1 1 150px; }
+  .combat-mini .cm-who { max-width: 84px; }
+}
+
+/* Seed tray: a chip plus its optional "All" button travel together when the row wraps. */
+.seed-group { display: inline-flex; align-items: center; gap: 4px; }

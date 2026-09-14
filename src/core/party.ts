@@ -14,7 +14,7 @@ import { RECIPE_MAP } from '../data/recipes';
 import { quality } from '../data/quality';
 import { RELIC_MAP, rollRelic } from '../data/relics';
 import {
-  ADV_MAX, CLASS_MAP, DELVE_DROPS, SUPPLY_WEIGHT, UNSUPPLIED_GUARD,
+  ADV_MAX, CLASS_MAP, DELVE_DROPS, KIT_MAX, SUPPLY_WEIGHT, UNSUPPLIED_GUARD,
   advLevel, delveGold, delveOdds, delveReq, delveTime, delveXp, hireCost, haulMult, injuryRest, isBossDepth, supplyNeed,
 } from '../data/adventurers';
 
@@ -136,6 +136,9 @@ export function dismissAdventurer(s: GameState, uid: string): void {
 }
 
 export function setKit(s: GameState, slot: number, potionId: string | null): void {
+  // The slot indexes a stored array, so it has to be a real slot: an out-of-range one used to pad the kit
+  // with nulls forever, growing the save every time it was called.
+  if (!Number.isInteger(slot) || slot < 0 || slot >= KIT_MAX) return;
   if (potionId && !suppliable(potionId)) return;
   while (s.party.kit.length <= slot) s.party.kit.push(null);
   // One potion per slot: the same tonic twice is a trap, not a strategy.

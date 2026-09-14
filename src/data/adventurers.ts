@@ -155,6 +155,10 @@ export function haulMult(depth: number): number {
  */
 export const SUPPLY_WEIGHT = 0.28;
 
+/** Hard ceilings on the company, enforced both in computeMods and by the setters that index these arrays. */
+export const KIT_MAX = 6;
+export const PARTY_MAX = 8;
+
 /**
  * Bottles of each kitted potion a delve drinks: one per adventurer, and another round for every ten
  * depths. The deeper the company goes, the harder your cauldrons have to work to keep it going — which

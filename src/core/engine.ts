@@ -339,8 +339,14 @@ export function availableIngredients(s: GameState, levelBonus = 0): ItemDef[] {
 export function plantCost(s: GameState, m: Mods, p: PlantDef): number {
   return p.cost * (1 - m.seedDiscount) * (1 - profBonusOf(s, p.id).cost);
 }
+/** How deeply a strain has been bred. Rank 1 is a strain that has only ever been sown once. */
+export function strainRank(s: GameState, plantId: string | null, trait: string | null): number {
+  if (!plantId || !trait) return 1;
+  return Math.max(1, s.strains?.[seedKey(plantId, trait)] ?? 1);
+}
+
 export function growRate(s: GameState, m: Mods, plantId: string, trait: string | null = null): number {
-  return m.growSpeed * (1 + profBonusOf(s, plantId).speed) * traitEffect(trait).speed;
+  return m.growSpeed * (1 + profBonusOf(s, plantId).speed) * traitEffect(trait, strainRank(s, plantId, trait)).speed;
 }
 export function brewRate(s: GameState, m: Mods, recipeId: string): number {
   return m.brewSpeed * (1 + profBonusOf(s, recipeId).speed);
@@ -450,7 +456,7 @@ export function harvestPlot(s: GameState, m: Mods, plot: Plot, idx: number): voi
   if (!plot.plantId || !plot.ready) return;
   const p = PLANT_MAP[plot.plantId];
   const b = profBonusOf(s, p.id);
-  const tr = traitEffect(plot.trait);
+  const tr = traitEffect(plot.trait, strainRank(s, plot.plantId, plot.trait));
   addItem(s, p.herb, rollAmount(p.yield * m.harvestYield) + b.yield + tr.yield + (Math.random() < b.double + tr.double ? 1 : 0));
   s.stats.harvested++;
   gainXp(s, m, 1 + p.level * 0.2);
@@ -458,8 +464,10 @@ export function harvestPlot(s: GameState, m: Mods, plot: Plot, idx: number): voi
   rollCrossBreed(s, m, idx);
   plot.ready = false;
   plot.progress = 0;
-  // A sown trait lasts for its own planting: the automatic replant puts back an ordinary herb.
-  plot.trait = null;
+  // The strain belongs to the bed, not to the planting. It used to be cleared here, which meant that
+  // the moment a Gardener took over the plots were never empty, seeds could never be sown, and the
+  // tray just filled up: ~50 seeds a day against ~675,000 harvests. A seed is now a permanent upgrade
+  // to one bed, kept until you clear it or plant something else there.
   const cost = tr.free ? 0 : plantCost(s, m, p);
   if (s.gold >= cost) addGold(s, -cost, false);
   else plot.plantId = null;

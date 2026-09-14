@@ -22,6 +22,12 @@ const BASE_ITEMS: ItemDef[] = [
   { id: 'bloodthorn', name: 'Bloodthorn', icon: '🌹', kind: 'herb', value: 90 },
   { id: 'starbloom', name: 'Starbloom', icon: '🌼', kind: 'herb', value: 220 },
   { id: 'voidvine', name: 'Voidvine', icon: '🥀', kind: 'herb', value: 1100 },
+  { id: 'witchhazel', name: 'Witch Hazel', icon: '🌾', kind: 'herb', value: 500 },
+  { id: 'ashlily', name: 'Ashen Lily', icon: '🌺', kind: 'herb', value: 2500 },
+  { id: 'mirrorbloom', name: 'Mirrorbloom', icon: '🎋', kind: 'herb', value: 5800 },
+  { id: 'soulthistle', name: 'Soul Thistle', icon: '🏵️', kind: 'herb', value: 13000 },
+  { id: 'glassfern', name: 'Glass Fern', icon: '🍀', kind: 'herb', value: 30000 },
+  { id: 'eternabloom', name: 'Eternabloom', icon: '🌻', kind: 'herb', value: 70000 },
   // Materials — found on expeditions, some sold at the market
   { id: 'clearwater', name: 'Clearwater', icon: '💧', kind: 'material', value: 1, buyLevel: 1 },
   { id: 'quartz', name: 'Quartz', icon: '🪨', kind: 'material', value: 6, buyLevel: 9 },
@@ -33,6 +39,12 @@ const BASE_ITEMS: ItemDef[] = [
   { id: 'stardust', name: 'Stardust', icon: '✨', kind: 'material', value: 180 },
   { id: 'phoenix', name: 'Phoenix Feather', icon: '🪶', kind: 'material', value: 2500 },
   { id: 'voidessence', name: 'Void Essence', icon: '🌑', kind: 'material', value: 2000 },
+  { id: 'bogiron', name: 'Bog Iron', icon: '⛓️', kind: 'material', value: 60 },
+  { id: 'frostheart', name: 'Frost Heart', icon: '❄️', kind: 'material', value: 220 },
+  { id: 'graveash', name: 'Grave Ash', icon: '⚱️', kind: 'material', value: 700 },
+  { id: 'abyssalpearl', name: 'Abyssal Pearl', icon: '🫧', kind: 'material', value: 3200 },
+  { id: 'emberglass', name: 'Ember Glass', icon: '🟠', kind: 'material', value: 9000 },
+  { id: 'auroradust', name: 'Aurora Dust', icon: '🎆', kind: 'material', value: 26000 },
   // Dungeon materials — dropped by monsters
   { id: 'ironore', name: 'Iron Ore', icon: '⛏️', kind: 'material', value: 10 },
   { id: 'fang', name: 'Beast Fang', icon: '🦷', kind: 'material', value: 14 },
@@ -46,6 +58,10 @@ const BASE_ITEMS: ItemDef[] = [
   { id: 'dragonheart', name: 'Dragon Heart', icon: '❤️‍🔥', kind: 'material', value: 2800 },
   { id: 'starmetal', name: 'Star Metal', icon: '☄️', kind: 'material', value: 5000 },
   { id: 'voidshard', name: 'Void Shard', icon: '🟣', kind: 'material', value: 6000 },
+  { id: 'glyphstone', name: 'Glyph Stone', icon: '🗿', kind: 'material', value: 11000 },
+  { id: 'runesteel', name: 'Rune Steel', icon: '🔗', kind: 'material', value: 14000 },
+  { id: 'aethersteel', name: 'Aether Steel', icon: '⚜️', kind: 'material', value: 38000 },
+  { id: 'titanheart', name: 'Titan Heart', icon: '💗', kind: 'material', value: 45000 },
   { id: 'arcanedust', name: 'Arcane Dust', icon: '✴️', kind: 'material', value: 5 },
   // Reagents — crafted at the Arcane Workbench, used to learn and cast spells
   { id: 'runechalk', name: 'Rune Chalk', icon: '🖍️', kind: 'reagent', value: 20 },
@@ -57,6 +73,10 @@ const BASE_ITEMS: ItemDef[] = [
   { id: 'tidesigil', name: 'Tide Sigil', icon: '🌊', kind: 'reagent', value: 1500 },
   { id: 'dragonsigil', name: 'Dragonfire Sigil', icon: '🔶', kind: 'reagent', value: 7000 },
   { id: 'voidsigil', name: 'Void Sigil', icon: '⚫', kind: 'reagent', value: 18000 },
+  { id: 'glyphink', name: 'Glyph Ink', icon: '🔹', kind: 'reagent', value: 30000 },
+  { id: 'aurorasigil', name: 'Aurora Sigil', icon: '🔆', kind: 'reagent', value: 90000 },
+  { id: 'titansigil', name: 'Titan Sigil', icon: '🔱', kind: 'reagent', value: 150000 },
+  { id: 'eternalsigil', name: 'Eternity Sigil', icon: '🕛', kind: 'reagent', value: 400000 },
 ];
 
 export const ITEM_MAP: Record<string, ItemDef> = Object.fromEntries(BASE_ITEMS.map((i) => [i.id, i]));

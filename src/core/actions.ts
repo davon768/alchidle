@@ -12,7 +12,7 @@ import { QUALITY_RESEARCH_BOOST, RESEARCH_MAP, researchCost, researchTime } from
 /** How much of a potion's quality value the guild pays on top of a contract. */
 const CONTRACT_QUALITY_WEIGHT = 0.5;
 import { PLANT_MAP } from '../data/plants';
-import { TRAIT_MAP, parseSeed, traitEffect } from '../data/mutations';
+import { TRAIT_MAP, describeTrait, parseSeed, traitEffect } from '../data/mutations';
 import { RECIPE_MAP } from '../data/recipes';
 import { ZONE_MAP } from '../data/zones';
 import { item } from '../data/items';
@@ -108,13 +108,29 @@ export function plant(s: GameState, idx: number, plantId: string): boolean {
   return true;
 }
 
-/** Sow a mutated seed into an empty plot. The seed is consumed; the trait lasts for this planting. */
+/**
+ * Sow a mutated seed into a bed. The seed is consumed and the strain stays with that bed through every
+ * replant, so a seed is a permanent upgrade to one plot rather than a single planting.
+ *
+ * An empty bed is planted outright and charged for. A bed already growing the same herb is grafted in
+ * place: no gold, and the growth already done is kept. A bed growing something else is refused —
+ * silently swapping the player's crop is worse than doing nothing.
+ */
 export function plantSeed(s: GameState, idx: number, key: string): boolean {
   const plot = s.plots[idx];
   const { plantId, trait } = parseSeed(key);
   const p = PLANT_MAP[plantId];
-  if (!plot || plot.plantId || !p || (s.seeds[key] ?? 0) < 1 || !TRAIT_MAP[trait]) return false;
-  const cost = traitEffect(trait).free ? 0 : plantCost(s, computeMods(s), p);
+  if (!plot || !p || (s.seeds[key] ?? 0) < 1 || !TRAIT_MAP[trait] || p.level > s.level) return false;
+  if (plot.plantId && plot.plantId !== plantId) {
+    toast(`That bed is growing ${PLANT_MAP[plot.plantId]?.name ?? 'something else'} — sow ${p.name} seeds in a ${p.name} bed.`, 'warn');
+    return false;
+  }
+  if (plot.trait === trait) {
+    toast(`That bed already carries the ${TRAIT_MAP[trait].name} strain.`, 'warn');
+    return false;
+  }
+  const graft = plot.plantId === plantId; // already growing: keep its progress, charge nothing
+  const cost = graft || traitEffect(trait).free ? 0 : plantCost(s, computeMods(s), p);
   if (s.gold < cost) {
     toast('Not enough gold to sow that seed.', 'warn');
     return false;
@@ -124,9 +140,55 @@ export function plantSeed(s: GameState, idx: number, key: string): boolean {
   if (s.seeds[key] <= 0) delete s.seeds[key];
   plot.plantId = plantId;
   plot.trait = trait;
-  plot.progress = 0;
-  plot.ready = false;
+  s.strains[key] = Math.max(1, s.strains[key] ?? 1);
+  if (!graft) {
+    plot.progress = 0;
+    plot.ready = false;
+  }
+  toast(`${TRAIT_MAP[trait].icon} ${TRAIT_MAP[trait].name} ${p.name} sown — this bed keeps the strain from now on.`, 'good');
   return true;
+}
+
+/**
+ * Sow one seed, wherever it does most good.
+ *
+ * A bed of that herb without a strain takes it; failing that, an empty bed. Once every bed that could
+ * carry the strain already does, further seeds deepen the strain itself — every bed carrying it gets
+ * stronger. That second half is what stops the tray filling up: a mature garden throws far more seeds
+ * than it has beds, and a seed with nowhere to go is the whole reason this needed reworking.
+ */
+export function sowBest(s: GameState, key: string): boolean {
+  const { plantId, trait } = parseSeed(key);
+  if ((s.seeds[key] ?? 0) < 1 || !TRAIT_MAP[trait] || !PLANT_MAP[plantId]) return false;
+  const plain = s.plots.findIndex((q) => q.plantId === plantId && !q.trait);
+  const empty = s.plots.findIndex((q) => !q.plantId);
+  const idx = plain >= 0 ? plain : empty;
+  if (idx >= 0) return plantSeed(s, idx, key);
+  return deepenStrain(s, key);
+}
+
+/** Spend a seed on the strain rather than on a bed, raising its rank for every bed that carries it. */
+export function deepenStrain(s: GameState, key: string): boolean {
+  const { plantId, trait } = parseSeed(key);
+  const t = TRAIT_MAP[trait];
+  const p = PLANT_MAP[plantId];
+  if (!t || !p || (s.seeds[key] ?? 0) < 1) return false;
+  s.seeds[key] -= 1;
+  if (s.seeds[key] <= 0) delete s.seeds[key];
+  const rank = (s.strains[key] ?? 1) + 1;
+  s.strains[key] = rank;
+  toast(`${t.icon} ${t.name} ${p.name} bred deeper — rank ${rank}. ${describeTrait(trait, rank)}`, 'good');
+  return true;
+}
+
+/** Sow every seed of a strain at once: the tray is a chore to click through at scale. */
+export function sowAll(s: GameState, key: string): number {
+  let n = 0;
+  for (let guard = 0; guard < 5000 && (s.seeds[key] ?? 0) > 0; guard++) {
+    if (!sowBest(s, key)) break;
+    n++;
+  }
+  return n;
 }
 
 export function plantAll(s: GameState, plantId: string): void {

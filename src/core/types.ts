@@ -288,6 +288,8 @@ export interface GameState {
   qual: Record<string, number[]>;
   seeds: Record<string, number>; // mutated seeds on hand, keyed `plantId:trait`
   catalogue: Record<string, true>; // every plant × trait pair ever discovered (permanent)
+  /** Rank per strain, keyed `plantId:trait`: how many seeds of it have been sown (permanent). */
+  strains: Record<string, number>;
   level: number;
   xp: number;
   skills: Record<string, number>;

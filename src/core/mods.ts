@@ -11,9 +11,10 @@ import { RESEARCH_MAP } from '../data/research';
 import { CATALOGUE_BONUS } from '../data/mutations';
 import { FAMILIAR_MAP, familiarEffects, familiarLevel } from '../data/familiars';
 import { RELIC_MAP, relicEffects } from '../data/relics';
-import { depthEffects } from '../data/adventurers';
+import { KIT_MAX, PARTY_MAX, depthEffects } from '../data/adventurers';
 import type { RoleId } from './types';
 import { apprenticeEffects, capacityOf } from './staff';
+import { BELT_MAX } from './combat';
 import { apprenticeLevel } from '../data/apprentices';
 import { fmt } from './format';
 
@@ -114,8 +115,9 @@ export function computeMods(s: GameState): Mods {
   m.sellPrice = Math.max(0.1, m.sellPrice);
   m.tradeBonus = Math.max(0.1, m.tradeBonus);
   m.attackMult = Math.max(0.1, m.attackMult);
-  m.kitSlots = Math.min(6, m.kitSlots);
-  m.partySlots = Math.min(8, m.partySlots);
+  m.potionSlots = Math.min(BELT_MAX, m.potionSlots);
+  m.kitSlots = Math.min(KIT_MAX, m.kitSlots);
+  m.partySlots = Math.min(PARTY_MAX, m.partySlots);
   return m;
 }
 

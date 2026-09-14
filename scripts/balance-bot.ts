@@ -22,8 +22,8 @@ import {
   researchStatus, simulate, syncSlots, unlockedRecipes, unlockedZones,
 } from '../src/core/engine.ts';
 import {
-  brew, buy, buyUpgrade, buySkill, harvestAll, plant, plantSeed, selectRecipe, sell,
-  skillStatus, startExpedition, startResearch, toggleRepeat,
+  brew, buy, buyUpgrade, buySkill, harvestAll, plant, selectRecipe, sell,
+  skillStatus, sowBest, startExpedition, startResearch, toggleRepeat,
 } from '../src/core/actions.ts';
 import { learnNode, nodeStatus, pointsFree } from '../src/core/staff.ts';
 import { canDelve, canHire, hireAdventurer, partyReport, setKit, startDelve, suppliable } from '../src/core/party.ts';
@@ -78,6 +78,9 @@ export interface BotResult {
   /** Minutes until any item reaches proficiency 50, and until any apprentice reaches level 25. */
   minutesToProf50: number | null;
   minutesToApprenticeCap: number | null; // level 25
+  /** Save size in KB, and the biggest collections in the state — a leak shows up as these climbing. */
+  saveKB: number;
+  biggest: [string, number][];
   /** Minutes each completed run took, first ascension onwards (only when the bot is allowed to ascend). */
   runMinutes: number[];
   /** What the player actually had in hand the moment the ascension gate opened. */
@@ -99,12 +102,11 @@ function tendGarden(s: GameState, m: Mods, opts: BotOptions): void {
     ? [affordable[0]]
     : opts.singleHerb ? [affordable[affordable.length - 1]] : affordable.slice(-2);
 
-  // Sow any mutated seeds first — they are strictly better than a plain sowing.
+  // Sow every mutated seed on hand: a strain now stays with the bed, so a seed is a permanent upgrade
+  // to one plot rather than a single planting, and holding them back is never right.
   for (const [key, n] of Object.entries(s.seeds)) {
     if (n <= 0) continue;
-    const idx = s.plots.findIndex((p) => !p.plantId);
-    if (idx < 0) break;
-    plantSeed(s, idx, key);
+    for (let i = 0; i < n; i++) if (!sowBest(s, key)) break;
   }
   s.plots.forEach((p, i) => {
     if (p.plantId) return;
@@ -315,6 +317,16 @@ export function runBot(opts: BotOptions): BotResult {
     bestApprenticeLevel: Math.max(0, ...Object.values(s.staff.crew).map((a) => (a ? apprenticeLevel(a.xp) : 0))),
     minutesToProf50,
     minutesToApprenticeCap,
+    saveKB: Math.round(JSON.stringify(s).length / 1024),
+    biggest: ([
+      ['items', Object.keys(s.items).length], ['qual', Object.keys(s.qual).length], ['prof', Object.keys(s.prof).length],
+      ['demand', Object.keys(s.demand).length], ['gear', s.gear.length], ['seeds', Object.keys(s.seeds).length],
+      ['strains', Object.keys(s.strains).length], ['catalogue', Object.keys(s.catalogue).length],
+      ['contracts', s.guild.contracts.length], ['offers', s.trade.offers.length], ['buffs', s.buffs.length],
+      ['combatLog', s.combat.log.length], ['combatBuffs', s.combat.buffs.length], ['cooldowns', Object.keys(s.combat.cooldowns).length],
+      ['roster', s.party.roster.length], ['relics', Object.keys(s.party.relics).length], ['familiars', Object.keys(s.familiars).length],
+      ['spells', Object.keys(s.spells).length], ['skills', Object.keys(s.skills).length], ['upgrades', Object.keys(s.upgrades).length],
+    ] as [string, number][]).sort((x, y) => y[1] - x[1]).slice(0, 6),
     runMinutes,
     atAscend,
     partyDepth: s.party.depth,

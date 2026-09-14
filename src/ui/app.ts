@@ -6,12 +6,13 @@ import { computeMods, describeEffects } from '../core/mods';
 import { pointsFree } from '../core/staff';
 import { onGain, onToast, skillPointsFree, type Gain, type OfflineSummary, type ToastKind } from '../core/engine';
 import { manaMax } from '../core/magic';
+import { heroStats } from '../core/combat';
 import { xpToNext } from '../core/state';
 import { fmt, fmtTime } from '../core/format';
 import { RECIPES } from '../data/recipes';
 import { PLANTS } from '../data/plants';
 import { ZONES } from '../data/zones';
-import { DUNGEONS, DUNGEON_UNLOCK_LEVEL } from '../data/combat';
+import { DUNGEONS, DUNGEON_MAP, DUNGEON_UNLOCK_LEVEL } from '../data/combat';
 import { GUILD_UNLOCK_LEVEL } from '../data/guilds';
 import { ascGoldTarget, ascStatus } from '../data/ascension';
 import { EVENT_MAP, raidTarget } from '../data/events';
@@ -168,11 +169,41 @@ function nextUnlock(s: GameState): string | null {
   return null;
 }
 
-/** World event banner plus active ritual buffs. */
-function statusStrip(s: GameState): TemplateResult | string {
+/**
+ * The fight, in one line, on every tab but the one that already shows it in full. Combat runs whatever
+ * you are doing — brewing, planting, selling — and until now the only way to know how it was going was
+ * to go and look.
+ */
+function combatStrip(s: GameState, m: Mods): TemplateResult | string {
+  const c = s.combat;
+  const d = c.dungeonId ? DUNGEON_MAP[c.dungeonId] : null;
+  if (!d || ui.tab === 'dungeon') return '';
+  const hero = heroStats(s, m);
+  const e = c.enemy;
+  const hp = Math.max(0, c.hp);
+  return html`<button class="combat-mini" title="Open the ⚔️ Dungeons tab" @click=${() => switchTab('dungeon')}>
+    <span class="cm-where">${d.icon} Floor ${c.floor}</span>
+    <span class="cm-side">
+      <span class="cm-who">🧙 You</span>
+      ${bar(hp / hero.maxHp, undefined, `${fmt(hp)} / ${fmt(hero.maxHp)}`, 'hp')}
+    </span>
+    <span class="cm-side">
+      ${c.dead > 0
+        ? html`<span class="cm-who">☠️ Recovering</span>${bar(0, undefined, fmtTime(c.dead), 'enemy')}`
+        : e
+          ? html`<span class="cm-who">${e.icon} ${e.name}</span>${bar(Math.max(0, e.hp) / e.maxHp, undefined, `${fmt(Math.max(0, e.hp))} / ${fmt(e.maxHp)}`, 'enemy')}`
+          : html`<span class="cm-who">… searching</span>${bar(0, undefined, '', 'enemy')}`}
+    </span>
+  </button>`;
+}
+
+/** World event banner plus active ritual buffs, with the combat readout above them. */
+function statusStrip(s: GameState, m: Mods): TemplateResult | string {
   const ev = s.event ? EVENT_MAP[s.event.id] : null;
-  if (!ev && s.buffs.length === 0) return '';
+  const fight = combatStrip(s, m);
+  if (!ev && s.buffs.length === 0) return fight ? html`<div class="view" style="margin-bottom:14px">${fight}</div>` : '';
   return html`<div class="view" style="margin-bottom:14px;gap:8px">
+    ${fight}
     ${ev && s.event ? html`<div class="event-banner">
       <span class="big-icon">${ev.icon}</span>
       <div class="grow">
@@ -253,7 +284,7 @@ function appTemplate(): TemplateResult {
     </nav>
     <main class="main">
       ${banner ?? (unlock ? html`<div class="view" style="margin-bottom:14px"><div class="goal">🔭 ${unlock}</div></div>` : '')}
-      ${statusStrip(s)}
+      ${statusStrip(s, m)}
       ${viewFor(ui.tab, s, m)}
     </main>
     ${feedTemplate(s)}

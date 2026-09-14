@@ -1,13 +1,14 @@
 import type { GameState } from './types';
 import { freshCombat, newState, SAVE_VERSION } from './state';
 import { DUNGEON_MAP } from '../data/combat';
+import { BELT_MAX } from './combat';
 import type { RoleId } from './types';
 import { PROF_MAP } from '../data/proficiency';
 import { RESEARCH_MAP } from '../data/research';
 import { TRAIT_MAP, parseSeed } from '../data/mutations';
 import { FAMILIAR_MAP } from '../data/familiars';
 import { ROLE_MAP, apprXpForLevel } from '../data/apprentices';
-import { CLASS_MAP } from '../data/adventurers';
+import { CLASS_MAP, KIT_MAX } from '../data/adventurers';
 import { PLANT_MAP } from '../data/plants';
 import { RECIPE_MAP } from '../data/recipes';
 import { ZONE_MAP } from '../data/zones';
@@ -84,7 +85,13 @@ function migrate(raw: LegacySave): GameState {
     if (typeof c.stirTarget !== 'number' || !Number.isFinite(c.stirTarget)) c.stirTarget = 0.5;
     if (typeof c.stirQ !== 'number' || !Number.isFinite(c.stirQ)) c.stirQ = 0;
   }
-  for (const key of Object.keys(s.seeds)) if (!TRAIT_MAP[parseSeed(key).trait]) delete s.seeds[key];
+  // Both halves of a seed key have to still exist: checking only the trait left seeds for deleted plants
+  // sitting in the tray forever, invisible and unsowable.
+  for (const key of Object.keys(s.seeds)) {
+    const { plantId, trait } = parseSeed(key);
+    if (!TRAIT_MAP[trait] || !PLANT_MAP[plantId]) delete s.seeds[key];
+  }
+  for (const key of Object.keys(s.strains ?? {})) if (!TRAIT_MAP[parseSeed(key).trait] || !PLANT_MAP[parseSeed(key).plantId]) delete s.strains[key];
   // v7 → v8: familiars. mergeDefaults supplies the empty records; drop anything whose definition is
   // gone and trim the equipped list so a stale id cannot reach computeMods.
   for (const id of Object.keys(s.familiars)) if (!FAMILIAR_MAP[id]) delete s.familiars[id];
@@ -110,13 +117,13 @@ function migrate(raw: LegacySave): GameState {
   for (const id of Object.keys(s.party.relics)) if (!RELIC_MAP[id]) delete s.party.relics[id];
   // Every id that indexes into game data, checked once here rather than defended at each of the dozens
   // of places that read it. An id whose content is gone is dropped; nothing else about the save changes.
-  s.party.kit = s.party.kit.map((id) => (id && RECIPE_MAP[id]?.combat ? id : null));
+  s.party.kit = s.party.kit.slice(0, KIT_MAX).map((id) => (id && RECIPE_MAP[id]?.combat ? id : null));
   for (const plot of s.plots) if (plot.plantId && !PLANT_MAP[plot.plantId]) Object.assign(plot, { plantId: null, progress: 0, ready: false });
   for (const c of s.cauldrons) {
     if (c.recipeId && !RECIPE_MAP[c.recipeId]) Object.assign(c, { recipeId: null, active: false, progress: 0, repeat: false, stirQ: 0 });
   }
   s.expeditions = s.expeditions.map((e) => (e && ZONE_MAP[e.zoneId] ? e : null));
-  s.belt = s.belt.map((id) => (id && RECIPE_MAP[id] ? id : null));
+  s.belt = s.belt.slice(0, BELT_MAX).map((id) => (id && RECIPE_MAP[id] ? id : null));
   s.spellSlots = s.spellSlots.filter((id) => SPELL_MAP[id]);
   for (const id of Object.keys(s.spells)) if (!SPELL_MAP[id]) delete s.spells[id];
   for (const id of Object.keys(s.autoSell)) if (!RECIPE_MAP[id]) delete s.autoSell[id];

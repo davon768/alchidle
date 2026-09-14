@@ -36,10 +36,10 @@ Early game is hands-on (click to plant, brew, sell). Automation comes from **app
 
 | System | What it does | How it ties into everything else |
 |---|---|---|
-| **Dungeons** (level 10) | 6 dungeons (last one endless). You auto-battle floor by floor: 5 foes per floor, and boss floors add a boss after its guards. Death sends you back a floor and pauses auto-advance. Simulated offline too | Drops rare materials that feed potions, reagents and forging. Gold and XP go into the normal economy. Guild slay contracts and Goblin Raid events count your kills |
+| **Dungeons** (level 10) | 8 dungeons (the Void Citadel endless). You auto-battle floor by floor: 5 foes per floor, and boss floors add a boss after its guards. Death sends you back a floor and pauses auto-advance. Simulated offline too | Drops rare materials that feed potions, reagents and forging. Gold and XP go into the normal economy. Guild slay contracts and Goblin Raid events count your kills |
 | **Combat potions** | The potion belt (3+ slots) drinks potions on its own: heals under 50% HP, mana under 25%, re-buffs, bombs on elites and bosses, revives on death | Brewed in the **same cauldrons**. Existing potions gained combat uses (Healing Tonic heals, Emberheart buffs attack, Elixir of Rebirth revives), plus 9 new combat recipes. The `potionPower` stat is the alchemist's edge |
 | **Gear** | 4 slots, 6+ tiers, 6 rarities with random affixes, enhancement (+10% base stats per level, endless), Forge crafting, salvage into Arcane Dust, auto-salvage filter | Affixes can roll **economy stats** (grow, brew and expedition speed, sell price, XP), so gear helps every system. Forge costs use dungeon materials |
-| **Magic** | Mana pool; 11 combat spells (auto-cast from 2+ spell slots) and 7 rituals (5-minute buffs); spell ranks up to 10 | Rituals buff the garden, cauldrons, market, expeditions and XP through the same modifier pipeline. Reagents are crafted at the Arcane Workbench from herbs, expedition finds and dungeon drops |
+| **Magic** | Mana pool; 18 combat spells (auto-cast from 2–6 spell slots) and 11 rituals (5-minute buffs); spell ranks up to 10; 13 reagents | Rituals buff the garden, cauldrons, market, expeditions and XP through the same modifier pipeline. Reagents are crafted at the Arcane Workbench from herbs, expedition finds and dungeon drops |
 | **World events** (level 3) | One random event every 4–8 minutes: 14 kinds, including buffs, mixed trade-offs (Merchant Strike, Eclipse) and specials (Goblin Raid kill quest, Wandering Champion, Mysterious Merchant, Fever in Town) | Plug into modifiers, market demand, the Trading Post and dungeons |
 | **Inventory + item pop-ups** | Every item with its count, value, combat effect and "used in" list; NEW badges. Every item gained pops up bottom-left, and repeat gains stack into one counter | Driven by a single `emitGain` hook in `addItem`, so every system reports automatically. Muted during offline catch-up, which gets its own summary |
 
@@ -101,17 +101,31 @@ It interlocks with quality in both directions: several studies grant `brewQualit
 in higher-quality potions shortens it** — up to 35% off, 18% for an all-Legendary payment — which gives
 Masterworks a use other than the market.
 
-### Cross-breeding (v0.7)
+### Cross-breeding (v0.7, seed tray reworked in v1.0)
 
 Harvesting a plot whose neighbour holds a *different* herb has a 2% chance (`mutationChance` scales it) of
-throwing a mutated seed: the same herb carrying one of four traits — Swift (×1.4 growth), Bountiful (+2 herbs),
-Radiant (35% bonus herb) or Hardy (free to sow, and its replant is free too). Seeds are consumable and a trait
-lasts only for the planting it was sown from, so they stay a flow rather than a permanent upgrade.
+throwing a mutated seed: the same herb carrying one of four traits — Swift (growth), Bountiful (flat herbs),
+Radiant (bonus-herb chance) or Hardy (free to sow and free to replant).
 
-The permanence lives in the **seed catalogue**: every plant × trait pair ever discovered is recorded forever and
-pays +1% growth and +1% harvest yield. With 9 plants × 4 traits that is a +36% ceiling on a collection grind
-that only advances when the player deliberately mixes herbs across neighbouring plots — planting one herb
-everywhere, as the balance bot does, never crosses at all.
+**A seed is a permanent upgrade to one bed.** Sowing puts the strain on that plot and it stays there through
+every replant, the Gardener's included. It was previously cleared on harvest, which quietly made the whole
+system dead content: the moment an apprentice took over, no plot was ever empty, the tray's sow button
+(which targeted the first empty plot) did nothing at all, and seeds simply accumulated.
+
+**Surplus seeds breed the strain deeper.** Once every bed that can carry a strain does, further seeds raise
+its *rank*, and every bed carrying it gets stronger: `strainStrength(rank) = 1 + 0.35 × log₂(rank)`, applied to
+the trait's bonus. Rank 1 is exactly the old value (Swift +40%), rank 9 is +84%, rank 100 is +133%. The curve
+has to be logarithmic because supply outruns any fixed number of beds — a mature garden throws ~2,400 seeds a
+day against sixteen plots, so a sink with a ceiling just refills the tray. Ranks are permanent and survive
+ascension, like the catalogue.
+
+Measured: seeds held after 24 h went from 34–65 sitting unused to 0–1, with no change to first-ascension
+pacing (88.8 min mean over four runs, against 90.2 before).
+
+The other permanence lives in the **seed catalogue**: every plant × trait pair ever discovered is recorded
+forever and pays +1% growth and +1% harvest yield. With 9 plants × 4 traits that is a +36% ceiling on a
+collection grind that only advances when the player deliberately mixes herbs across neighbouring plots —
+planting one herb everywhere never crosses at all.
 
 ### Familiars (v0.8)
 
@@ -233,14 +247,56 @@ The level requirement is the part that answers "I ascended before I unlocked the
 rushed with permanent multipliers; levels cannot, because every level is content the run has to re-walk.
 
 ### What persists through ascension
-Stones and eternal perks, proficiency, achievements, lifetime stats, settings, your potion belt layout, research, the seed catalogue, familiars, apprentices, and the adventurer company (roster, relics and depth). **Arcane Memory** also keeps spells, and **Heirloom Armory** keeps equipped gear. Everything else resets.
+Stones and eternal perks, proficiency, achievements, lifetime stats, settings, your potion belt layout, research, the seed catalogue and strain ranks, familiars, apprentices, and the adventurer company (roster, relics and depth). **Arcane Memory** also keeps spells, and **Heirloom Armory** keeps equipped gear. Everything else resets.
+
+### The v1.0 content pass, and what paces it
+
+Content now runs to **level 100** across every system, roughly doubling what was there:
+
+| System | Was | Now | New tiers at |
+|---|---|---|---|
+| Herbs / beds | 9 | 15 | 42, 58, 66, 74, 82, 90 |
+| Potions | 22 | 33 | 24, 35, 46, 50, 62, 68, 74, 80, 88, 96, 100 |
+| Expedition zones | 7 | 13 | 23, 33, 44, 58, 70, 84 |
+| Dungeons | 6 | 8 | 68 (tier 7), 82 (tier 8) |
+| Forge tiers | 6 | 8 | — |
+| Materials | 21 | 31 | one per new zone and dungeon |
+
+New tiers extend the existing curves rather than starting new ones: herb value ×1.106 a level, grow time
+×1.032, yield ×1.022; zone XP ×1.12; potion gold-per-second climbing ~1.10 a level; dungeon HP ×3.7 and
+gold ×4.5 a tier. The Endless Rift stays at level 50 — the finite zones above it are richer at their tier,
+and the Rift overtakes them all again once its depth multiplier has had time to compound.
+
+The **Magnum Opus Draught** (level 100) is the new capstone, and the Philosopher's Panacea is now an
+*ingredient* of the Elixir of Eternity rather than the end of the line.
+
+**Spells** now run the full distance too. Damage multipliers continue their existing ~1.035-a-level climb
+(1.6 at level 10 → 14 at 55 → 95 at 100), and the new rituals deliberately cover the systems that had none:
+**Song of the Deep** buffs the adventurer company, **Forgefire Rite** the dungeon run, **Aurora Veil** potion
+quality, and **The Eternal Hour** everything at once. Spell slots were the real constraint — 18 combat spells
+against a base of 2 — so two Library studies (*Sigil Craft* at 40, *The High Sigils* at 72) add a slot each
+plus the mana to use it, taking a fully-invested caster to six.
+
+**Level curve.** Two pieces: 21% a level to 35, easing to 16% after (`SOFTEN_AT` in `core/state.ts`). At a
+flat 21% the hundredth level alone would have cost more XP than the whole run before it. Cumulative XP to
+level 100 is ~5.9e9. Bot pacing: level 10 at 22 min, 20 at 45, 30 at ~95, 40 at ~420, 50 at ~1450.
+
+**The first ascension is gated on gold, not level**, which is why slowing the level curve alone did not
+lengthen a run — it just meant ascending at level 25 instead of 30, having seen *less* of the game. The
+first Great Work now asks **600K gold and level 15** (was 200K and level 12). Measured first ascension:
+**110 min** (range 101–130) against 78–89 before, at level 31 with 16 recipes unlocked.
+
+Run cadence after the pass: **120 → 127 → 202 → 361 → 376 → 442 minutes**. Levels
+55+ are reached inside the late, long runs rather than the early short ones, which is what makes the
+back half of the content worth writing.
 
 ## 3. Balance levers (all in `src/data/`)
 
-- `xpToNext` in `core/state.ts`: level curve (`40 × 1.21^(L-1) + 25L` — raised ~1.6× in v1.0, since every system is level-gated and at the old scale they all arrived inside the first half hour)
-- `ascGoldTarget` / `ascMinLevel` / `stonesFor` in `data/ascension.ts`: the prestige gate (200K gold and level 12, ×2.5 gold and +3 levels per ascension) and the stone formula
+- `xpToNext` in `core/state.ts`: level curve (`65 × 1.21^(L-1) + 40L`, easing to 16% a level past `SOFTEN_AT` = 35)
+- `ascGoldTarget` / `ascMinLevel` / `stonesFor` in `data/ascension.ts`: the prestige gate (600K gold and level 15, ×2.5 gold and +3 levels per ascension, level capped at 60) and the stone formula
 - `riftRewardMult` / `riftTimeMult` in `data/zones.ts`: endless scaling
 - `delveReq` / `delveTime` / `delveGold` / `supplyNeed` in `data/adventurers.ts`: the company’s endless ladder
+- `strainStrength` in `data/mutations.ts`: how far a bred strain can be pushed
 - `rankThreshold` in `data/guilds.ts`: guild rank curve
 - Recipe `value`/`time`/`xp`, plant `cost`/`time`/`yield`, zone `xp`/`bounty`, upgrade `baseCost`/`growth`
 

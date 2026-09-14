@@ -25,7 +25,13 @@ export const PLANTS: PlantDef[] = [
   { id: 'dreamlotus', herb: 'dreamlotus', name: 'Dream Lotus', icon: '🌱', level: 20, cost: 50, time: 90, yield: 3.75 },
   { id: 'bloodthorn', herb: 'bloodthorn', name: 'Bloodthorn', icon: '🌱', level: 26, cost: 90, time: 120, yield: 4.6 },
   { id: 'starbloom', herb: 'starbloom', name: 'Starbloom', icon: '🌱', level: 34, cost: 220, time: 180, yield: 5.75 },
+  { id: 'witchhazel', herb: 'witchhazel', name: 'Witch Hazel', icon: '🌱', level: 42, cost: 500, time: 230, yield: 6.8 },
   { id: 'voidvine', herb: 'voidvine', name: 'Voidvine', icon: '🌱', level: 50, cost: 1100, time: 300, yield: 8.2 },
+  { id: 'ashlily', herb: 'ashlily', name: 'Ashen Lily', icon: '🌱', level: 58, cost: 2500, time: 380, yield: 9.8 },
+  { id: 'mirrorbloom', herb: 'mirrorbloom', name: 'Mirrorbloom', icon: '🌱', level: 66, cost: 5800, time: 480, yield: 11.6 },
+  { id: 'soulthistle', herb: 'soulthistle', name: 'Soul Thistle', icon: '🌱', level: 74, cost: 13000, time: 600, yield: 13.8 },
+  { id: 'glassfern', herb: 'glassfern', name: 'Glass Fern', icon: '🌱', level: 82, cost: 30000, time: 760, yield: 16.4 },
+  { id: 'eternabloom', herb: 'eternabloom', name: 'Eternabloom', icon: '🌱', level: 90, cost: 70000, time: 960, yield: 19.5 },
 ];
 
 export const PLANT_MAP: Record<string, PlantDef> = Object.fromEntries(PLANTS.map((p) => [p.id, p]));

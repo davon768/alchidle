@@ -38,7 +38,7 @@ export const RANK_MULT = {
   champion: { hp: 8, atk: 1.6, reward: 15 },
 } as const;
 
-export const DUNGEONS: DungeonDef[] = [
+const RAW_DUNGEONS: DungeonDef[] = [
   { id: 'goblin', name: 'Goblin Warrens', icon: '👺', level: 10, floors: 10, tier: 1, desc: 'Tunnels full of thieves, rats and stolen ore.',
     hp: 70, atk: 22, def: 8, gold: 10, xp: 4,
     enemies: [{ name: 'Goblin Sneak', icon: '👺' }, { name: 'Cave Rat', icon: '🐀' }, { name: 'Goblin Brute', icon: '👹' }],
@@ -69,6 +69,18 @@ export const DUNGEONS: DungeonDef[] = [
     boss: { name: 'Vermithrax the Ancient', icon: '🐉' },
     drops: [{ id: 'adamant', min: 1, max: 1, chance: 0.35 }, { id: 'dragonheart', min: 1, max: 1, chance: 0.12, rare: true }, { id: 'wyrmscale', min: 1, max: 2, chance: 0.4 }],
     bossDrops: [{ id: 'adamant', min: 3, max: 6, chance: 1 }, { id: 'dragonheart', min: 2, max: 4, chance: 1 }, { id: 'phoenix', min: 1, max: 1, chance: 0.5, rare: true }] },
+  { id: 'bastion', name: 'Glyphward Bastion', icon: '🏰', level: 68, floors: 25, tier: 7, desc: 'A fortress that outlived its garrison and kept standing guard anyway.',
+    hp: 88000, atk: 6700, def: 2800, gold: 50000, xp: 2400,
+    enemies: [{ name: 'Glyph Sentinel', icon: '🗿' }, { name: 'Animate Plate', icon: '🛡️' }, { name: 'Wardwright', icon: '📐' }],
+    boss: { name: 'The Last Castellan', icon: '🏰' },
+    drops: [{ id: 'glyphstone', min: 1, max: 2, chance: 0.4 }, { id: 'runesteel', min: 1, max: 1, chance: 0.3 }],
+    bossDrops: [{ id: 'glyphstone', min: 4, max: 8, chance: 1 }, { id: 'runesteel', min: 3, max: 6, chance: 1 }, { id: 'voidshard', min: 1, max: 2, chance: 0.6, rare: true }] },
+  { id: 'titan', name: "Titan's Rest", icon: '⛰️', level: 82, floors: 30, tier: 8, desc: 'The mountain is the body. It has been waking up for a century.',
+    hp: 325000, atk: 18800, def: 7800, gold: 225000, xp: 6700,
+    enemies: [{ name: 'Stoneblood Husk', icon: '🪨' }, { name: 'Marrow Colossus', icon: '🦿' }, { name: 'Aether Wisp', icon: '⚜️' }],
+    boss: { name: 'The Waking Titan', icon: '⛰️' },
+    drops: [{ id: 'aethersteel', min: 1, max: 2, chance: 0.35 }, { id: 'titanheart', min: 1, max: 1, chance: 0.15, rare: true }],
+    bossDrops: [{ id: 'aethersteel', min: 4, max: 8, chance: 1 }, { id: 'titanheart', min: 2, max: 4, chance: 1 }, { id: 'starmetal', min: 2, max: 5, chance: 1 }] },
   { id: 'void', name: 'Void Citadel', icon: '🌌', level: 55, floors: 0, tier: 6, desc: 'Endless floors between the stars. Gear tier rises every 10 floors.',
     hp: 24000, atk: 2400, def: 1000, gold: 11000, xp: 850,
     enemies: [{ name: 'Void Stalker', icon: '👁️' }, { name: 'Null Wraith', icon: '🌫️' }, { name: 'Star Eater', icon: '🪐' }],
@@ -76,6 +88,13 @@ export const DUNGEONS: DungeonDef[] = [
     drops: [{ id: 'voidshard', min: 1, max: 1, chance: 0.3 }, { id: 'starmetal', min: 1, max: 1, chance: 0.25 }, { id: 'voidessence', min: 1, max: 2, chance: 0.4 }],
     bossDrops: [{ id: 'voidshard', min: 3, max: 6, chance: 1 }, { id: 'starmetal', min: 3, max: 6, chance: 1 }, { id: 'phoenix', min: 1, max: 2, chance: 1 }] },
 ];
+
+/**
+ * Sorted by level, and that order is load-bearing: `dungeonUnlocked` gates each dungeon on clearing the
+ * *previous entry*, and guild slay contracts read the last unlocked one as "your deepest". Adding the
+ * Bastion and Titan's Rest in the wrong place made the level-55 Void Citadel wait on level-82 content.
+ */
+export const DUNGEONS: DungeonDef[] = [...RAW_DUNGEONS].sort((a, b) => a.level - b.level);
 
 export const DUNGEON_MAP: Record<string, DungeonDef> = Object.fromEntries(DUNGEONS.map((d) => [d.id, d]));
 

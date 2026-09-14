@@ -87,7 +87,7 @@ export const GOALS: GoalDef[] = [
 
   { id: 'crossbreed', chapter: 'Craft & proficiency', title: 'Breed a new strain', level: 3, tab: 'garden',
     how: 'Grow two different herbs in neighbouring plots, then harvest them.',
-    about: 'A ripe plot beside a different herb can throw a mutated seed — Swift, Bountiful, Radiant or Hardy. Seeds are consumable, but every strain you discover is recorded in the catalogue, and the catalogue pays +1% growth and yield for each one, forever.',
+    about: 'A ripe plot beside a different herb can throw a mutated seed — Swift, Bountiful, Radiant or Hardy. Sowing one upgrades that bed for good: the strain survives every replant, your Gardener’s included. Every strain you discover is also recorded in the catalogue, which pays +1% growth and yield for each one, forever.',
     check: (s) => Object.keys(s.catalogue).length > 0, reward: { gold: 200 } },
   { id: 'familiar', chapter: 'Craft & proficiency', title: 'Make a friend', level: 3, tab: 'explore',
     how: 'Keep sending expeditions until a familiar follows you home.',

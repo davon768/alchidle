@@ -433,7 +433,14 @@ export function toggleAutoAdvance(s: GameState): void {
   s.combat.retreated = false; // a manual choice — Squires won't override it
 }
 
+/** Hard ceiling on the potion belt, enforced here and in computeMods so the two cannot drift apart. */
+export const BELT_MAX = 8;
+
 export function setBeltSlot(s: GameState, i: number, id: string | null): void {
+  // Both arguments index stored data: an out-of-range slot used to pad the belt with nulls forever, and
+  // an id with no recipe behind it would render as an unknown item for the rest of the save's life.
+  if (!Number.isInteger(i) || i < 0 || i >= BELT_MAX) return;
+  if (id && !RECIPE_MAP[id]) return;
   while (s.belt.length <= i) s.belt.push(null);
   s.belt[i] = id;
 }

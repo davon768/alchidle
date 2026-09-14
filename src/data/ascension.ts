@@ -11,8 +11,14 @@ export interface AscNode {
   effects: Effect[];
 }
 
-/** Gold earned in a run before the *first* Magnum Opus. Later ones ask for far more — see ascGoldTarget. */
-export const ASC_MIN_GOLD = 200_000;
+/**
+ * Gold earned in a run before the *first* Magnum Opus. Later ones ask for far more — see ascGoldTarget.
+ *
+ * Raised with the v1.0 content pass. The level curve paces how fast the game *opens up*, but it does not
+ * pace the first ascension at all — that is gated on gold, so slowing levels alone just meant ascending
+ * at level 25 instead of 30, having seen less of the game rather than more of it.
+ */
+export const ASC_MIN_GOLD = 600_000;
 
 /**
  * What each further ascension demands. Nearly everything that earns gold is permanent — research,
@@ -31,7 +37,7 @@ export function ascGoldTarget(count: number): number {
  * the content than the one before it.
  */
 export function ascMinLevel(count: number): number {
-  return Math.min(45, 12 + 3 * count);
+  return Math.min(60, 15 + 3 * count);
 }
 
 /** Whether the Magnum Opus can be performed, and what is still missing. */
