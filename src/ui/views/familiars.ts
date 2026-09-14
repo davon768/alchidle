@@ -64,7 +64,9 @@ export function familiarsView(s: GameState, m: Mods): TemplateResult {
           </div>`;
         }
         const pr = familiarProgress(xp);
-        const out = s.equippedFamiliars.includes(f.id);
+        // Only the first `familiarSlots` of the equipped list actually reach computeMods, so read the
+        // same slice here — otherwise a card could claim a familiar is out with you while it contributes nothing.
+        const out = s.equippedFamiliars.slice(0, slots).includes(f.id);
         const next = Math.min(FAMILIAR_MAX, (milestonesAt(pr.level) + 1) * FAMILIAR_STEP);
         return html`<div class="card ${out ? 'highlight' : ''}">
           <div class="row between">
