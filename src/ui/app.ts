@@ -44,8 +44,25 @@ import { RESEARCH_UNLOCK_LEVEL } from '../data/research';
 import { COMPANY_HINT_LEVEL, companyOpen } from '../data/adventurers';
 import { findStalls } from '../core/ledger';
 
+/**
+ * Tabs are grouped because twenty-one of them in one list is a wall, not a menu. The headings only show
+ * on the sidebar: at phone width the nav is a horizontal strip where a heading would be noise, but the
+ * grouping still pays off there, because related tabs end up next to each other.
+ */
+export type NavGroup = 'make' | 'trade' | 'adventure' | 'people' | 'grow' | 'records';
+
+const NAV_GROUPS: { id: NavGroup; label: string }[] = [
+  { id: 'make', label: 'Production' },
+  { id: 'trade', label: 'Commerce' },
+  { id: 'adventure', label: 'Adventure' },
+  { id: 'people', label: 'Your people' },
+  { id: 'grow', label: 'Growth' },
+  { id: 'records', label: 'Records' },
+];
+
 interface TabDef {
   id: TabId;
+  group: NavGroup;
   icon: string;
   label: string;
   unlocked: (s: GameState) => boolean;
@@ -54,34 +71,52 @@ interface TabDef {
 
 const combatOpen = (s: GameState) => s.level >= DUNGEON_UNLOCK_LEVEL || s.asc.count > 0;
 
-const TABS: TabDef[] = [
-  { id: 'garden', icon: '🌱', label: 'Garden', unlocked: () => true, dot: (s, m) => m.autoHarvest <= 0 && s.plots.some((p) => p.ready || !p.plantId) },
-  { id: 'brew', icon: '⚗️', label: 'Cauldrons', unlocked: () => true, dot: (s) => s.cauldrons.some((c) => !c.active) },
-  { id: 'explore', icon: '🧭', label: 'Expeditions', unlocked: () => true, dot: (s) => s.expeditions.some((e) => !e) },
-  { id: 'staff', icon: '👥', label: 'Apprentices', unlocked: (s) => Object.keys(s.staff.crew).length > 0,
+const RAW_TABS: TabDef[] = [
+  { id: 'garden', group: 'make', icon: '🌱', label: 'Garden', unlocked: () => true, dot: (s, m) => m.autoHarvest <= 0 && s.plots.some((p) => p.ready || !p.plantId) },
+  { id: 'brew', group: 'make', icon: '⚗️', label: 'Cauldrons', unlocked: () => true, dot: (s) => s.cauldrons.some((c) => !c.active) },
+  { id: 'explore', group: 'make', icon: '🧭', label: 'Expeditions', unlocked: () => true, dot: (s) => s.expeditions.some((e) => !e) },
+  { id: 'staff', group: 'people', icon: '👥', label: 'Apprentices', unlocked: (s) => Object.keys(s.staff.crew).length > 0,
     dot: (s) => Object.values(s.staff.crew).some((a) => a && pointsFree(a) > 0) },
-  { id: 'dungeon', icon: '⚔️', label: 'Dungeons', unlocked: (s) => s.level >= DUNGEON_UNLOCK_LEVEL, dot: (s) => !s.combat.dungeonId },
-  { id: 'party', icon: '🏕️', label: 'Company', unlocked: (s) => s.level >= COMPANY_HINT_LEVEL || companyOpen(s, computeMods(s)),
+  { id: 'dungeon', group: 'adventure', icon: '⚔️', label: 'Dungeons', unlocked: (s) => s.level >= DUNGEON_UNLOCK_LEVEL, dot: (s) => !s.combat.dungeonId },
+  { id: 'party', group: 'adventure', icon: '🏕️', label: 'Company', unlocked: (s) => s.level >= COMPANY_HINT_LEVEL || companyOpen(s, computeMods(s)),
     dot: (s, m) => !s.party.delve && (s.party.roster.length < Math.floor(m.partySlots) || s.party.roster.some((x) => x.rest <= 0)) },
-  { id: 'market', icon: '🏪', label: 'Market', unlocked: () => true },
-  { id: 'inventory', icon: '🎒', label: 'Inventory', unlocked: () => true },
-  { id: 'proficiency', icon: '🎖️', label: 'Proficiency', unlocked: (s) => Object.keys(s.prof).length > 0 },
-  { id: 'arcanum', icon: '🔮', label: 'Arcanum', unlocked: combatOpen },
-  { id: 'armory', icon: '🗡️', label: 'Armory', unlocked: (s) => combatOpen(s) || s.gear.length > 0 },
-  { id: 'workshop', icon: '🔨', label: 'Workshop', unlocked: (s) => s.level >= 2 || s.stats.runGold >= 20 || s.asc.count > 0 },
-  { id: 'skills', icon: '📜', label: 'Skills', unlocked: (s) => s.level >= 2, dot: (s, m) => skillPointsFree(s, m) > 0 },
-  { id: 'library', icon: '📚', label: 'Library', unlocked: (s) => s.level >= RESEARCH_UNLOCK_LEVEL || Object.keys(s.research.done).length > 0,
+  { id: 'market', group: 'trade', icon: '🏪', label: 'Market', unlocked: () => true },
+  { id: 'inventory', group: 'records', icon: '🎒', label: 'Inventory', unlocked: () => true },
+  { id: 'proficiency', group: 'grow', icon: '🎖️', label: 'Proficiency', unlocked: (s) => Object.keys(s.prof).length > 0 },
+  { id: 'arcanum', group: 'adventure', icon: '🔮', label: 'Arcanum', unlocked: combatOpen },
+  { id: 'armory', group: 'adventure', icon: '🗡️', label: 'Armory', unlocked: (s) => combatOpen(s) || s.gear.length > 0 },
+  { id: 'workshop', group: 'grow', icon: '🔨', label: 'Workshop', unlocked: (s) => s.level >= 2 || s.stats.runGold >= 20 || s.asc.count > 0 },
+  { id: 'skills', group: 'grow', icon: '📜', label: 'Skills', unlocked: (s) => s.level >= 2, dot: (s, m) => skillPointsFree(s, m) > 0 },
+  { id: 'library', group: 'grow', icon: '📚', label: 'Library', unlocked: (s) => s.level >= RESEARCH_UNLOCK_LEVEL || Object.keys(s.research.done).length > 0,
     dot: (s, m) => s.research.queue.length < Math.floor(m.researchSlots) },
-  { id: 'familiars', icon: '🐾', label: 'Familiars', unlocked: (s) => Object.keys(s.familiars).length > 0,
+  { id: 'familiars', group: 'people', icon: '🐾', label: 'Familiars', unlocked: (s) => Object.keys(s.familiars).length > 0,
     dot: (s, m) => s.equippedFamiliars.length < Math.min(Object.keys(s.familiars).length, Math.floor(m.familiarSlots)) },
-  { id: 'trade', icon: '🐪', label: 'Trading Post', unlocked: (s) => s.level >= 6 },
-  { id: 'guild', icon: '🛡️', label: 'Guilds', unlocked: (s) => s.level >= GUILD_UNLOCK_LEVEL },
-  { id: 'ascend', icon: '🌟', label: 'Magnum Opus', unlocked: (s) => s.asc.count > 0 || s.stats.runGold >= ascGoldTarget(0) * 0.2 },
-  { id: 'goals', icon: '🎯', label: 'Goals', unlocked: () => true, dot: (s) => GOALS.some((g) => s.goals[g.id] === 'done') },
-  { id: 'ledger', icon: '📊', label: 'Ledger', unlocked: (s) => s.level >= 5,
+  { id: 'trade', group: 'trade', icon: '🐪', label: 'Trading Post', unlocked: (s) => s.level >= 6 },
+  { id: 'guild', group: 'trade', icon: '🛡️', label: 'Guilds', unlocked: (s) => s.level >= GUILD_UNLOCK_LEVEL },
+  { id: 'ascend', group: 'grow', icon: '🌟', label: 'Magnum Opus', unlocked: (s) => s.asc.count > 0 || s.stats.runGold >= ascGoldTarget(0) * 0.2 },
+  { id: 'goals', group: 'records', icon: '🎯', label: 'Goals', unlocked: () => true, dot: (s) => GOALS.some((g) => s.goals[g.id] === 'done') },
+  { id: 'ledger', group: 'records', icon: '📊', label: 'Ledger', unlocked: (s) => s.level >= 5,
     dot: (s, m) => findStalls(s, m).length >= 3 },
-  { id: 'journal', icon: '📓', label: 'Journal', unlocked: () => true },
+  { id: 'journal', group: 'records', icon: '📓', label: 'Journal', unlocked: () => true },
 ];
+
+/**
+ * The order the nav reads in, top to bottom. Written out rather than derived, because within a group the
+ * useful sequence is a judgement — the things you spend on come before the record of having spent.
+ */
+const TAB_ORDER: TabId[] = [
+  'garden', 'brew', 'explore',
+  'market', 'trade', 'guild',
+  'dungeon', 'party', 'armory', 'arcanum',
+  'staff', 'familiars',
+  'workshop', 'skills', 'library', 'proficiency', 'ascend',
+  'inventory', 'ledger', 'goals', 'journal',
+];
+
+const TABS: TabDef[] = [...RAW_TABS].sort((x, y) => {
+  const ix = TAB_ORDER.indexOf(x.id), iy = TAB_ORDER.indexOf(y.id);
+  return (ix < 0 ? TAB_ORDER.length : ix) - (iy < 0 ? TAB_ORDER.length : iy);
+});
 
 // ── Activity feed: messages and item gains get their own column (or strip), never covering the game ──
 interface Toast { id: number; msg: string; kind: ToastKind; t: number }
@@ -283,9 +318,14 @@ function appTemplate(): TemplateResult {
       <div class="spacer"></div>
     </header>
     <nav class="nav">
-      ${tabs.map((t) => html`<button class="tab ${ui.tab === t.id ? 'active' : ''}" @click=${() => switchTab(t.id)}>
-        <span class="icon">${t.icon}</span><span>${t.label}</span>${t.dot?.(s, m) && ui.tab !== t.id ? html`<span class="dot"></span>` : ''}
-      </button>`)}
+      ${NAV_GROUPS.map((g) => {
+        const inGroup = tabs.filter((t) => t.group === g.id);
+        if (!inGroup.length) return '';
+        return html`<div class="nav-label">${g.label}</div>
+          ${inGroup.map((t) => html`<button class="tab ${ui.tab === t.id ? 'active' : ''}" @click=${() => switchTab(t.id)}>
+            <span class="icon">${t.icon}</span><span>${t.label}</span>${t.dot?.(s, m) && ui.tab !== t.id ? html`<span class="dot"></span>` : ''}
+          </button>`)}`;
+      })}
     </nav>
     <main class="main">
       ${banner ?? (unlock ? html`<div class="view" style="margin-bottom:14px"><div class="goal">🔭 ${unlock}</div></div>` : '')}

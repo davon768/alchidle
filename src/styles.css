@@ -96,6 +96,12 @@ button { font: inherit; color: inherit; }
   color: var(--muted);
   position: relative;
 }
+.nav-label {
+  padding: 10px 12px 2px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--dim); opacity: 0.75;
+}
+.nav-label:first-child { padding-top: 2px; }
 .tab:hover { background: var(--panel); color: var(--text); }
 .tab.active { background: var(--panel2); border-color: var(--border); color: var(--text); }
 .tab .icon { font-size: 18px; width: 22px; text-align: center; }
@@ -241,6 +247,8 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
   .header { gap: 10px; padding: 6px 12px; padding-top: calc(6px + env(safe-area-inset-top)); flex-wrap: wrap; min-height: var(--header-h); }
   .brand { display: none; }
   .lvl { flex: 1 1 120px; min-width: 100px; }
+  /* The phone strip keeps the grouped order but drops the headings: no room, and no need. */
+  .nav-label { display: none; }
   .nav { flex-direction: row; overflow-x: auto; border-right: none; border-top: 1px solid var(--border); padding: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom)); gap: 2px; }
   .tab { flex-direction: column; gap: 2px; padding: 6px 8px; font-size: 11px; min-width: 58px; align-items: center; text-align: center; }
   .tab .icon { font-size: 20px; }
