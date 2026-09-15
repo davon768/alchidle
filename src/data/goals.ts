@@ -2,7 +2,7 @@ import type { GameState, ItemStack } from '../core/types';
 import { profLevel } from './proficiency';
 import { REAGENTS } from './spells';
 import { ascGoldTarget, ascMinLevel } from './ascension';
-import { apprenticeLevel } from './apprentices';
+import { apprenticeLevel, ROLES } from './apprentices';
 
 /**
  * Goals are the game's tutorial: each one teaches a single mechanic. They are listed in the order a player
@@ -22,6 +22,9 @@ export interface GoalDef {
   progress?: (s: GameState) => [number, number];
   reward: { gold?: number; items?: ItemStack[] };
 }
+
+/** Every talent gated behind a rebirth — the judgement tier. Derived, so a new one counts automatically. */
+const JUDGEMENT = new Set(ROLES.flatMap((r) => r.tree.filter((n) => (n.minAsc ?? 0) > 0).map((n) => n.id)));
 
 const bestProf = (s: GameState) => Math.max(1, ...Object.values(s.prof).map(profLevel));
 const ascensionOpen = (s: GameState) => s.asc.count > 0 || s.stats.runGold >= ascGoldTarget(0) * 0.2;
@@ -72,6 +75,12 @@ export const GOALS: GoalDef[] = [
     how: 'With a Brewer working, turn on \ud83d\udd01 Repeat on a cauldron.',
     about: 'A cauldron tended by a Brewer restarts its recipe on its own for as long as the ingredients last.',
     check: (s) => s.cauldrons.some((c) => c.repeat), reward: { gold: 200 } },
+  { id: 'judgement', chapter: 'Apprentices', title: 'Let an apprentice decide', level: 8, tab: 'staff',
+    when: (s) => s.asc.count >= 1,
+    how: 'After your first Magnum Opus, spend an apprentice\u2019s points on a \ud83c\udf1f judgement talent, deep in any tree.',
+    about: 'Early talents buy capacity \u2014 more beds tended, more cauldrons watched. The deep ones, marked \ud83c\udf1f, buy judgement: an apprentice who picks what to plant, chooses the recipe worth brewing, restocks the missing reagent, takes the contract, or sends the company down the Rift without you. A new layer opens with every rebirth, and together they are how a workshop eventually runs itself.',
+    check: (s) => Object.values(s.staff.crew).some((a) => a && Object.keys(a.nodes).some((id) => JUDGEMENT.has(id))),
+    reward: { gold: 25000 } },
   { id: 'event', chapter: 'Apprentices', title: 'Witness a world event', level: 3,
     how: 'Keep playing \u2014 the next event arrives within 8 minutes.',
     about: 'World events change the rules for a few minutes: bountiful rain, market booms, goblin raids. The banner at the top shows what each one does.',
@@ -183,7 +192,7 @@ export const GOALS: GoalDef[] = [
   // ── The long game ──────────────────────────────────────────
   { id: 'ascend', chapter: 'The long game', title: 'Perform the Magnum Opus', level: 1, when: ascensionOpen, tab: 'ascend',
     how: `Reach level ${ascMinLevel(0)} and earn ${(ascGoldTarget(0) / 1000).toFixed(0)}K gold in one run, then ascend in 🌟 Magnum Opus.`,
-    about: 'Ascending resets your run for Philosopher’s Stones. You keep stones, eternal perks, proficiency, research, apprentices and achievements — and because so much carries over, each Great Work asks for a higher level and 2.5× the gold of the last.',
+    about: 'Ascending resets your run for Philosopher’s Stones. You keep stones, eternal perks, proficiency, research, apprentices and achievements — and because so much carries over, each Great Work asks for a higher level and 2.5× the gold of the last. Gold is only the gate: the stones themselves weigh thirteen strands of what the run did — what you brewed, grew, studied, slew and discovered — so a run that touched every system pays far better than a rich one that did nothing else.',
     check: (s) => s.asc.count >= 1, progress: (s) => [Math.min(ascGoldTarget(0), s.stats.runGold), ascGoldTarget(0)], reward: { gold: 5000 } },
   { id: 'perk', chapter: 'The long game', title: 'Buy an eternal perk', level: 1, when: (s) => s.asc.count > 0, tab: 'ascend',
     how: 'Spend Philosopher’s Stones in 🌟 Magnum Opus.',

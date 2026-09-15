@@ -195,9 +195,35 @@ above level 20, covering 19 stats. Everything added from v0.5 onwards — potion
 research, familiars, the whole adventurer company — had no upgrade at all, and a level-60 player had
 nothing left to buy.
 
-Now **43 upgrades reaching level 60**, grouped by the system each one serves (Garden, Cauldrons, Market,
+Now **66 upgrades reaching level 100**, grouped by the system each one serves (Garden, Cauldrons, Market,
 Expeditions, The Company, Study, Adventure, The Long Game) and rendered as sections with a filter rather
-than one wall of cards. No stretch of levels longer than 12 passes without something new appearing.
+than one wall of cards. No stretch of levels longer than 4 passes without something new appearing.
+
+**Costs are anchored on measured income, never extrapolated.** The v1.2 pass first set the new entries by
+continuing the curve the list already implied — about ×1.28 per level — and that was wrong in a way worth
+recording, because the same mistake had already been made above level 48. Measured income grows **×1.10
+per level**; a cost curve growing ×1.28 outruns it by ×1.16 per level, which compounds to roughly 200×
+over forty levels. The top of the list had ended up priced at 3.8e13 against an economy earning ~1.3e4 a
+minute — about 420,000 runs' worth of gold for one card.
+
+The method now: measure gold per minute at each level the bot reaches (the bot reports this), take the
+deepest upgrade it demonstrably affords as an **anchor**, leave everything at or below that anchor
+untouched, and price everything above it at the anchor's own minutes-of-income, grown at the measured
+income rate. That puts every ordinary upgrade above the anchor within 132–139 minutes of income at its own
+level, and every capacity slot at ~3× that — the same premium the validated range already charged for
+space. The dearest thing in the game is now 3.0e8 rather than 3.8e13.
+
+The v1.1 pass stopped at 60 and that was still short. Recipes, spells, zones and dungeons all run to 100,
+and the bot reaches level 57–64 inside a long run, so the tail mattered: above level 56 there was exactly
+**one** upgrade in the whole list, and above 80, none. A late rebirth had a purse measured in billions and
+nothing to spend it on. The v1.2 pass added 23 upgrades spanning levels 58–100 — every group now runs to
+at least 86 — with costs continuing the curve the list already set (about ×1.28 per level, anchored on the
+Rooftop Observatory at 2e9 on level 60) rather than a new one invented for the occasion.
+
+| Levels | 1–30 | 31–55 | 56–79 | 80–100 |
+|---|---|---|---|---|
+| Upgrades before | 29 | 13 | 1 | 0 |
+| Upgrades after | 29 | 13 | 12 | 12 |
 
 Two rules govern what belongs here:
 
@@ -342,6 +368,12 @@ Goal claiming and skill-point spending belong to no apprentice, so they are eter
 Hands**, **Trained Instinct**). Ascension itself is deliberately *not* automatable: one decision per run
 stays yours.
 
+The tier is marked 🌟 on the talent card and **stays marked after it unlocks** (v1.2). It used to carry
+the star only while it was still out of reach, which is backwards: a player hunting for the talents that
+hand a whole system over is doing it *after* the rebirth that opened them, not before. A goal — *Let an
+apprentice decide* — teaches the tier, and derives its check from `minAsc` rather than a list of ids, so
+a new judgement talent counts the day it is added.
+
 Everything lives in `core/automation.ts`, runs once a second from `tick`, and calls the same functions a
 click would — so an automated sale, delve or study is identical to a manual one, ledger tag included.
 Order matters and is the one thing that bit during the build: every consumer of potions (belt, supply
@@ -447,10 +479,11 @@ level 100 is ~5.9e9. Bot pacing: level 10 at 22 min, 20 at 45, 30 at ~95, 40 at 
 
 **The first ascension is gated on gold, not level**, which is why slowing the level curve alone did not
 lengthen a run — it just meant ascending at level 25 instead of 30, having seen *less* of the game. The
-first Great Work now asks **600K gold and level 15** (was 200K and level 12). Measured first ascension:
-**110 min** (range 101–130) against 78–89 before, at level 31 with 16 recipes unlocked.
+first Great Work now asks **600K gold and level 15** (was 200K and level 12). Measured at the time of
+that pass: **110 min** (range 101–130) against 78–89 before, at level 31 with 16 recipes unlocked.
 
-Run cadence after the pass: **120 → 127 → 202 → 361 → 376 → 442 minutes**. Levels
+Run cadence measured after that pass: **120 → 127 → 202 → 361 → 376 → 442 minutes**. (Those two figures
+are the v1.1 record of what this change achieved; §3 above carries the current measurement.) Levels
 55+ are reached inside the late, long runs rather than the early short ones, which is what makes the
 back half of the content worth writing.
 
@@ -502,17 +535,38 @@ Pacing targets: first ascension at about 2–4 hours of active play, the Panacea
 Measured with `npm run bot` under its default policy (alternate two herbs so cross-breeding can happen,
 keep every research desk busy, buy the cheapest affordable upgrade, skill and apprentice node each step):
 
+Measured v1.2, five 60-hour runs — **under the bot's previous upgrade policy** (always buy the cheapest
+affordable). That policy was later found to be the reason the bot stopped buying upgrades at level 22, and
+was replaced with one that saves for a target; the first 40-hour measurement under the new policy puts
+first ascension at ~139 min rather than 104, since saving delays the cheap compounding buys and the
+ascension gate is on gold *earned*, not held. **These figures are therefore pending re-derivation** — the
+shape below (runs must grow) is the part that matters and is not in question; the absolute minutes are.
+
 | Milestone | Bot | Human (~2× slower) |
 |---|---|---|
-| Level 10 | ~12 min | ~25 min |
-| Level 20 | ~30 min | ~1 h |
-| First ascension | **98 min** (range 90–112) | **~3.3 h** |
-| An item reaches proficiency 50 | ~158 min | ~5 h |
-| An apprentice reaches level 25 | ~40 min | ~1.3 h |
+| Level 10 | ~22 min | ~45 min |
+| Level 20 | ~48 min | ~1.6 h |
+| Level 30 | ~134 min | ~4.5 h |
+| First ascension | **104 min** (range 89–136) | **~3.5 h** |
+| An item reaches proficiency 50 | ~154 min | ~5 h |
+| An apprentice reaches level 25 | ~39 min | ~1.3 h |
 
-That lands first ascension inside the 2–4 hour design target above. An earlier note in this file put the
-bot at ~70 minutes; that figure came from a bot whose policy was not recorded and could not be
-reproduced, so it has been replaced rather than chased. **These numbers are only meaningful with the
+**Run lengths are the number that matters for prestige pacing, and the rule is that they must grow.**
+Each Great Work asks for a higher level and 2.5× the gold of the last, so a flat or falling curve would
+mean the carry-over had outrun the gate:
+
+| Run | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| Minutes (previous policy) | 104 | 112 | 202 | 229 | 348 | 495 |
+
+Monotonic across all six — but only at five runs. A three-run sample of the same code showed run 4 coming
+in *shorter* than run 3 (262 → 191), which would have read as a real regression against the rule. At the
+60-hour mark the bot is level 52–60 with 7 apprentices, the best at level 100, ~25
+studies, ~39 strains and the company at depth ~47.
+
+That lands first ascension inside the 2–4 hour design target above. Two earlier figures in this file —
+~70 minutes, then ~98 — came from bots whose policy was not recorded and could not be reproduced, so
+they have been replaced rather than chased. **These numbers are only meaningful with the
 policy attached** — changing nothing but the order in which the bot hires apprentices moved first
 ascension by 30 minutes. Compare configurations with `--single-herb`, `--no-research` and `--no-hire`
 rather than reading a single figure as truth.

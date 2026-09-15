@@ -19,9 +19,13 @@ function nodeButton(s: GameState, role: RoleId, node: ApprenticeNode): TemplateR
   const maxed = node.maxRank > 0 && rank >= node.maxRank;
   // A rebirth-gated talent is shown, not hidden: knowing what the next Great Work opens is the point.
   const rebirthLocked = !!node.minAsc && s.asc.count < node.minAsc;
+  // The mark stays after it unlocks. These are the talents that hand a whole system over, they are what
+  // a player is hunting for by the third or fourth rebirth, and a tier you can only identify while it is
+  // still out of reach is no use at all.
+  const judgement = !!node.minAsc;
   return html`<div class="appr-node ${maxed ? 'maxed' : status.ok ? 'ready' : 'locked'}">
     <div class="row between">
-      <b class="small">${rebirthLocked ? '🌟' : node.icon} ${node.name}</b>
+      <b class="small">${rebirthLocked ? '🌟' : node.icon} ${node.name}${judgement && !rebirthLocked ? html`<span class="tag-judgement" title="Judgement: this apprentice decides for themself">🌟</span>` : ''}</b>
       <span class="dim">${rank}${node.maxRank > 0 ? `/${node.maxRank}` : ' ∞'}</span>
     </div>
     <div class="small good">${describeNode(node, 1)}${node.maxRank !== 1 ? ' each' : ''}</div>

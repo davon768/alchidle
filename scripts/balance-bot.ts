@@ -6,14 +6,19 @@
  *   npm run bot -- 12 --runs 5        five 12-hour runs, full length, with a summary
  *   npm run bot -- --single-herb      plant one herb everywhere (never cross-breeds)
  *   npm run bot -- --no-research      never start a study
- *   npm run bot -- --no-hire          never hire apprentices
- *   npm run bot -- --hire-ratio 25    hire only when one costs under 1/25th of the purse
  *   npm run bot -- --starter          only ever use the lowest tier of content it has unlocked
  *   npm run bot -- --json             machine-readable output
+ *   npm run bot -- --dump state.json  write the final state out, for questions a summary cannot answer
  *
- * The two toggles exist to isolate a system's contribution: run with and without it and diff the
+ * The toggles exist to isolate a system's contribution: run with and without it and diff the
  * time-to-ascension. Runs under plain Node via scripts/register-ts.mjs.
+ *
+ * Alongside pacing it reports what the Workshop could actually afford — how deep into the upgrade list
+ * it bought, the income at each level, and every upgrade that never came within saving distance in any
+ * run. That last one exists because the bot spent a long time reporting the Workshop as fine while two
+ * thirds of it was unreachable, and a list nobody can afford should be a finding rather than a silence.
  */
+import fs from 'node:fs';
 import type { GameState, Mods } from '../src/core/types.ts';
 import { newState } from '../src/core/state.ts';
 import { computeMods } from '../src/core/mods.ts';
@@ -23,7 +28,8 @@ import {
 } from '../src/core/engine.ts';
 import {
   brew, buy, buyUpgrade, buySkill, harvestAll, plant, selectRecipe, sell,
-  skillStatus, sowBest, startExpedition, startResearch, toggleRepeat,
+  skillStatus,
+  upgradeOpen, sowBest, startExpedition, startResearch, toggleRepeat,
 } from '../src/core/actions.ts';
 import { learnNode, nodeStatus, pointsFree } from '../src/core/staff.ts';
 import { canDelve, canHire, hireAdventurer, partyReport, setKit, startDelve, suppliable } from '../src/core/party.ts';
@@ -57,6 +63,12 @@ export interface BotOptions {
    * measures whether the game applies any pressure to progress through its own content.
    */
   starter: boolean;
+  /** Write the final game state to this path, for questions a summary cannot answer. */
+  dump?: string;
+  /** Filled in by the run: upgrade ids that were open but never came within saving distance. */
+  unreachable?: Set<string>;
+  /** One set per completed run, so the report can intersect rather than union them. */
+  unreachablePerRun?: Set<string>[];
 }
 
 export interface BotResult {
@@ -75,6 +87,15 @@ export interface BotResult {
   topProficiencies: [string, number][];
   apprentices: number;
   bestApprenticeLevel: number;
+  /** Gold per minute over the stretch leading up to each level — the curve costs must be set against. */
+  goldPerMinAtLevel: Record<number, number>;
+  endGold: number;
+  endGoldPerMin: number;
+  /** The whole final state, only when --dump asked for it. */
+  finalState: GameState | null;
+  /** How many distinct upgrades were bought, and the level of the deepest one — is the tail reachable? */
+  upgradesOwned: number;
+  deepestUpgrade: { name: string; level: number } | null;
   /** Minutes until any item reaches proficiency 50, and until any apprentice reaches level 25. */
   minutesToProf50: number | null;
   minutesToApprenticeCap: number | null; // level 25
@@ -147,19 +168,72 @@ function sellStock(s: GameState, tiersSold: number[], sold: { w: number; n: numb
   }
 }
 
+/**
+ * How far ahead the bot is willing to save. A player will hold gold for a card worth holding for, but
+ * not forever: past this, the upgrade is not a goal, it is scenery.
+ */
+const SAVE_MINUTES = 45;
+/** Small enough that taking it does not meaningfully delay whatever is being saved for. */
+const INCIDENTAL = 0.02;
+
+/**
+ * Buy upgrades the way a player does: pick something worth having and save for it.
+ *
+ * The old rule — always the cheapest affordable, six a pass — was not perfect play but *cheap* play,
+ * and it hid most of the Workshop. Re-buying the infinite cheap entries forever, the bot never
+ * accumulated enough for anything expensive: it stopped dead at level 22 while playing on to level 60,
+ * bought 23 of 66 upgrades, and never once touched the deep half of the list. Because upgrades compound
+ * into income, that also quietly depressed every gold figure the bot has ever reported.
+ *
+ * The horizon is what keeps this honest in both directions. An upgrade the bot could reach by saving
+ * for up to `SAVE_MINUTES` of current income is a goal worth banking for; one beyond that is recorded
+ * as **unreachable** rather than silently skipped, which is the whole point — an upgrade list nobody can
+ * afford should show up as a finding, not as a list that merely never gets bought.
+ */
+function buyUpgrades(s: GameState, opts: BotOptions): void {
+  const perMin = Math.max(1, s.stats.runGold / Math.max(1, s.stats.runTime / 60));
+  const horizon = s.gold + perMin * SAVE_MINUTES;
+
+  for (let g = 0; g < 6; g++) {
+    const open = UPGRADES.filter((u) => upgradeOpen(s, u))
+      .map((u) => ({ u, owned: s.upgrades[u.id] ?? 0, cost: upgradeCost(u, s.upgrades[u.id] ?? 0) }))
+      .filter((o) => o.u.max === 0 || o.owned < o.u.max);
+
+    // Anything open but past the horizon is out of reach *at this income*. Early on that is most of the
+    // list and means nothing, so an entry is cleared again the moment it comes within reach: what
+    // survives to the end is the set that never once came within saving distance, at any income the run
+    // ever reached.
+    for (const o of open) {
+      if (o.cost > horizon) opts.unreachable?.add(o.u.id);
+      else opts.unreachable?.delete(o.u.id);
+    }
+
+    // The target: something worth saving for. Prefer a card never opened, then the deepest one, since
+    // depth is how this list encodes strength.
+    const target = open
+      .filter((o) => o.cost <= horizon)
+      .sort((a, b) => (a.owned === 0 ? 0 : 1) - (b.owned === 0 ? 0 : 1)
+        || b.u.level - a.u.level
+        || a.cost - b.cost)[0];
+    if (!target) break;
+
+    if (target.cost <= s.gold) { buyUpgrade(s, target.u.id); continue; }
+
+    // Saving for it. Take anything trivial enough not to delay it, otherwise bank and stop.
+    const incidental = open
+      .filter((o) => o.cost <= s.gold && o.cost <= target.cost * INCIDENTAL)
+      .sort((a, b) => (a.owned === 0 ? 0 : 1) - (b.owned === 0 ? 0 : 1) || a.cost - b.cost)[0];
+    if (!incidental) break;
+    buyUpgrade(s, incidental.u.id);
+  }
+}
+
 function spendGold(s: GameState, m: Mods, opts: BotOptions): void {
   for (const it of ALL_ITEMS) {
     if (!it.buyLevel || it.buyLevel > s.level) continue;
     if (count(s, it.id) < 40 && s.gold > buyUnitPrice(it.id) * 80) buy(s, it.id, 40);
   }
-  for (let g = 0; g < 6; g++) {
-    const best = UPGRADES.filter((u) => u.level <= s.level)
-      .map((u) => ({ u, cost: upgradeCost(u, s.upgrades[u.id] ?? 0) }))
-      .filter((o) => o.cost <= s.gold * 0.5)
-      .sort((a, b) => a.cost - b.cost)[0];
-    if (!best) break;
-    buyUpgrade(s, best.u.id);
-  }
+  buyUpgrades(s, opts);
   for (let g = 0; g < 4; g++) {
     const node = SKILLS.filter((n) => skillStatus(s, n).ok)[0];
     if (!node) break;
@@ -235,6 +309,8 @@ export function runBot(opts: BotOptions): BotResult {
   let minutesToApprenticeCap: number | null = null;
   let atAscend: BotResult['atAscend'] = null;
   const runMinutes: number[] = [];
+  const goldPerMinAtLevel: Record<number, number> = {};
+  let lastSample = { t: 0, gold: 0 };
   let runStart = 0;
 
   for (let t = 0; t < opts.hours * 3600; t += STEP) {
@@ -255,6 +331,21 @@ export function runBot(opts: BotOptions): BotResult {
 
     for (const L of [10, 20, 30, 40, 50]) {
       if (levelMinutes[`lvl${L}`] === undefined && s.level >= L) levelMinutes[`lvl${L}`] = +(t / 60).toFixed(1);
+    }
+    // Income at each level, sampled the first time that level is reached. This is the curve an upgrade's
+    // price has to be set against: a card introduced at level L is only content if someone at level L can
+    // earn it. Extrapolating a cost curve instead of measuring this is how the top of the Workshop list
+    // ended up priced past anything the game produces.
+    for (let L = 5; L <= 100; L += 5) {
+      if (goldPerMinAtLevel[L] === undefined && s.level >= L) {
+        // The *marginal* rate since the last milestone, not the run average. A running average is
+        // dragged down by every early minute, which is precisely the wrong error to make when the
+        // question is what a player earns once they are deep. Lifetime gold, so an ascension in the
+        // middle of the window does not reset it to nothing.
+        const mins = (t - lastSample.t) / 60;
+        goldPerMinAtLevel[L] = mins > 0 ? Math.round((s.stats.totalGold - lastSample.gold) / mins) : 0;
+        lastSample = { t, gold: s.stats.totalGold };
+      }
     }
     if (minutesToProf50 === null && Object.keys(s.prof).some((id) => profLevelOf(s, id) >= 50)) {
       minutesToProf50 = +(t / 60).toFixed(1);
@@ -305,6 +396,14 @@ export function runBot(opts: BotOptions): BotResult {
     }
   }
 
+  // Hand this run's verdict over and start the next one clean. Sharing one set across runs made the
+  // report a union: an upgrade bought comfortably in one run still showed as unreachable because a
+  // different run never got there.
+  if (opts.unreachable) {
+    opts.unreachablePerRun?.push(new Set(opts.unreachable));
+    opts.unreachable.clear();
+  }
+
   return {
     ascendMinutes,
     levelMinutes,
@@ -324,6 +423,14 @@ export function runBot(opts: BotOptions): BotResult {
       .slice(0, 6),
     apprentices: Object.keys(s.staff.crew).length,
     bestApprenticeLevel: Math.max(0, ...Object.values(s.staff.crew).map((a) => (a ? apprenticeLevel(a.xp) : 0))),
+    // What the purse looks like at the end, which is what says whether the deep upgrades are content
+    // or decoration: an entry costing more than the whole late run earns is one nobody will ever buy.
+    endGold: Math.round(s.gold),
+    endGoldPerMin: Math.round(s.stats.runGold / Math.max(1, s.stats.runTime / 60)),
+    upgradesOwned: Object.keys(s.upgrades).filter((id) => (s.upgrades[id] ?? 0) > 0).length,
+    deepestUpgrade: UPGRADES.filter((u) => (s.upgrades[u.id] ?? 0) > 0)
+      .sort((a, b) => b.level - a.level)
+      .map((u) => ({ name: u.name, level: u.level }))[0] ?? null,
     minutesToProf50,
     minutesToApprenticeCap,
     saveKB: Math.round(JSON.stringify(s).length / 1024),
@@ -337,7 +444,9 @@ export function runBot(opts: BotOptions): BotResult {
       ['spells', Object.keys(s.spells).length], ['skills', Object.keys(s.skills).length], ['upgrades', Object.keys(s.upgrades).length],
     ] as [string, number][]).sort((x, y) => y[1] - x[1]).slice(0, 6),
     runMinutes,
+    goldPerMinAtLevel,
     atAscend,
+    finalState: opts.dump ? s : null,
     partyDepth: s.party.depth,
     adventurers: s.party.roster.length,
     relicRanks: Object.values(s.party.relics).reduce((a, x) => a + x, 0),
@@ -357,6 +466,9 @@ const runs = num('runs', 1);
 const opts: BotOptions = {
   hours,
   stopAtAscend: !flag('full'),
+  dump: argv.includes('--dump') ? argv[argv.indexOf('--dump') + 1] : undefined,
+  unreachable: new Set<string>(),
+  unreachablePerRun: [] as Set<string>[],
   research: !flag('no-research'),
   singleHerb: flag('single-herb'),
   hireRatio: flag('no-hire') ? 0 : num('hire-ratio', 1),
@@ -365,6 +477,12 @@ const opts: BotOptions = {
 
 const results: BotResult[] = [];
 for (let i = 0; i < runs; i++) results.push(runBot(opts));
+
+if (opts.dump && results[0]?.finalState) {
+  fs.writeFileSync(opts.dump, JSON.stringify(results[0].finalState, null, 1));
+  console.log(`
+final state of run 1 written to ${opts.dump}`);
+}
 
 if (flag('json')) {
   console.log(JSON.stringify({ opts, results }, null, 2));
@@ -382,11 +500,39 @@ if (flag('json')) {
     console.log(`        tiers sold ${r.tiersSold.join('/')} · levels ${JSON.stringify(r.levelMinutes)}`);
     console.log(`        top proficiency ${r.topProficiencies.slice(0, 3).map(([k, v]) => `${k} ${v}`).join(', ')}`
       + ` · ${r.apprentices} apprentices (best lv ${r.bestApprenticeLevel})`);
+    console.log(`        purse ${r.endGold.toExponential(2)}, earning ${r.endGoldPerMin.toExponential(2)}/min in the current run`);
+    console.log(`        upgrades ${r.upgradesOwned}/${UPGRADES.length} bought`
+      + (r.deepestUpgrade ? `, deepest ${r.deepestUpgrade.name} (level ${r.deepestUpgrade.level})` : ''));
   }
+  const perRun = opts.unreachablePerRun ?? [];
+  const neverReachable = perRun.length
+    ? [...perRun[0]].filter((id) => perRun.every((set) => set.has(id)))
+    : [...(opts.unreachable ?? [])];
+  const unreachable = neverReachable
+    .map((id) => UPGRADES.find((u) => u.id === id))
+    .filter((u): u is NonNullable<typeof u> => !!u)
+    .sort((x, y) => x.level - y.level);
+  if (unreachable.length) {
+    console.log(`
+⚠ ${unreachable.length} upgrade(s) never came within ${SAVE_MINUTES} minutes of income in any run —`
+      + ' open, but priced past anything this economy earns:');
+    for (const u of unreachable) {
+      console.log(`   level ${String(u.level).padStart(3)}  ${u.name.padEnd(24)} ${u.baseCost.toExponential(1)}`);
+    }
+  }
+
+  {
+    const lv = Object.keys(results[0]?.goldPerMinAtLevel ?? {}).map(Number).sort((a, b) => a - b);
+    if (lv.length) {
+      console.log('\nincome when each level was first reached (run 1), gold/min:');
+      console.log('   ' + lv.map((L) => `${L}:${results[0].goldPerMinAtLevel[L].toExponential(1)}`).join('  '));
+    }
+  }
+
   if (asc.length) {
     console.log(`\nascension: mean ${mean(asc).toFixed(1)} min, `
       + `range ${Math.min(...asc).toFixed(1)}–${Math.max(...asc).toFixed(1)} `
-      + `(DESIGN.md §3 baseline: ~98 min under this policy)`);
+      + `(DESIGN.md §3 baseline: ~104 min, v1.2, this policy)`);
   }
   const got = (pick: (r: BotResult) => number | null) => results.map(pick).filter((x): x is number => x !== null);
   const p50 = got((r) => r.minutesToProf50);

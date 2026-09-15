@@ -455,3 +455,11 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .stir-shout { font-weight: 700; letter-spacing: 0.02em; }
 .stir-count { font-size: 12px; opacity: 0.9; font-variant-numeric: tabular-nums; }
 @media (pointer: coarse) { .stir-face { padding: 14px 12px; } }
+
+/* Marks the judgement tier of an apprentice tree — the talents that hand a system over entirely. */
+.tag-judgement {
+  margin-left: 4px;
+  font-size: 9px;
+  vertical-align: super;
+  opacity: 0.75;
+}

@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.scripts.json",
     "setup": "npm install && node scripts/claude-sync.mjs setup",
     "sync:status": "node scripts/claude-sync.mjs status",
     "sync:pull": "node scripts/claude-sync.mjs pull",
@@ -18,6 +18,7 @@
     "lit-html": "^3.3.3"
   },
   "devDependencies": {
+    "@types/node": "^26.5.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.0"
   }

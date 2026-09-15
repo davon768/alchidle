@@ -1,0 +1,25 @@
+/*
+ * The tooling under `scripts/` was never typechecked: the root config includes only `src`, so
+ * `npm run typecheck` passed happily on a balance bot that would not even parse. A broken bot is a
+ * broken measurement, and the balance argument rests on measurements.
+ *
+ * Separate from the root config because these run under plain Node: they need `@types/node`, and they
+ * import with explicit `.ts` extensions, which the app's own build does not. DOM stays in `lib` because
+ * the bot reaches into `src` and those modules are written for a browser — it never executes a DOM path,
+ * but the types still have to resolve.
+ */
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["scripts"]
+}
