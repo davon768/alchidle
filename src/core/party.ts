@@ -10,6 +10,7 @@ import type { Adventurer, Delve, GameState, Mods } from './types';
 import { addGold, addItem, gainXp, potionPotency, randInt, removeItem, rollAmount, takenTier, toast } from './engine';
 import { computeMods } from './mods';
 import { workXp } from './staff';
+import { moment } from './telemetry';
 import { RECIPE_MAP } from '../data/recipes';
 import { quality } from '../data/quality';
 import { RELIC_MAP, rollRelic } from '../data/relics';
@@ -123,6 +124,7 @@ export function hireAdventurer(s: GameState, clsId: string): boolean {
   addGold(s, -cost, false);
   s.party.roster.push({ uid: `a${s.party.nextId++}`, cls: clsId, xp: 0, rest: 0 });
   toast(`${cls.icon} A ${cls.name} signs on with your company.`, 'epic');
+  moment('hire', `hired a ${cls.name}`, -cost);
   return true;
 }
 
@@ -197,6 +199,7 @@ function awardRelic(s: GameState, depth: number): void {
   const rank = (s.party.relics[def.id] ?? 0) + 1;
   s.party.relics[def.id] = rank;
   toast(`${def.icon} ${def.name}${rank > 1 ? ` rank ${rank}` : ''} — torn out of the deep!`, 'epic');
+  moment('relic', `${def.name} rank ${rank} at depth ${depth}`);
 }
 
 /** Hurt one of the company. The heavily armoured are far less likely to be the one who limps home. */

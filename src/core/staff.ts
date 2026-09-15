@@ -1,5 +1,6 @@
 import type { Apprentice, GameState, Mods, RoleId } from './types';
 import { toast } from './engine';
+import { moment } from './telemetry';
 import { describeEffects } from './mods';
 import {
   APPRENTICE_MAX, APPR_ROW_POINTS, NAMES, NODE_MAP, ROLE_MAP, ROLES,
@@ -69,6 +70,7 @@ export function learnNode(s: GameState, role: RoleId, nodeId: string): void {
     return;
   }
   a.nodes[nodeId] = (a.nodes[nodeId] ?? 0) + 1;
+  moment('talent', `${ROLE_MAP[role].name}: ${node.name} rank ${a.nodes[nodeId]}`);
 }
 
 /** Refund every point in a tree so it can be spent again. Free: the points were earned by working. */
@@ -76,6 +78,7 @@ export function respecApprentice(s: GameState, role: RoleId): void {
   const a = s.staff.crew[role];
   if (!a) return;
   a.nodes = {};
+  moment('talent', `reset the ${ROLE_MAP[role].name} tree at level ${levelOf(a)}`);
   toast(`${ROLE_MAP[role].icon} ${NAMES[role]} starts afresh — every point is yours to spend again.`, 'good');
 }
 

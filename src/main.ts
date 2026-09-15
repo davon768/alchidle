@@ -37,10 +37,10 @@ const rerender = mount(document.getElementById('app')!);
 if (import.meta.env.DEV) {
   // Import through the app's own module graph: after HMR, Vite serves timestamped URLs, so a bare
   // `import('/src/...')` from the console would load separate copies that don't affect the running game.
-  void Promise.all([import('./core/actions'), import('./core/engine'), import('./core/state'), import('./core/staff'), import('./ui/common')]).then(
-    ([actions, engine, state, staff, common]) => {
+  void Promise.all([import('./core/actions'), import('./core/engine'), import('./core/state'), import('./core/staff'), import('./ui/common'), import('./core/telemetry')]).then(
+    ([actions, engine, state, staff, common, telemetry]) => {
       (window as unknown as Record<string, unknown>).__alchemy = {
-        game, actions, engine, state, staff, computeMods, saveGame, ui: common.ui, refresh: common.refresh,
+        game, actions, engine, state, staff, computeMods, saveGame, ui: common.ui, refresh: common.refresh, telemetry,
       };
     },
   );

@@ -1,4 +1,5 @@
 import type { GameState, ItemStack, Mods } from './types';
+import { moment } from './telemetry';
 import { computeMods } from './mods';
 import { addGold, addItem, count, gainProf, hasAll, profBonusOf, removeItem, rollAmount, toast } from './engine';
 import { workXp } from './staff';
@@ -35,6 +36,7 @@ export function learnSpell(s: GameState, id: string): void {
   s.spells[id] = 1;
   toast(`📘 Learned ${sp.icon} ${sp.name}!`, 'epic');
   if (sp.kind === 'combat' && s.spellSlots.length < Math.floor(computeMods(s).spellSlots)) s.spellSlots.push(id);
+  moment('unlock', `learned ${sp.name}`);
 }
 
 export function rankUpSpell(s: GameState, id: string): void {

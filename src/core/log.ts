@@ -41,9 +41,13 @@ const STALL_MS = 1200;
 let lastFrame = 0;
 
 export function noteFrame(now: number): void {
+  // `lastFrame` is zeroed to mean "no baseline" — at load, and every time the tab comes back. Test that
+  // directly: `now` is measured from page load, so differencing against zero yields the age of the page,
+  // which always clears the threshold and reports the whole session as one freeze.
   const gap = now - lastFrame;
+  const hadBaseline = lastFrame > 0;
   lastFrame = now;
-  if (!gap || gap < STALL_MS) return;
+  if (!hadBaseline || gap < STALL_MS) return;
   if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
   stalls++;
   worstStall = Math.max(worstStall, Math.round(gap));

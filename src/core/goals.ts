@@ -1,6 +1,7 @@
 import type { GameState } from './types';
 import { GOALS, GOAL_MAP, type GoalDef } from '../data/goals';
 import { addGold, addItem, toast } from './engine';
+import { moment } from './telemetry';
 
 export type GoalStatus = 'claimed' | 'done' | 'active' | 'locked';
 
@@ -34,4 +35,5 @@ export function claimGoal(s: GameState, id: string): void {
   if (g.reward.gold) addGold(s, g.reward.gold, false);
   for (const it of g.reward.items ?? []) addItem(s, it.id, it.qty);
   toast(`🎁 Reward claimed: ${g.title}`, 'good');
+  moment('goal', `claimed "${g.title}"`);
 }

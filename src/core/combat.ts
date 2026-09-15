@@ -5,6 +5,7 @@ import { computeMods } from './mods';
 import { manaMax } from './magic';
 import { addGear, newGear } from './armory';
 import { onEventKill } from './events';
+import { moment } from './telemetry';
 import { workXp } from './staff';
 import { fmt } from './format';
 import {
@@ -298,6 +299,7 @@ function onDeath(s: GameState, m: Mods, hero: HeroStats): void {
     return;
   }
   s.stats.deaths++;
+  moment('death', `fell on floor ${s.combat.floor} of ${s.combat.dungeonId ?? 'nowhere'}`);
   const floor = c.floor;
   c.dead = RECOVER_TIME;
   c.enemy = null;

@@ -237,6 +237,51 @@ stopped permanently**, because the only restart lived inside a loop guarded on `
 nothing — Repeat stayed lit and the cauldron never brewed again. The tick now retries idle repeat
 cauldrons every step, which is also where the stall data comes from.
 
+### Two recorders (v1.2): the fault log and the play recording
+
+Both live outside the save, both are downloadable from the Journal's Diagnostics panel, and they answer
+two different questions.
+
+**The fault log** (`core/log.ts`) answers *what went wrong*. A 250-entry rolling buffer of errors, failed
+draws, failed ticks, autosave failures, tab visibility changes and freezes, written out as a plain-text
+report with the browser, the viewport, the heap, the draw counters and a summary of the save on top. A
+**freeze** is a gap of more than 1.2 s between animation frames *while the page is visible* — a gap while
+hidden is a browser parking a background tab, which is normal and must never be reported as a fault.
+
+The first version of that check got it backwards and shipped: `lastFrame` is zeroed to mean *no baseline*
+— at load, and again every time the tab comes back — but the guard tested whether the **gap** was zero
+rather than whether the baseline was. Differencing a `performance.now()` timestamp against zero yields the
+age of the page, which always clears the 1.2 s threshold, so every page load and every return from a
+background tab logged one false freeze as long as the session. A player who alt-tabbed a few times saw
+dozens. The detector now tests `lastFrame > 0` directly, and is unit-tested both ways: a first frame on a
+30-second-old page counts nothing, a genuine 2.2 s hang counts one.
+
+It is memory-only and dies with the session: evidence about a session is not part of the game, and telling the
+player to grab it *before* reloading is cheaper than persisting it.
+
+**The play recording** (`core/telemetry.ts`) answers *how the game is actually going*. The balance bot
+plays perfectly and never gets bored, which makes it a good measure of reachability and a poor one of what
+a session feels like. This records two streams, because an idle game's events are not all the same size:
+
+- **Minutes** — one snapshot a minute: level, gold, gold earned *per source* since the last snapshot,
+  potions brewed, herbs harvested, kills, expeditions, delves, ascension count, party depth, the top three
+  Ledger stalls, and the freeze count. Thousands of brews an hour cannot be logged one by one and nothing
+  is learned from trying; the rate is the thing.
+- **Moments** — the discrete decisions: a level, an upgrade, a skill, a talent, a finished study, an
+  ascension, a relic, a hire, a death, a claimed goal. Rare enough to keep whole, and exactly what a rate
+  cannot explain.
+
+Per-source income is measured by **differencing the lifetime `s.income` totals**, not by reading the
+Ledger's rolling window: that window is bucketed by whole wall-clock minutes, so asking it for "the last
+minute" as a new minute begins falls between two buckets and reports nothing at all. The first snapshot of
+a recording is always zero — `since()` seeds its marks on the first call — and that is by design.
+
+It is skipped entirely during offline catch-up (`quiet`), because hours of simulated time arriving in one
+step would read as a single impossibly rich minute and make every rate in the file a lie. It persists to
+its own `localStorage` key so it can span the hours a balance question needs, capped at 720 minutes /
+1200 moments / 300 KB and trimmed oldest-first — a recording must never be the thing that fills storage
+and stops the game from saving.
+
 ### Goals (v0.5): the tutorial
 
 32 goals in 8 chapters (Workshop basics, Apprentices, Craft & proficiency, Commerce, Adventure, Magic, The company, The long game) teach every mechanic in the order players meet it. Each goal has a one-line *how*, a short explanation of the mechanic, an optional progress bar, a **Show me** button that opens the right tab, and a one-time reward (gold, or items that help with the next step — for example, the reagent goal pays Rune Chalk and Spell Ink toward learning Firebolt). The banner at the top of every tab shows a claimable goal first, otherwise the next unfinished one; the 🎯 Goals tab lists them all. Goals are checked every second, stay done once reached, and survive ascension, so each reward pays out only once. Content lives in `src/data/goals.ts` — add a goal whenever a new system is added.

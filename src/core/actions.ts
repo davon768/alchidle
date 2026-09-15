@@ -22,6 +22,7 @@ import { ROW_POINTS, SKILL_MAP, skillRankCost, type SkillNode } from '../data/sk
 import { GUILD_MAP, GUILD_UNLOCK_LEVEL, rankFor, rankName } from '../data/guilds';
 import { ASC_MAP, ascCost, ascStatus, stonesFor } from '../data/ascension';
 import { kitReserve } from './party';
+import { moment } from './telemetry';
 
 // ── Research Library ─────────────────────────────────────────
 /**
@@ -53,6 +54,7 @@ export function startResearch(s: GameState, id: string): void {
     removeItem(s, c.id, c.qty, from);
   }
   s.research.queue.push({ id, progress: 0, time: researchTime(def, done) * (1 - cut) });
+  moment('research', `began ${def.name}${done ? ` (rank ${done + 1})` : ''}, ${Math.round(researchTime(def, done) * (1 - cut) / 60)} min`);
   toast(cut > 0.01 ? `📚 Study begun — fine reagents cut ${Math.round(cut * 100)}% off the work.` : '📚 Study begun.', 'good');
 }
 
@@ -418,6 +420,7 @@ export function buyUpgrade(s: GameState, id: string): void {
   if (s.gold < cost) return;
   addGold(s, -cost, false);
   s.upgrades[id] = owned + 1;
+  moment('upgrade', `${u.name} to ${owned + 1}`, -cost);
 }
 
 // ── Skills ───────────────────────────────────────────────────
@@ -445,7 +448,9 @@ export function skillStatus(s: GameState, node: SkillNode): { ok: boolean; reaso
 
 export function buySkill(s: GameState, id: string): void {
   const node = SKILL_MAP[id];
-  if (node && skillStatus(s, node).ok) s.skills[id] = (s.skills[id] ?? 0) + 1;
+  if (!node || !skillStatus(s, node).ok) return;
+  s.skills[id] = (s.skills[id] ?? 0) + 1;
+  moment('skill', `${node.name} rank ${s.skills[id]}`);
 }
 
 export function respecCost(s: GameState): number {
@@ -460,6 +465,7 @@ export function respec(s: GameState): void {
   }
   addGold(s, -cost, false);
   s.skills = {};
+  moment('skill', `reset every skill for ${Math.round(cost)} gold`, -cost);
   toast('Skill points refunded.', 'info');
 }
 
@@ -496,6 +502,7 @@ export function joinGuild(s: GameState, id: string): void {
   if (!GUILD_MAP[id] || s.level < GUILD_UNLOCK_LEVEL || s.guild.id === id) return;
   s.guild = { id, rep: 0, contracts: [] };
   toast(`You joined ${GUILD_MAP[id].name}!`, 'epic');
+  moment('unlock', `joined ${GUILD_MAP[id].name}`);
 }
 
 /** Deliver potions to a contract, or claim a finished slay contract (kills are counted automatically in dungeons). */
@@ -554,6 +561,7 @@ export function buyAscNode(s: GameState, id: string): void {
   if (s.asc.stones < cost) return;
   s.asc.stones -= cost;
   s.asc.nodes[id] = owned + 1;
+  moment('ascend', `spent ${cost} stones on ${node.name} rank ${owned + 1}, ${s.asc.stones} left`);
 }
 
 /** Performs the Magnum Opus. Returns the fresh run state, or null if not yet possible. */
@@ -565,5 +573,6 @@ export function ascend(s: GameState): GameState | null {
   next.asc.stones += stones;
   next.asc.total += stones;
   next.asc.count++;
+  moment('ascend', `Great Work #${next.asc.count} for ${stones} stones after ${Math.round(s.stats.runTime / 60)} min, level ${s.level}`, s.stats.runGold);
   return next;
 }

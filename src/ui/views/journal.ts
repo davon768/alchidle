@@ -10,6 +10,7 @@ import { fmt, fmtTime, setNotation } from '../../core/format';
 import { act, closeModal, openModal, refresh, sectionTitle } from '../common';
 import { domNodes, heapMB, looksExternal, rendersPerSecond, runtime } from '../../core/diagnostics';
 import { buildReport, downloadReport, logStalls } from '../../core/log';
+import { clearTelemetry, downloadTape, telemetrySize } from '../../core/telemetry';
 
 function showExport(): void {
   const code = exportSave(game.s);
@@ -125,6 +126,23 @@ export function journalView(s: GameState): TemplateResult {
         drew, every error and freeze, and a summary of your save — no items, no save data. If something looked
         wrong or the tab locked up, grab it before reloading: a reload starts the log over.</div>
       <div class="dim">Elements should settle at a few hundred and stay there. A peak that keeps climbing the longer you play is the signature of a leak — that is the number worth reporting.</div>
+    </div>
+
+    ${sectionTitle('📈 Play recording', 'A rolling record of how the game is actually going, for balance')}
+    <div class="card">
+      <div class="stat-grid">
+        <div>🕐 ${telemetrySize().hours}h covered</div>
+        <div>📊 ${fmt(telemetrySize().minutes)} minute snapshots</div>
+        <div>⭐ ${fmt(telemetrySize().moments)} moments</div>
+      </div>
+      <div class="row">
+        <button class="btn primary" @click=${() => { downloadTape(game.s); toast('Play recording saved.', 'good'); }}>⬇ Download recording</button>
+        <button class="btn" @click=${act(() => { clearTelemetry(); toast('Recording cleared — starting fresh.', 'info'); })}>Start over</button>
+      </div>
+      <div class="dim small">A snapshot a minute of what you earned and from where, what you made, and what
+        sat idle — plus every purchase, talent, level, ascension, relic and death. It survives reloads and
+        covers about half a day, so it can answer questions a single session cannot: whether a system ever
+        pays, where a run slows down, what is quietly doing nothing.</div>
     </div>
 
     ${sectionTitle('⚙️ Settings & Save')}

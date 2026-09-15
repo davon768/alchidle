@@ -22,6 +22,7 @@ import { tickStaff, unlockApprentice, workXp } from './staff';
 import { noteStarved as recordStarved, recordIncome, type IncomeSource } from './ledger';
 import { kitReserve, tickParty } from './party';
 import { bestPlant, tickAutomation } from './automation';
+import { moment, tickTelemetry } from './telemetry';
 
 // ── Notifications ────────────────────────────────────────────
 export type ToastKind = 'info' | 'good' | 'warn' | 'epic';
@@ -165,6 +166,7 @@ export function gainXp(s: GameState, m: Mods, amount: number): void {
     s.level++;
     need = xpToNext(s.level);
     toast(`Level up! You are now level ${s.level}.`, 'epic');
+    moment('level', `reached level ${s.level}`);
   }
 }
 
@@ -603,6 +605,7 @@ export function tickResearch(s: GameState, m: Mods, dt: number): void {
     const def = RESEARCH_MAP[st.id];
     if (!def) continue;
     toast(`📚 Research complete: ${def.icon} ${def.name}!`, 'epic');
+    moment('research', `finished ${def.name}`);
     if (def.unlocksRole) unlockApprentice(s, def.unlocksRole);
   }
 }
@@ -759,6 +762,7 @@ export function tick(s: GameState, dt: number): void {
   tickParty(s, m, dt);
   // Last: apprentices act on the state the rest of the tick just produced.
   tickAutomation(s, m, dt);
+  tickTelemetry(s, dt, quiet);
 }
 
 export interface OfflineSummary {
