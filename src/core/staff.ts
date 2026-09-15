@@ -39,11 +39,19 @@ export function pointsSpent(a: Apprentice): number {
 
 export const pointsFree = (a: Apprentice): number => pointsEarned(a) - pointsSpent(a);
 
-/** Whether a node can be bought right now, and why not. */
-export function nodeStatus(a: Apprentice, node: ApprenticeNode): { ok: boolean; reason: string; cost: number } {
+/**
+ * Whether a node can be bought right now, and why not.
+ *
+ * `asc` is the number of Great Works performed: the deepest talents in every tree are judgement rather
+ * than capacity, and they stay shut until the player has been round at least once.
+ */
+export function nodeStatus(a: Apprentice, node: ApprenticeNode, asc = 0): { ok: boolean; reason: string; cost: number } {
   const rank = a.nodes[node.id] ?? 0;
   const cost = nodeRankCost(node, rank);
   if (node.maxRank > 0 && rank >= node.maxRank) return { ok: false, reason: 'Fully learned', cost };
+  if (node.minAsc && asc < node.minAsc) {
+    return { ok: false, reason: `Opens after ${node.minAsc} ascension${node.minAsc > 1 ? 's' : ''}`, cost };
+  }
   if (pointsSpent(a) < node.row * APPR_ROW_POINTS) {
     return { ok: false, reason: `Spend ${node.row * APPR_ROW_POINTS} points in this tree first`, cost };
   }
@@ -55,7 +63,7 @@ export function learnNode(s: GameState, role: RoleId, nodeId: string): void {
   const a = s.staff.crew[role];
   const node = NODE_MAP[nodeId];
   if (!a || !node || roleOfNode[nodeId] !== role) return;
-  const status = nodeStatus(a, node);
+  const status = nodeStatus(a, node, s.asc.count);
   if (!status.ok) {
     if (status.reason) toast(status.reason, 'warn');
     return;

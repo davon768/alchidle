@@ -1,6 +1,9 @@
 import { html, type TemplateResult } from 'lit-html';
 import type { GameState, Mods } from '../../core/types';
-import { ASC_GOLD_GROWTH, ASC_NODES, STONE_RESONANCE, ascCost, ascGoldTarget, ascStatus, startGoldFor, stonesFor } from '../../data/ascension';
+import {
+  ASC_GOLD_GROWTH, ASC_NODES, STONE_RESONANCE, ascCost, ascGoldTarget, ascStatus, startGoldFor,
+  stoneBreakdown, stonesFor,
+} from '../../data/ascension';
 import { ascend, buyAscNode } from '../../core/actions';
 import { describeEffects } from '../../core/mods';
 import { game } from '../../core/game';
@@ -32,8 +35,38 @@ function confirmAscend(stones: number): void {
   </div>`);
 }
 
+/**
+ * Why this Great Work is worth what it is. The formula weighs every system, so the screen has to show
+ * that — a single number would leave the whole point invisible.
+ */
+function stonePanel(s: GameState, m: Mods): TemplateResult {
+  const { sources, total } = stoneBreakdown(s, m.stoneGain);
+  const earned = sources.filter((x) => x.stones > 0.004).sort((a, b) => b.stones - a.stones);
+  const missing = sources.filter((x) => x.stones <= 0.004);
+  return html`<div class="card">
+    <div class="row between">
+      <h3>💎 What this run is worth</h3>
+      <span class="dim">${total.toFixed(2)} stones before rounding</span>
+    </div>
+    <div class="muted small">Every system counts, each on its own curve — twice the work is about 1.4× the
+      stones, never 2×. Breadth pays more than depth in any one thing.</div>
+    <div class="col" style="gap:4px">
+      ${earned.map((x) => html`<div class="ledger-row">
+        <span class="ledger-name">${x.icon} ${x.label}</span>
+        ${bar(Math.min(1, x.stones / Math.max(0.001, earned[0].stones)), undefined, '', 'tall')}
+        <span class="ledger-num">${fmt(Math.round(x.amount))}</span>
+        <span class="dim ledger-pct">+${x.stones.toFixed(2)}</span>
+      </div>`)}
+    </div>
+    ${missing.length
+      ? html`<div class="dim small">Nothing yet from: ${missing.map((x) => `${x.icon} ${x.label}`).join(' · ')}.
+          Any of them would add to the next Great Work.</div>`
+      : html`<div class="small good">Every strand of the work contributed to this one.</div>`}
+  </div>`;
+}
+
 export function ascendView(s: GameState, m: Mods): TemplateResult {
-  const gain = stonesFor(s.stats.runGold, m.stoneGain, s.asc.count);
+  const gain = stonesFor(s, m.stoneGain);
   const need = ascStatus(s);
   return html`<div class="view">
     ${sectionTitle('🌟 Magnum Opus', 'Reset your run to earn Philosopher\'s Stones — permanent power that makes every future run faster.')}
@@ -54,6 +87,8 @@ export function ascendView(s: GameState, m: Mods): TemplateResult {
               Stones scale with the square root of gold earned, and every Great Work after this one asks for
               ${ASC_GOLD_GROWTH}× the gold and three more levels — because so much of what earns that gold is permanent.</div>`}
     </div>
+
+    ${stonePanel(s, m)}
 
     ${sectionTitle('💎 Eternal Perks', 'Bought with stones. Never reset.')}
     <div class="grid">

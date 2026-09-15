@@ -15,19 +15,24 @@ const studyFor = (role: RoleId) => RESEARCH.find((r) => r.unlocksRole === role);
 function nodeButton(s: GameState, role: RoleId, node: ApprenticeNode): TemplateResult {
   const a = s.staff.crew[role]!;
   const rank = a.nodes[node.id] ?? 0;
-  const status = nodeStatus(a, node);
+  const status = nodeStatus(a, node, s.asc.count);
   const maxed = node.maxRank > 0 && rank >= node.maxRank;
+  // A rebirth-gated talent is shown, not hidden: knowing what the next Great Work opens is the point.
+  const rebirthLocked = !!node.minAsc && s.asc.count < node.minAsc;
   return html`<div class="appr-node ${maxed ? 'maxed' : status.ok ? 'ready' : 'locked'}">
     <div class="row between">
-      <b class="small">${node.icon} ${node.name}</b>
+      <b class="small">${rebirthLocked ? '🌟' : node.icon} ${node.name}</b>
       <span class="dim">${rank}${node.maxRank > 0 ? `/${node.maxRank}` : ' ∞'}</span>
     </div>
     <div class="small good">${describeNode(node, 1)}${node.maxRank !== 1 ? ' each' : ''}</div>
     ${rank > 0 ? html`<div class="dim">Now: ${describeNode(node, rank)}</div>` : ''}
     ${node.flavor ? html`<div class="dim">${node.flavor}</div>` : ''}
+    ${rebirthLocked
+      ? html`<div class="small warn">🌟 Opens after ${node.minAsc} Great Work${node.minAsc! > 1 ? 's' : ''} — you have done ${s.asc.count}.</div>`
+      : ''}
     <button class="btn small ${status.ok ? 'primary' : ''}" ?disabled=${!status.ok}
       title=${status.reason} @click=${act((st) => learnApprenticeNode(st, role, node.id))}>
-      ${maxed ? 'Fully learned' : `${status.cost} point${status.cost > 1 ? 's' : ''}`}
+      ${maxed ? 'Fully learned' : rebirthLocked ? 'Not yet' : `${status.cost} point${status.cost > 1 ? 's' : ''}`}
     </button>
   </div>`;
 }

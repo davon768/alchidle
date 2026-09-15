@@ -1,5 +1,5 @@
 import type { GameState } from './types';
-import { freshCombat, newState, SAVE_VERSION } from './state';
+import { freshCombat, newState, snapshotRun, SAVE_VERSION } from './state';
 import { DUNGEON_MAP } from '../data/combat';
 import { BELT_MAX } from './combat';
 import type { RoleId } from './types';
@@ -130,6 +130,12 @@ function migrate(raw: LegacySave): GameState {
   if (s.guild.id && !GUILD_MAP[s.guild.id]) s.guild = { id: null, rep: 0, contracts: [] };
   s.guild.contracts = s.guild.contracts.filter((c) => (c.recipeId ? !!RECIPE_MAP[c.recipeId] : true));
   if (s.combat.dungeonId && !DUNGEON_MAP[s.combat.dungeonId]) s.combat = freshCombat();
+  // v10 → v11: the Great Work now weighs what a *run* did, measured against a snapshot taken when the
+  // run began. A save from before this has no snapshot, and without one every lifetime tally — hundreds
+  // of thousands of brews — would read as this run's work and pay out a windfall. Start counting now.
+  // Test the *raw* save, not the merged object: mergeDefaults fills runStart from a fresh state, so the
+  // merged copy always has one (all zeros) and an "is it empty" check never fires.
+  if (raw.runStart === undefined) s.runStart = snapshotRun(s);
   s.version = SAVE_VERSION;
   return s;
 }

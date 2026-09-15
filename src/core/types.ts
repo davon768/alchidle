@@ -39,6 +39,32 @@ export interface Mods {
   autoSell: number;
   autoScav: number;
   autoRitual: number;
+  // Judgement, not repetition: these let an apprentice decide rather than just tend more of the same.
+  // Each is a flag (>= 1 means on) and, like every auto stat, is zeroed unless that craft is staffed.
+  autoPlant: number;
+  autoRotate: number;
+  autoSeeds: number;
+  autoRecipe: number;
+  autoSpread: number;
+  autoBuy: number;
+  autoRoute: number;
+  autoSupply: number;
+  autoRift: number;
+  autoSellAll: number;
+  autoContract: number;
+  autoTrade: number;
+  autoBelt: number;
+  autoEquip: number;
+  autoGear: number;
+  autoDungeon: number;
+  autoReagent: number;
+  autoStudy: number;
+  autoFeed: number;
+  autoKit: number;
+  autoHire: number;
+  autoWait: number;
+  autoGoals: number;
+  autoSkills: number;
   apprenticeXp: number;
   // Research Library
   // Adventurer company
@@ -146,6 +172,7 @@ export interface Stats {
   spellsCast: number;
   events: number;
   bestQuality: number; // best potion quality tier ever brewed
+  runQuality: number; // best tier brewed *this run* — a lifetime max cannot say what this run achieved
   delves: number; // Rift delves the company has run
 }
 
@@ -304,6 +331,11 @@ export interface GameState {
   prof: Record<string, number>; // proficiency XP per plant / potion / reagent / forge tier (permanent)
   /** Lifetime gold earned per source — see core/ledger.ts. The recent window is in memory, not here. */
   income: Record<string, number>;
+  /**
+   * Every carried-over counter as it stood when this run began. Most of the game's tallies are lifetime,
+   * so "what did this run do" is the difference against this — which is what the Great Work now weighs.
+   */
+  runStart: Record<string, number>;
   guild: { id: string | null; rep: number; contracts: Contract[] };
   trade: { offers: TradeOffer[]; timer: number };
   asc: { stones: number; total: number; count: number; nodes: Record<string, number> };

@@ -27,6 +27,7 @@ export function baseMods(): Mods {
     xpGain: 1, stoneGain: 1, offlineHours: 8,
     plots: 2, cauldrons: 1, expSlots: 1, skillPoints: 0, startGold: 0,
     autoHarvest: 0, autoBrew: 0, autoSell: 0, autoScav: 0, autoRitual: 0, apprenticeXp: 1,
+    autoPlant: 0, autoRotate: 0, autoSeeds: 0, autoRecipe: 0, autoSpread: 0, autoBuy: 0, autoRoute: 0, autoSupply: 0, autoRift: 0, autoSellAll: 0, autoContract: 0, autoTrade: 0, autoBelt: 0, autoEquip: 0, autoGear: 0, autoDungeon: 0, autoReagent: 0, autoStudy: 0, autoFeed: 0, autoKit: 0, autoHire: 0, autoWait: 0, autoGoals: 0, autoSkills: 0,
     partySlots: 0, kitSlots: 2, delveSpeed: 1, partyPower: 1, autoDelve: 0,
     researchSlots: 1, researchSpeed: 1, familiarSlots: 1,
     attack: 0, attackMult: 1, defense: 0, defenseMult: 1, maxHp: 0, hpMult: 1,
@@ -106,6 +107,14 @@ export function computeMods(s: GameState): Mods {
   m.autoSell = tended.shopkeeper ? m.autoSell + tended.shopkeeper : 0;
   m.autoRitual = tended.scribe ? m.autoRitual + tended.scribe : 0;
   m.autoDelve = tended.captain ? m.autoDelve + tended.captain : 0;
+  // An apprentice's judgement leaves with them: no Gardener, no Gardener's decisions.
+  if (!tended.gardener) { m.autoPlant = 0; m.autoRotate = 0; m.autoSeeds = 0; }
+  if (!tended.brewer) { m.autoRecipe = 0; m.autoSpread = 0; m.autoBuy = 0; }
+  if (!tended.scout) { m.autoRoute = 0; m.autoSupply = 0; m.autoRift = 0; }
+  if (!tended.shopkeeper) { m.autoSellAll = 0; m.autoContract = 0; m.autoTrade = 0; }
+  if (!tended.squire) { m.autoBelt = 0; m.autoEquip = 0; m.autoGear = 0; m.autoDungeon = 0; }
+  if (!tended.scribe) { m.autoReagent = 0; m.autoStudy = 0; m.autoFeed = 0; }
+  if (!tended.captain) { m.autoKit = 0; m.autoHire = 0; m.autoWait = 0; }
 
   m.seedDiscount = Math.min(0.75, m.seedDiscount);
   m.doubleBrew = Math.min(1, m.doubleBrew);
@@ -163,6 +172,30 @@ export const STAT_INFO: Record<StatKey, { label: string; fmt: StatFormat }> = {
   autoSell: { label: 'potion types your Shopkeepers auto-sell', fmt: 'flat' },
   autoScav: { label: 'parties tended by your Scouts', fmt: 'flat' },
   autoRitual: { label: 'rituals your Scribes keep running', fmt: 'flat' },
+  autoPlant: { label: 'beds your Gardeners plant unasked', fmt: 'flag' },
+  autoRotate: { label: 'Gardeners replanting the best herb', fmt: 'flag' },
+  autoSeeds: { label: 'Gardeners sowing and breeding strains', fmt: 'flag' },
+  autoRecipe: { label: 'Brewers choosing the recipe', fmt: 'flag' },
+  autoSpread: { label: 'Brewers spreading sales across recipes', fmt: 'flag' },
+  autoBuy: { label: 'Brewers restocking cheap ingredients', fmt: 'flag' },
+  autoRoute: { label: 'Scouts choosing the destination', fmt: 'flag' },
+  autoSupply: { label: 'Scouts fetching what the cauldrons lack', fmt: 'flag' },
+  autoRift: { label: 'Scouts pushing the Rift deeper', fmt: 'flag' },
+  autoSellAll: { label: 'Shopkeepers selling every potion', fmt: 'flag' },
+  autoContract: { label: 'Shopkeepers delivering contracts', fmt: 'flag' },
+  autoTrade: { label: 'Shopkeepers taking trade offers', fmt: 'flag' },
+  autoBelt: { label: 'Squires packing your potion belt', fmt: 'flag' },
+  autoEquip: { label: 'Squires equipping better gear', fmt: 'flag' },
+  autoGear: { label: 'Squires salvaging and enhancing', fmt: 'flag' },
+  autoDungeon: { label: 'Squires choosing the dungeon', fmt: 'flag' },
+  autoReagent: { label: 'Scribes crafting reagents', fmt: 'flag' },
+  autoStudy: { label: 'Scribes starting studies', fmt: 'flag' },
+  autoFeed: { label: 'Scribes feeding your familiars', fmt: 'flag' },
+  autoKit: { label: 'Captains stocking the supply kit', fmt: 'flag' },
+  autoHire: { label: 'Captains filling empty roster seats', fmt: 'flag' },
+  autoWait: { label: 'Captains waiting for the injured', fmt: 'flag' },
+  autoGoals: { label: 'goal rewards claimed for you', fmt: 'flag' },
+  autoSkills: { label: 'skill points spent for you', fmt: 'flag' },
   apprenticeXp: { label: 'apprentice XP', fmt: 'pct' },
   attack: { label: 'attack', fmt: 'flat' },
   attackMult: { label: 'attack', fmt: 'pct' },

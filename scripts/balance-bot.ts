@@ -84,7 +84,7 @@ export interface BotResult {
   /** Minutes each completed run took, first ascension onwards (only when the bot is allowed to ascend). */
   runMinutes: number[];
   /** What the player actually had in hand the moment the ascension gate opened. */
-  atAscend: { level: number; studies: number; apprentices: number; recipes: number; trade: boolean; guild: boolean; dungeon: boolean; goldPerSec: number } | null;
+  atAscend: { level: number; studies: number; apprentices: number; recipes: number; trade: boolean; guild: boolean; dungeon: boolean; goldPerSec: number; act: Record<string, number> } | null;
   /** The adventurer company: how deep it got, how many signed on, and how many relic ranks it holds. */
   partyDepth: number;
   adventurers: number;
@@ -190,7 +190,7 @@ function tendStaff(s: GameState, _m: Mods, _opts: BotOptions): void {
     for (let guard = 0; guard < 12; guard++) {
       if (pointsFree(a) <= 0) break;
       const next = role.tree
-        .map((n) => ({ n, st: nodeStatus(a, n) }))
+        .map((n) => ({ n, st: nodeStatus(a, n, s.asc.count) }))
         .filter((x) => x.st.ok)
         .sort((x, y) => x.st.cost - y.st.cost)[0];
       if (!next) break;
@@ -273,6 +273,15 @@ export function runBot(opts: BotOptions): BotResult {
         guild: s.level >= 8,
         dungeon: s.level >= 10,
         goldPerSec: +(s.stats.runGold / Math.max(1, t)).toFixed(1),
+        // What the run actually *did*, for calibrating a stone formula that is not just gold.
+        act: {
+          gold: Math.round(s.stats.runGold), brewed: Math.round(s.stats.brewed), harvested: Math.round(s.stats.harvested),
+          expeditions: s.stats.expeditions, kills: s.stats.kills, bosses: s.stats.bosses,
+          contracts: s.stats.contracts, trades: s.stats.trades, spells: s.stats.spellsCast, delves: s.stats.delves,
+          studies: Object.values(s.research.done).reduce((x, y) => x + y, 0),
+          bestFloor: Math.max(0, ...Object.values(s.dungeons)), bestQuality: s.stats.bestQuality,
+          profTotal: Object.keys(s.prof).length, strains: Object.keys(s.catalogue).length, partyDepth: s.party.depth,
+        },
       };
       if (opts.stopAtAscend) break;
     }

@@ -1,4 +1,5 @@
 import type { Effect, GameState } from '../core/types';
+import { totalProficiency } from '../core/state';
 
 export interface AscNode {
   id: string;
@@ -59,13 +60,82 @@ export function ascStatus(s: GameState): { ok: boolean; goldNeed: number; levelN
 export const STONE_RESONANCE = 0.02;
 
 /**
- * 3 stones at the first target, then the square root of gold earned (4× gold = 2× stones). Measured
- * against the *first* target rather than the current one, so a run that clears a bigger gate is worth
- * more stones: roughly 1.6× per ascension at the minimum.
+ * What the Great Work is worth.
+ *
+ * Gold used to be the only thing weighed, which said that a run spent brewing Legendaries, clearing the
+ * Citadel, breeding strains and finishing studies was worth exactly as much as one that sold herbs. Every
+ * system now contributes, each measured against what this run did rather than a lifetime total, and each
+ * on its own square-root curve so no single one can be farmed into dominance.
+ *
+ * Breadth is a **bonus, not a gate**. Wealth is still the backbone — it is what the gate asks for — and a
+ * player who ignores combat entirely still ascends perfectly well, just for fewer stones than one who
+ * does everything. Requiring every system would turn a preference into a punishment.
  */
-export function stonesFor(runGold: number, stoneGain: number, count = 0): number {
-  if (runGold < ascGoldTarget(count)) return 0;
-  return Math.floor(3 * Math.sqrt(runGold / ASC_MIN_GOLD) * stoneGain);
+export interface StoneSource {
+  id: string;
+  label: string;
+  icon: string;
+  /** What this run did. */
+  amount: number;
+  /** The amount a first ascension typically reaches, so one unit of benchmark is one unit of weight. */
+  bench: number;
+  weight: number;
+  stones: number;
+}
+
+/** Each strand of the Great Work, and what a first ascension usually looks like on it. */
+const STONE_WEIGHTS: { id: string; label: string; icon: string; bench: number; weight: number }[] = [
+  { id: 'wealth', label: 'Gold earned', icon: '🪙', bench: ASC_MIN_GOLD, weight: 1.1 },
+  { id: 'craft', label: 'Potions brewed', icon: '⚗️', bench: 4000, weight: 0.45 },
+  { id: 'quality', label: 'Finest bottle', icon: '✦', bench: 3, weight: 0.35 },
+  { id: 'garden', label: 'Herbs harvested', icon: '🌿', bench: 14000, weight: 0.3 },
+  { id: 'explore', label: 'Expeditions run', icon: '🧭', bench: 110, weight: 0.3 },
+  { id: 'study', label: 'Studies finished', icon: '📚', bench: 7, weight: 0.35 },
+  { id: 'mastery', label: 'Proficiency gained', icon: '🎖️', bench: 250, weight: 0.4 },
+  { id: 'combat', label: 'Monsters slain', icon: '⚔️', bench: 600, weight: 0.35 },
+  { id: 'depth', label: 'Deepest floor', icon: '🏰', bench: 15, weight: 0.3 },
+  { id: 'commerce', label: 'Contracts & trades', icon: '📜', bench: 25, weight: 0.3 },
+  { id: 'magic', label: 'Spells cast', icon: '🔮', bench: 250, weight: 0.25 },
+  { id: 'company', label: 'Rift delves', icon: '🏕️', bench: 30, weight: 0.3 },
+  { id: 'strains', label: 'Strains discovered', icon: '🌾', bench: 14, weight: 0.2 },
+];
+
+/** How much of each strand this run actually produced. */
+export function runActivity(s: GameState): Record<string, number> {
+  const was = s.runStart ?? {};
+  const since = (k: string, now: number) => Math.max(0, now - (was[k] ?? 0));
+  return {
+    wealth: s.stats.runGold,
+    craft: since('brewed', s.stats.brewed),
+    quality: s.stats.runQuality ?? 0,
+    garden: since('harvested', s.stats.harvested),
+    explore: since('expeditions', s.stats.expeditions),
+    study: since('studies', Object.values(s.research.done).reduce((a, b) => a + b, 0)),
+    mastery: since('profLevels', totalProficiency(s)),
+    combat: since('kills', s.stats.kills),
+    depth: Math.max(0, ...Object.values(s.dungeons), 0),
+    commerce: since('contracts', s.stats.contracts) + since('trades', s.stats.trades),
+    magic: since('spellsCast', s.stats.spellsCast),
+    company: since('delves', s.stats.delves),
+    strains: since('strains', Object.keys(s.catalogue).length),
+  };
+}
+
+/** The full breakdown, so the Magnum Opus screen can show its working rather than one number. */
+export function stoneBreakdown(s: GameState, stoneGain: number): { sources: StoneSource[]; total: number } {
+  const act = runActivity(s);
+  const sources = STONE_WEIGHTS.map((w) => {
+    const amount = act[w.id] ?? 0;
+    // Square root: doing twice as much is worth about 1.4 times as many stones, never twice.
+    const stones = w.weight * Math.sqrt(Math.max(0, amount) / w.bench) * stoneGain;
+    return { ...w, amount, stones };
+  });
+  return { sources, total: sources.reduce((a, x) => a + x.stones, 0) };
+}
+
+export function stonesFor(s: GameState, stoneGain: number): number {
+  if (!ascStatus(s).ok) return 0;
+  return Math.max(1, Math.floor(stoneBreakdown(s, stoneGain).total));
 }
 
 export const ASC_NODES: AscNode[] = [
@@ -99,6 +169,10 @@ export const ASC_NODES: AscNode[] = [
     effects: [{ stat: 'attackMult', value: 0.1 }, { stat: 'defenseMult', value: 0.1 }, { stat: 'hpMult', value: 0.1 }, { stat: 'spellMult', value: 0.1 }] },
   { id: 'arcane_memory', name: 'Arcane Memory', icon: '📘', desc: 'Keep learned spells and their ranks when you ascend', max: 1, baseCost: 10, growth: 1,
     effects: [] },
+  { id: 'diligent', name: 'Diligent Hands', icon: '🎁', desc: 'Goal rewards claim themselves', max: 1, baseCost: 6, growth: 1,
+    effects: [{ stat: 'autoGoals', value: 1 }] },
+  { id: 'instinct', name: 'Trained Instinct', icon: '📜', desc: 'Skill points spend themselves on the cheapest node available', max: 1, baseCost: 9, growth: 1,
+    effects: [{ stat: 'autoSkills', value: 1 }] },
   { id: 'heirloom', name: 'Heirloom Armory', icon: '🗝️', desc: 'Keep your equipped gear when you ascend', max: 1, baseCost: 12, growth: 1,
     effects: [] },
 ];

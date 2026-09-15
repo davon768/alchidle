@@ -385,7 +385,7 @@ export function affordableUnits(s: GameState, id: string): number {
  */
 export function affordableLevels(s: GameState, id: string, cap = 1000): number {
   const u = UPGRADE_MAP[id];
-  if (!u || u.level > s.level) return 0;
+  if (!u || !upgradeOpen(s, u)) return 0;
   const owned = s.upgrades[id] ?? 0;
   let gold = s.gold;
   let n = 0;
@@ -412,10 +412,15 @@ export function buyUpgradeMax(s: GameState, id: string, cap = 1000): number {
   return bought;
 }
 
+/** Whether an upgrade is available to buy at all: level reached, and any study it extends finished. */
+export function upgradeOpen(s: GameState, u: { level: number; req?: string }): boolean {
+  return s.level >= u.level && (!u.req || researchDone(s, u.req) > 0);
+}
+
 export function buyUpgrade(s: GameState, id: string): void {
   const u = UPGRADE_MAP[id];
   const owned = s.upgrades[id] ?? 0;
-  if (!u || (u.max > 0 && owned >= u.max) || u.level > s.level) return;
+  if (!u || (u.max > 0 && owned >= u.max) || !upgradeOpen(s, u)) return;
   const cost = upgradeCost(u, owned);
   if (s.gold < cost) return;
   addGold(s, -cost, false);
@@ -561,7 +566,7 @@ export function buyAscNode(s: GameState, id: string): void {
 /** Performs the Magnum Opus. Returns the fresh run state, or null if not yet possible. */
 export function ascend(s: GameState): GameState | null {
   if (!ascStatus(s).ok) return null;
-  const stones = stonesFor(s.stats.runGold, computeMods(s).stoneGain, s.asc.count);
+  const stones = stonesFor(s, computeMods(s).stoneGain);
   if (stones <= 0) return null;
   const next = newState(s);
   next.asc.stones += stones;

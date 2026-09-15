@@ -4,6 +4,7 @@ import { game } from '../core/game';
 import { item, type ItemKind } from '../data/items';
 import { qualCounts } from '../core/engine';
 import { quality } from '../data/quality';
+import type { UpgradeGroup } from '../data/upgrades';
 import { fmt } from '../core/format';
 
 export type TabId =
@@ -21,6 +22,8 @@ export const ui = {
   forgeSlot: 'weapon' as GearSlot,
   spellTab: 'combat' as 'combat' | 'ritual',
   profFilter: 'all' as 'all' | 'plant' | 'potion' | 'reagent' | 'forge',
+  /** Which Workshop section is shown; 'all' groups them under headings. */
+  shopGroup: 'all' as 'all' | UpgradeGroup,
   /** Potion chosen for feeding familiars; falls back to whatever is on hand. */
   feedPotion: '' as string,
   /** Item keys gained since the Inventory tab was last open (shows NEW badges). */

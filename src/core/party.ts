@@ -247,6 +247,9 @@ export function tickParty(s: GameState, m: Mods, dt: number): void {
   for (let g = 0; t > 0 && g < 50; g++) {
     if (!p.delve) {
       if (!p.repeat || m.autoDelve < 1 || !canDelve(s, m)) break;
+      // Forced Rest: a Captain with the talent waits for the injured instead of sending a thin party
+      // into a depth that will only hurt someone else.
+      if (m.autoWait >= 1 && p.roster.some((a) => a.rest > 0)) break;
       if (!startDelve(s, m)) break;
     }
     const d = p.delve;

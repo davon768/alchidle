@@ -238,7 +238,7 @@ function viewFor(tab: TabId, s: GameState, m: Mods): TemplateResult {
     case 'armory': return armoryView(s, m);
     case 'trade': return tradeView(s, m);
     case 'guild': return guildView(s, m);
-    case 'workshop': return workshopView(s);
+    case 'workshop': return workshopView(s, m);
     case 'library': return libraryView(s, m);
     case 'familiars': return familiarsView(s, m);
     case 'skills': return skillsView(s, m);

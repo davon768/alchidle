@@ -1,7 +1,8 @@
 import type { CombatState, GameState, Stats } from './types';
 import { startGoldFor } from '../data/ascension';
+import { profLevel } from '../data/proficiency';
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 /**
  * XP from one level to the next.
@@ -29,7 +30,7 @@ function freshStats(): Stats {
   return {
     runGold: 0, totalGold: 0, bestRunGold: 0, brewed: 0, harvested: 0, expeditions: 0,
     potionsSold: 0, contracts: 0, trades: 0, playTime: 0, runTime: 0,
-    kills: 0, bosses: 0, deaths: 0, gearFound: 0, bestRarity: 0, spellsCast: 0, events: 0, bestQuality: 0, delves: 0,
+    kills: 0, bosses: 0, deaths: 0, gearFound: 0, bestRarity: 0, spellsCast: 0, events: 0, bestQuality: 0, runQuality: 0, delves: 0,
   };
 }
 
@@ -73,6 +74,7 @@ export function newState(prev?: GameState): GameState {
     hotTimer: 90,
     prof: {},
     income: {},
+    runStart: {},
     guild: { id: null, rep: 0, contracts: [] },
     trade: { offers: [], timer: 0 },
     asc: { stones: 0, total: 0, count: 0, nodes: {} },
@@ -134,5 +136,31 @@ export function newState(prev?: GameState): GameState {
       s.nextGearId = prev.nextGearId;
     }
   }
+  s.runStart = snapshotRun(s);
   return s;
+}
+
+/**
+ * The carried-over tallies as this run starts. Everything the Great Work weighs is measured against it,
+ * so a run is judged on what it did rather than on a lifetime total it inherited.
+ */
+export function snapshotRun(s: GameState): Record<string, number> {
+  const keys: (keyof Stats)[] = [
+    'brewed', 'harvested', 'expeditions', 'potionsSold', 'contracts', 'trades',
+    'kills', 'bosses', 'gearFound', 'spellsCast', 'events', 'delves',
+  ];
+  const snap: Record<string, number> = {};
+  for (const k of keys) snap[k] = s.stats[k];
+  snap.studies = Object.values(s.research.done).reduce((a, b) => a + b, 0);
+  snap.profLevels = totalProficiency(s);
+  snap.partyDepth = s.party.depth;
+  snap.strains = Object.keys(s.catalogue).length;
+  return snap;
+}
+
+/** Proficiency levels summed across every track — the game's broadest measure of craft. */
+export function totalProficiency(s: GameState): number {
+  let total = 0;
+  for (const xp of Object.values(s.prof)) total += profLevel(xp);
+  return total;
 }

@@ -179,6 +179,34 @@ the delve in progress does not.
 Bot-measured: first relic inside the first day, depth ~28 after 24 h with two adventurers, and no
 measurable change to the ~90-minute first ascension — the charter costs 120K gold and lands well after it.
 
+### Workshop (reworked in v1.1)
+
+Gold spent on the run you are in, and the one system that had not moved since v0.1: 18 upgrades, none
+above level 20, covering 19 stats. Everything added from v0.5 onwards — potion quality, cross-breeding,
+research, familiars, the whole adventurer company — had no upgrade at all, and a level-60 player had
+nothing left to buy.
+
+Now **43 upgrades reaching level 60**, grouped by the system each one serves (Garden, Cauldrons, Market,
+Expeditions, The Company, Study, Adventure, The Long Game) and rendered as sections with a filter rather
+than one wall of cards. No stretch of levels longer than 12 passes without something new appearing.
+
+Two rules govern what belongs here:
+
+- **It never sells automation.** The `auto*` capacities come from apprentices and nowhere else. Capacity
+  bought with gold means *space* — another bed, another cauldron, another seat on the company charter —
+  never someone to tend it.
+- **Flat stats stay with gear, slots stay earned.** The Workshop sells multipliers (`attackMult`), gear
+  supplies the flat values (`attack`); research desks, spell slots and skill points are earned through
+  the Library, guilds and levels. `startGold` and `skillPoints` belong to the ascension tree, since a
+  per-run purchase of them would reset before it paid.
+
+Upgrades that extend a system a study opens carry a `req` (the research id) and stay locked until it is
+finished — otherwise a Bunkhouse would open the company for gold alone, skipping the charter and the
+Captain that comes with it. The card says which study it is waiting on.
+
+Upgrade ids are unchanged, so existing saves keep every level they bought — including `ledger`, renamed
+to Guild Standing now that the Ledger is a tab.
+
 ### The Ledger (v1.1): income attribution and stalls
 
 Sixteen systems feed one purse and nothing said which of them was carrying a run. The Ledger tags every
@@ -235,6 +263,37 @@ represented, and leave the points unspent so the tree is laid out fresh.
 **Backlog ideas for this system:** specializations that branch a tree at level 30; lessons that convert
 ingredients into XP bursts; apprentices as dungeon companions; apprentice-driven events.
 
+### Apprentice judgement (v1.2): the automation ladder
+
+Apprentice trees ran 5–7 nodes and ~60 points against the 60 you earned by level 60 — effectively
+finished, with the endless node as a dump. And every `auto*` stat was *repetition*: tending more of a
+thing you had already set up. Everything requiring **judgement** was still a click.
+
+Trees now run to **level 100** with 8–11 nodes each, and the deep end of every one is judgement rather
+than capacity: a Gardener choosing what to plant, a Brewer choosing what to brew, a Scout choosing where
+to go. Those talents carry a `minAsc` and stay shut until the player has been round at least once — a
+first run stays hands-on, and each rebirth opens another layer of "stop clicking this".
+
+| Apprentice | What it can now decide |
+|---|---|
+| 🧑‍🌾 Gardener | plants empty beds · replants the *best* herb · sows and breeds strains |
+| 🧑‍🔬 Brewer | full auto-stir · picks the most profitable brew · spreads across recipes to spare demand · buys missing cheap ingredients |
+| 🧝 Scout | routes to the best zone · fetches what the cauldrons are starved of · pushes the Rift |
+| 🧑‍💼 Shopkeeper | sells everything above the reserve · delivers contracts · takes good trade offers |
+| 🤺 Squire | packs the belt · equips better gear · salvages and enhances · picks the dungeon |
+| 🧙 Scribe | crafts reagents · starts studies · feeds familiars |
+| 🎖️ Captain | stocks the supply kit · recruits to empty seats · waits for the injured |
+
+Goal claiming and skill-point spending belong to no apprentice, so they are eternal perks (**Diligent
+Hands**, **Trained Instinct**). Ascension itself is deliberately *not* automatable: one decision per run
+stays yours.
+
+Everything lives in `core/automation.ts`, runs once a second from `tick`, and calls the same functions a
+click would — so an automated sale, delve or study is identical to a manual one, ledger tag included.
+Order matters and is the one thing that bit during the build: every consumer of potions (belt, supply
+kit, familiars, contracts) runs *before* the Shopkeeper sells the surplus, or Open Books empties the
+shelves each second and the Quartermaster never sees a bottle.
+
 ### Proficiency (v0.3): replaces recipe mastery
 
 Every **plant, potion, spell reagent and forge tier** has its own proficiency, levels 1–100 (58 tracks), earned by making that item. XP per action scales with production time, so a 6-second potion and a 10-minute potion level at a similar real-time pace. The curve grows 8.5% per level: about 450K XP to reach 100. The first milestones arrive within minutes to an hour, level 50 takes hours of focus, and level 100 takes **dozens of hours of dedicated production per item**. Maxing all 58 tracks is a very long-term goal. Proficiency is **permanent** through ascension. "Proficiency gain" (the former mastery-gain stat) speeds it up.
@@ -268,6 +327,34 @@ so clearing a bigger gate is worth more stones: about 1.6× per ascension at the
 
 The level requirement is the part that answers "I ascended before I unlocked the merchant". Gold can be
 rushed with permanent multipliers; levels cannot, because every level is content the run has to re-walk.
+
+### What the Great Work is worth (v1.2)
+
+Stones used to be `3 × √(runGold / 200K)` — which said a run spent brewing Legendaries, clearing the
+Citadel, breeding strains and finishing studies was worth exactly as much as one that sold herbs.
+
+Thirteen strands now contribute, each measured against **what this run did** and each on its own square
+root, so twice the work is about 1.4× the stones and no single system can be farmed into dominance:
+
+| | | |
+|---|---|---|
+| 🪙 Gold earned | ⚗️ Potions brewed | ✦ Finest bottle |
+| 🌿 Herbs harvested | 🧭 Expeditions run | 📚 Studies finished |
+| 🎖️ Proficiency gained | ⚔️ Monsters slain | 🏰 Deepest floor |
+| 📜 Contracts & trades | 🔮 Spells cast | 🏕️ Rift delves |
+| 🌾 Strains discovered | | |
+
+Benchmarks were calibrated against a measured first ascension (600K gold, 4,055 brewed, 13,780 harvested,
+113 expeditions, 7 studies), so a run played the way the balance bot plays still pays **3 stones** — the
+old value. A run that also fights, trades, casts and delves pays about **45% more**.
+
+**Breadth is a bonus, not a gate.** Wealth stays the backbone, because wealth is what the gate asks for.
+The bot reaches its first ascension with zero kills, contracts, trades, spells and delves, and that is a
+legitimate way to play — requiring every system would turn a preference into a punishment.
+
+Most of the game's tallies are lifetime, so "what this run did" is measured against `s.runStart`, a
+snapshot taken when the run begins. The Magnum Opus screen shows the full breakdown; a single number
+would leave the entire point invisible.
 
 ### What persists through ascension
 Stones and eternal perks, proficiency, achievements, lifetime stats, settings, your potion belt layout, research, the seed catalogue and strain ranks, familiars, apprentices, and the adventurer company (roster, relics and depth). **Arcane Memory** also keeps spells, and **Heirloom Armory** keeps equipped gear. Everything else resets.

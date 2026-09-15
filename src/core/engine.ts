@@ -21,6 +21,7 @@ import { tickEvents } from './events';
 import { tickStaff, unlockApprentice, workXp } from './staff';
 import { noteStarved as recordStarved, recordIncome, type IncomeSource } from './ledger';
 import { kitReserve, tickParty } from './party';
+import { bestPlant, tickAutomation } from './automation';
 
 // ── Notifications ────────────────────────────────────────────
 export type ToastKind = 'info' | 'good' | 'warn' | 'epic';
@@ -418,6 +419,7 @@ function completeBrew(s: GameState, m: Mods, r: Recipe, banked: number): void {
   s.stats.brewed += out;
   if (tier > 0) {
     s.stats.bestQuality = Math.max(s.stats.bestQuality ?? 0, tier);
+    s.stats.runQuality = Math.max(s.stats.runQuality ?? 0, tier);
     if (tier >= 2) toast(`${r.icon} ${qualityName(tier, r.name)} — a ${quality(tier).name} brew!`, 'epic');
   }
   gainXp(s, m, r.xp * out * (1 + tier * 0.15));
@@ -473,6 +475,13 @@ export function harvestPlot(s: GameState, m: Mods, plot: Plot, idx: number): voi
   // the moment a Gardener took over the plots were never empty, seeds could never be sown, and the
   // tray just filled up: ~50 seeds a day against ~675,000 harvests. A seed is now a permanent upgrade
   // to one bed, kept until you clear it or plant something else there.
+  // Crop Rotation: a Gardener with the talent replants the best herb rather than the one that was there.
+  // A bed carrying a sown strain is left alone — the strain belongs to that herb, and swapping would
+  // quietly destroy seeds the player spent.
+  if (m.autoRotate >= 1 && !plot.trait) {
+    const better = bestPlant(s, m);
+    if (better && better.id !== plot.plantId) plot.plantId = better.id;
+  }
   const cost = tr.free ? 0 : plantCost(s, m, p);
   if (s.gold >= cost) addGold(s, -cost, false);
   else plot.plantId = null;
@@ -748,6 +757,8 @@ export function tick(s: GameState, dt: number): void {
   tickCombat(s, m, dt);
   tickStaff(s, m, dt);
   tickParty(s, m, dt);
+  // Last: apprentices act on the state the rest of the tick just produced.
+  tickAutomation(s, m, dt);
 }
 
 export interface OfflineSummary {
