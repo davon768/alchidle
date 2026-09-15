@@ -206,12 +206,27 @@ per level**; a cost curve growing ×1.28 outruns it by ×1.16 per level, which c
 over forty levels. The top of the list had ended up priced at 3.8e13 against an economy earning ~1.3e4 a
 minute — about 420,000 runs' worth of gold for one card.
 
-The method now: measure gold per minute at each level the bot reaches (the bot reports this), take the
-deepest upgrade it demonstrably affords as an **anchor**, leave everything at or below that anchor
+The method now: measure gold per minute at each level the bot reaches, take the deepest upgrade it
+demonstrably affords as an **anchor** (Caravan Rights, level 28), leave everything at or below that anchor
 untouched, and price everything above it at the anchor's own minutes-of-income, grown at the measured
-income rate. That puts every ordinary upgrade above the anchor within 132–139 minutes of income at its own
-level, and every capacity slot at ~3× that — the same premium the validated range already charged for
-space. The dearest thing in the game is now 3.0e8 rather than 3.8e13.
+income rate — **×1.1725 per level**. Every ordinary upgrade above the anchor then sits at the same
+minutes-of-income as the anchor itself, and every capacity slot at ~3× that, the premium the validated
+range already charged for space.
+
+Getting that number took three attempts, and the failure is worth recording because it would be easy to
+repeat. The first two passes fitted the curve to **a single run**, and a single run's income at a given
+level swings by more than an order of magnitude — one level crossed just after a big sale reads as a
+fortune. They produced ×1.10 and ×1.19, 27× apart at the top of the list, in opposite directions. The bot
+now averages the curve across runs *and prints the run-to-run spread beside it*, which showed the real
+shape of the problem: the spread is about 2× up to level 40 and degrades to 12× beyond, because few runs
+reach those levels and each samples one narrow slice. Fitting only levels 20–40 and extrapolating the rate
+from there is stable — feeding the result back through the anchoring re-prices nothing at all.
+
+**The count of unaffordable upgrades is not a good acceptance test**, and was briefly mistaken for one. It
+moved 17 → 1 → 7 → 4 → 8 across passes, and in the last of those the prices had gone *down*: what it
+mostly measures is how far a given sample of runs happened to get, not whether the prices are right. The
+stable signals are the income curve inside its trustworthy range (reproduces within 15%), first ascension
+(128.8 then 127.4 minutes across independent sets), and the idempotence of the anchoring.
 
 The v1.1 pass stopped at 60 and that was still short. Recipes, spells, zones and dungeons all run to 100,
 and the bot reaches level 57–64 inside a long run, so the tail mattered: above level 56 there was exactly
@@ -535,21 +550,23 @@ Pacing targets: first ascension at about 2–4 hours of active play, the Panacea
 Measured with `npm run bot` under its default policy (alternate two herbs so cross-breeding can happen,
 keep every research desk busy, buy the cheapest affordable upgrade, skill and apprentice node each step):
 
-Measured v1.2, five 60-hour runs — **under the bot's previous upgrade policy** (always buy the cheapest
-affordable). That policy was later found to be the reason the bot stopped buying upgrades at level 22, and
-was replaced with one that saves for a target; the first 40-hour measurement under the new policy puts
-first ascension at ~139 min rather than 104, since saving delays the cheap compounding buys and the
-ascension gate is on gold *earned*, not held. **These figures are therefore pending re-derivation** — the
-shape below (runs must grow) is the part that matters and is not in question; the absolute minutes are.
+Measured v1.2, two independent sets of six 40-hour runs under the current policy. Both sets are quoted
+because the point of the second was to check the first reproduced:
 
 | Milestone | Bot | Human (~2× slower) |
 |---|---|---|
-| Level 10 | ~22 min | ~45 min |
-| Level 20 | ~48 min | ~1.6 h |
-| Level 30 | ~134 min | ~4.5 h |
-| First ascension | **104 min** (range 89–136) | **~3.5 h** |
-| An item reaches proficiency 50 | ~154 min | ~5 h |
-| An apprentice reaches level 25 | ~39 min | ~1.3 h |
+| Level 10 | ~24 min | ~48 min |
+| Level 20 | ~59 min | ~2 h |
+| Level 30 | ~143 min | ~4.8 h |
+| First ascension | **128 min** (range 107–145) | **~4.3 h** |
+| An item reaches proficiency 50 | ~189 min | ~6.3 h |
+| An apprentice reaches level 25 | ~45 min | ~1.5 h |
+
+First ascension moved from 104 to 128 minutes in this pass, and the cause is the bot rather than the
+game: it used to buy the cheapest affordable upgrade every time, which bought twenty levels of fertiliser
+and ascended quickly on a workshop that had seen a third of its own content. Saving for a target is the
+better model of a player and the slower one. The 104 was never a target that was missed; it was a
+measurement of a bot playing badly.
 
 **Run lengths are the number that matters for prestige pacing, and the rule is that they must grow.**
 Each Great Work asks for a higher level and 2.5× the gold of the last, so a flat or falling curve would
@@ -557,11 +574,12 @@ mean the carry-over had outrun the gate:
 
 | Run | 1 | 2 | 3 | 4 | 5 | 6 |
 |---|---|---|---|---|---|---|
-| Minutes (previous policy) | 104 | 112 | 202 | 229 | 348 | 495 |
+| Minutes | 128 | 119 | 142 | 171 | 195 | 334 |
 
-Monotonic across all six — but only at five runs. A three-run sample of the same code showed run 4 coming
-in *shorter* than run 3 (262 → 191), which would have read as a real regression against the rule. At the
-60-hour mark the bot is level 52–60 with 7 apprentices, the best at level 100, ~25
+Runs 2 through 6 grow clearly. Run 2 sits a little *under* run 1 in both samples, which is within the
+run-to-run spread rather than a finding — the honest statement is that the curve grows from run 2 onward
+and that runs 1 and 2 are level with each other. Earlier three-run samples produced dips at run 4 that
+vanished at five and six runs, so no claim about the shape should be made below six. At the 60-hour mark the bot is level 52–60 with 7 apprentices, the best at level 100, ~25
 studies, ~39 strains and the company at depth ~47.
 
 That lands first ascension inside the 2–4 hour design target above. Two earlier figures in this file —

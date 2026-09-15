@@ -173,8 +173,16 @@ function sellStock(s: GameState, tiersSold: number[], sold: { w: number; n: numb
  * not forever: past this, the upgrade is not a goal, it is scenery.
  */
 const SAVE_MINUTES = 45;
-/** Small enough that taking it does not meaningfully delay whatever is being saved for. */
-const INCIDENTAL = 0.02;
+/**
+ * While saving, still take anything costing under this share of the purse.
+ *
+ * Measured against the purse rather than against the target's price, which is the version that matters:
+ * a cheap compounding upgrade pays for itself many times over before an expensive one is even affordable,
+ * and gating incidentals on 2% of a distant target starved exactly those. That cost 55 minutes on the
+ * first ascension — the old cheapest-first bot, for all its blindness, was right that twenty levels of
+ * fertiliser beat holding gold.
+ */
+const INCIDENTAL = 0.1;
 
 /**
  * Buy upgrades the way a player does: pick something worth having and save for it.
@@ -221,7 +229,7 @@ function buyUpgrades(s: GameState, opts: BotOptions): void {
 
     // Saving for it. Take anything trivial enough not to delay it, otherwise bank and stop.
     const incidental = open
-      .filter((o) => o.cost <= s.gold && o.cost <= target.cost * INCIDENTAL)
+      .filter((o) => o.cost <= s.gold * INCIDENTAL)
       .sort((a, b) => (a.owned === 0 ? 0 : 1) - (b.owned === 0 ? 0 : 1) || a.cost - b.cost)[0];
     if (!incidental) break;
     buyUpgrade(s, incidental.u.id);
@@ -522,10 +530,23 @@ if (flag('json')) {
   }
 
   {
-    const lv = Object.keys(results[0]?.goldPerMinAtLevel ?? {}).map(Number).sort((a, b) => a - b);
+    // Averaged across runs, and stated with its spread. One run's figure swings by more than an order of
+    // magnitude — a level crossed just after a big sale reads as a fortune — and anchoring a cost curve
+    // on a single sample of it produced two answers 27x apart, in opposite directions.
+    const lv = [...new Set(results.flatMap((r) => Object.keys(r.goldPerMinAtLevel).map(Number)))].sort((a, b) => a - b);
+    const at = (L: number) => results
+      .map((r) => r.goldPerMinAtLevel[L])
+      .filter((x): x is number => x !== undefined && x > 0);
     if (lv.length) {
-      console.log('\nincome when each level was first reached (run 1), gold/min:');
-      console.log('   ' + lv.map((L) => `${L}:${results[0].goldPerMinAtLevel[L].toExponential(1)}`).join('  '));
+      console.log(`\nincome at each level, gold/min (mean of ${results.length} run(s)):`);
+      console.log('   ' + lv.map((L) => {
+        const xs = at(L);
+        return xs.length ? `${L}:${(xs.reduce((a, b) => a + b, 0) / xs.length).toExponential(1)}` : `${L}:-`;
+      }).join('  '));
+      console.log('   spread ' + lv.map((L) => {
+        const xs = at(L);
+        return xs.length > 1 ? `${L}:${(Math.max(...xs) / Math.min(...xs)).toFixed(0)}x` : `${L}:-`;
+      }).join('  '));
     }
   }
 
