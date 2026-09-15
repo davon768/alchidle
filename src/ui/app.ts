@@ -35,12 +35,14 @@ import { partyView } from './views/party';
 import { skillsView } from './views/skills';
 import { ascendView } from './views/ascend';
 import { journalView } from './views/journal';
+import { ledgerView } from './views/ledger';
 import { proficiencyView } from './views/proficiency';
 import { staffView } from './views/apprentices';
 import { goalBanner, goalsView } from './views/goals';
 import { GOALS } from '../data/goals';
 import { RESEARCH_UNLOCK_LEVEL } from '../data/research';
 import { COMPANY_HINT_LEVEL, companyOpen } from '../data/adventurers';
+import { findStalls } from '../core/ledger';
 
 interface TabDef {
   id: TabId;
@@ -76,6 +78,8 @@ const TABS: TabDef[] = [
   { id: 'guild', icon: '🛡️', label: 'Guilds', unlocked: (s) => s.level >= GUILD_UNLOCK_LEVEL },
   { id: 'ascend', icon: '🌟', label: 'Magnum Opus', unlocked: (s) => s.asc.count > 0 || s.stats.runGold >= ascGoldTarget(0) * 0.2 },
   { id: 'goals', icon: '🎯', label: 'Goals', unlocked: () => true, dot: (s) => GOALS.some((g) => s.goals[g.id] === 'done') },
+  { id: 'ledger', icon: '📊', label: 'Ledger', unlocked: (s) => s.level >= 5,
+    dot: (s, m) => findStalls(s, m).length >= 3 },
   { id: 'journal', icon: '📓', label: 'Journal', unlocked: () => true },
 ];
 
@@ -240,6 +244,7 @@ function viewFor(tab: TabId, s: GameState, m: Mods): TemplateResult {
     case 'skills': return skillsView(s, m);
     case 'ascend': return ascendView(s, m);
     case 'goals': return goalsView(s);
+    case 'ledger': return ledgerView(s, m);
     case 'journal': return journalView(s);
   }
 }
@@ -295,6 +300,21 @@ function appTemplate(): TemplateResult {
 let root: HTMLElement;
 function rerenderNow(): void {
   render(appTemplate(), root);
+}
+
+/**
+ * Discard the rendered tree and build it again from nothing.
+ *
+ * lit tracks what it rendered through comment markers in the DOM. If anything outside the app edits that
+ * DOM — a browser extension, a page translation, a reader mode — those markers can vanish, and every
+ * later draw then walks into a node that is no longer there. Re-rendering into the same container keeps
+ * hitting the same damage, so the only way back is to drop lit's bookkeeping along with the markup.
+ */
+export function resetRender(): void {
+  const host = root as HTMLElement & { _$litPart$?: unknown };
+  delete host._$litPart$;
+  host.textContent = '';
+  rerenderNow();
 }
 
 export function mount(el: HTMLElement): () => void {

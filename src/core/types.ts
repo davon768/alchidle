@@ -302,6 +302,8 @@ export interface GameState {
   hotPotion: string | null;
   hotTimer: number;
   prof: Record<string, number>; // proficiency XP per plant / potion / reagent / forge tier (permanent)
+  /** Lifetime gold earned per source — see core/ledger.ts. The recent window is in memory, not here. */
+  income: Record<string, number>;
   guild: { id: string | null; rep: number; contracts: Contract[] };
   trade: { offers: TradeOffer[]; timer: number };
   asc: { stones: number; total: number; count: number; nodes: Record<string, number> };

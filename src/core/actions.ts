@@ -475,7 +475,7 @@ export function acceptOffer(s: GameState, i: number): void {
   }
   const bonus = computeMods(s).tradeBonus;
   for (const g of o.give) g.id === 'gold' ? addGold(s, -g.qty, false) : removeItem(s, g.id, g.qty);
-  for (const g of o.get) g.id === 'gold' ? addGold(s, offerGetQty(g, bonus)) : addItem(s, g.id, offerGetQty(g, bonus));
+  for (const g of o.get) g.id === 'gold' ? addGold(s, offerGetQty(g, bonus), true, 'trade') : addItem(s, g.id, offerGetQty(g, bonus));
   o.used = true;
   s.stats.trades++;
   toast(`🐪 Trade complete: ${o.title}`, 'good');
@@ -526,7 +526,7 @@ export function deliver(s: GameState, idx: number): void {
   const m = computeMods(s);
   const before = rankFor(s.guild.rep);
   const qMult = 1 + (c.qual ?? 0) / Math.max(1, c.qty);
-  addGold(s, c.gold * m.contractReward * qMult);
+  addGold(s, c.gold * m.contractReward * qMult, true, 'contract');
   s.guild.rep += c.rep * m.repGain * qMult;
   gainXp(s, m, c.kind === 'slay' ? c.rep : RECIPE_MAP[c.recipeId].xp * c.qty * 0.5);
   s.stats.contracts++;

@@ -19,6 +19,7 @@ import { dungeonUnlocked, tickCombat } from './combat';
 import { tickMagic } from './magic';
 import { tickEvents } from './events';
 import { tickStaff, unlockApprentice, workXp } from './staff';
+import { noteStarved as recordStarved, recordIncome, type IncomeSource } from './ledger';
 import { kitReserve, tickParty } from './party';
 
 // ── Notifications ────────────────────────────────────────────
@@ -142,11 +143,15 @@ export function removeItem(s: GameState, id: string, qty: number, from: 'low' | 
 export function hasAll(s: GameState, stacks: ItemStack[], times = 1): boolean {
   return stacks.every((st) => (st.id === 'gold' ? s.gold : count(s, st.id)) >= st.qty * times);
 }
-export function addGold(s: GameState, amount: number, earned = true): void {
+/** Every coin in the game arrives here, which is why attribution is tagged at this one point. */
+export function addGold(s: GameState, amount: number, earned = true, source: IncomeSource = 'other'): void {
   s.gold += amount;
   if (earned && amount > 0) {
     s.stats.runGold += amount;
     s.stats.totalGold += amount;
+    // Offline catch-up would land hours of earnings in one bucket and drown the chart; the offline
+    // summary reports that separately.
+    if (!quiet) recordIncome(s, source, amount);
   }
 }
 
@@ -301,13 +306,13 @@ export function removeTier(s: GameState, id: string, tier: number, qty: number):
   return take;
 }
 
-export function doSell(s: GameState, m: Mods, id: string, qty: number, tier?: number): number {
+export function doSell(s: GameState, m: Mods, id: string, qty: number, tier?: number, source: IncomeSource = 'market'): number {
   qty = Math.min(qty, tier === undefined ? count(s, id) : qualCounts(s, id)[Math.max(0, Math.min(QUAL_MAX, Math.floor(tier)))]);
   if (qty <= 0) return 0;
   const gold = sellValue(s, m, id, qty, tier);
   if (tier === undefined) removeItem(s, id, qty);
   else removeTier(s, id, tier, qty);
-  addGold(s, gold);
+  addGold(s, gold, true, source);
   if (item(id).kind === 'potion') {
     s.demand[id] = Math.max(DEMAND_FLOOR, demandOf(s, id) - demandDrop(s, id) * qty);
     s.stats.potionsSold += qty;
@@ -421,7 +426,7 @@ function completeBrew(s: GameState, m: Mods, r: Recipe, banked: number): void {
   if (autoSellActive(s, m, r.id)) {
     const extra = count(s, r.id) - s.settings.keepReserve - kitReserve(s, m, r.id);
     if (extra > 0) {
-      const gold = doSell(s, m, r.id, extra);
+      const gold = doSell(s, m, r.id, extra, undefined, 'autosell');
       workXp(s, m, 'shopkeeper', 0, 0.3 + Math.log10(1 + gold) * 0.3);
     }
   }
@@ -480,7 +485,7 @@ function completeExpedition(s: GameState, m: Mods, z: ZoneDef): void {
     if (Math.random() >= chance) continue;
     const qty = rollAmount(randInt(d.min, d.max) * m.scavYield * mult * (z.bounty ?? 1));
     if (qty <= 0) continue;
-    if (d.id === 'gold') addGold(s, qty);
+    if (d.id === 'gold') addGold(s, qty, true, 'expedition');
     else addItem(s, d.id, qty);
   }
   gainXp(s, m, z.xp * Math.sqrt(mult));
@@ -672,6 +677,13 @@ export function tick(s: GameState, dt: number): void {
     // The stir window runs on the wall clock, not on dt, so it closes on time regardless of tick size
     // (and is already closed by the time an offline catch-up finishes).
     if (c.stirStart > 0 && stirElapsed(c.stirStart) >= STIR_WINDOW) c.stirStart = 0;
+    // Keep trying to restart an idle repeat cauldron. The only restart used to live inside the loop
+    // below, which is guarded on `c.active` — so a cauldron that could not restock the moment a brew
+    // finished never tried again, and one gap in supply stopped it for good with Repeat still lit.
+    if (!c.active && c.repeat && c.recipeId && ci < m.autoBrew && !startBrew(s, c, false, m)) {
+      const r = RECIPE_MAP[c.recipeId];
+      recordStarved(c.recipeId, dt, r ? r.inputs.filter((i) => count(s, i.id) < i.qty).map((i) => i.id) : []);
+    }
     let t = dt;
     for (let g = 0; c.active && c.recipeId && t > 0 && g < GUARD; g++) {
       const r = RECIPE_MAP[c.recipeId];

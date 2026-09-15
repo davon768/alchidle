@@ -61,7 +61,7 @@ function remove(s: GameState, uid: string): GearItem | null {
 
 export function sellGear(s: GameState, uid: string): void {
   const it = remove(s, uid);
-  if (it) addGold(s, gearValue(it));
+  if (it) addGold(s, gearValue(it), true, 'salvage');
 }
 
 export function salvageGear(s: GameState, uid: string): void {

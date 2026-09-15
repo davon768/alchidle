@@ -8,7 +8,7 @@ import { game } from '../../core/game';
 import { toast } from '../../core/engine';
 import { fmt, fmtTime, setNotation } from '../../core/format';
 import { act, closeModal, openModal, refresh, sectionTitle } from '../common';
-import { domNodes, heapMB, rendersPerSecond, runtime } from '../../core/diagnostics';
+import { domNodes, heapMB, looksExternal, rendersPerSecond, runtime } from '../../core/diagnostics';
 
 function showExport(): void {
   const code = exportSave(game.s);
@@ -103,9 +103,16 @@ export function journalView(s: GameState): TemplateResult {
         <div>🧩 ${fmt(domNodes())} elements (peak ${fmt(runtime.peakNodes)})</div>
         <div>💾 ${fmt(saveKB(s))} KB save</div>
         <div>🧠 ${heapMB() === null ? 'n/a in this browser' : `${heapMB()} MB heap`}</div>
-        <div class=${runtime.renderErrors > 0 ? 'warn' : ''}>⚠️ ${runtime.renderErrors} draw error${runtime.renderErrors === 1 ? '' : 's'}</div>
+        <div class=${runtime.renderErrors > 0 ? 'warn' : ''}>⚠️ ${runtime.renderErrors} draw error${runtime.renderErrors === 1 ? '' : 's'}${runtime.recoveries > 0 ? ` · ${runtime.recoveries} rebuilt` : ''}</div>
       </div>
-      ${runtime.lastError ? html`<div class="small warn">Last error: ${runtime.lastError}</div>` : ''}
+      ${runtime.firstError ? html`<div class="small warn">First error: ${runtime.firstError}</div>
+        ${runtime.firstErrorStack ? html`<div class="dim small" style="word-break:break-all">${runtime.firstErrorStack}</div>` : ''}
+        ${runtime.lastError && runtime.lastError !== runtime.firstError ? html`<div class="small warn">Last error: ${runtime.lastError}</div>` : ''}
+        ${looksExternal(runtime.firstError)
+          ? html`<div class="small">This one comes from outside the game: something is editing the page as it draws — a browser
+              extension, a page translation, or a reader mode are the usual culprits. The screen rebuilds itself when it happens,
+              so the game keeps running; turning extensions off for this page should stop it entirely.</div>`
+          : ''}` : ''}
       <div class="dim">Elements should settle at a few hundred and stay there. A peak that keeps climbing the longer you play is the signature of a leak — that is the number worth reporting.</div>
     </div>
 

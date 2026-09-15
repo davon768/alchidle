@@ -182,7 +182,7 @@ export function startDelve(s: GameState, m: Mods): boolean {
 
 function delveLoot(s: GameState, m: Mods, depth: number, haul: number, share: number): void {
   const mult = haulMult(depth) * haul * share;
-  addGold(s, Math.round(delveGold(depth) * haul * share));
+  addGold(s, Math.round(delveGold(depth) * haul * share), true, 'company');
   for (const d of DELVE_DROPS) {
     if (d.depth > depth) continue;
     if (Math.random() >= Math.min(1, d.chance * (d.id === 'relic' ? m.rareFind : 1))) continue;

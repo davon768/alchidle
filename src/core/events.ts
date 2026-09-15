@@ -71,7 +71,7 @@ export function onEventKill(s: GameState, m: Mods): void {
   s.event.progress++;
   if (s.event.progress < raidTarget(s.level)) return;
   const gold = Math.round(150 * s.level ** 1.5 * m.contractReward);
-  addGold(s, gold);
+  addGold(s, gold, true, 'event');
   const best = [...DUNGEONS].reverse().find((d) => dungeonUnlocked(s, d));
   if (best) addGear(s, newGear(s, best.tier, rollRarity(m.lootFind * 2, 2)));
   toast(`👺 Raid repelled! The caravans reward you with ${gold.toLocaleString()} gold and a gift.`, 'epic');

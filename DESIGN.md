@@ -179,9 +179,30 @@ the delve in progress does not.
 Bot-measured: first relic inside the first day, depth ~28 after 24 h with two adventurers, and no
 measurable change to the ~90-minute first ascension — the charter costs 120K gold and lands well after it.
 
+### The Ledger (v1.1): income attribution and stalls
+
+Sixteen systems feed one purse and nothing said which of them was carrying a run. The Ledger tags every
+coin where it arrives (`addGold` is the single entry point, so attribution is one parameter) and reports
+income by source over the last hour, with a per-minute sparkline and lifetime totals as a fallback.
+
+The more useful half is **stalls**: the specific, actionable ways a workshop stops earning — a cauldron
+idle for want of one named herb, beds lying fallow, empty expedition slots or research desks, an idle
+company, a flooded potion market, unspent skill points, unclaimed goals. Each names the fix and links to
+the tab. Ingredient stalls record *what was missing when they stalled*, since by the time you look the
+garden has usually delivered, and they fade over five minutes so a problem you have solved stops being
+reported.
+
+The recent window is in memory, not the save: it is a diagnostic, and an hour of per-source buckets would
+be a large share of a 10 KB save. Lifetime totals live in `s.income` and survive ascension.
+
+Building it found a real bug it was designed to find: **a cauldron on Repeat that ran out of ingredients
+stopped permanently**, because the only restart lived inside a loop guarded on `c.active`. Restocking did
+nothing — Repeat stayed lit and the cauldron never brewed again. The tick now retries idle repeat
+cauldrons every step, which is also where the stall data comes from.
+
 ### Goals (v0.5): the tutorial
 
-31 goals in 8 chapters (Workshop basics, Apprentices, Craft & proficiency, Commerce, Adventure, Magic, The company, The long game) teach every mechanic in the order players meet it. Each goal has a one-line *how*, a short explanation of the mechanic, an optional progress bar, a **Show me** button that opens the right tab, and a one-time reward (gold, or items that help with the next step — for example, the reagent goal pays Rune Chalk and Spell Ink toward learning Firebolt). The banner at the top of every tab shows a claimable goal first, otherwise the next unfinished one; the 🎯 Goals tab lists them all. Goals are checked every second, stay done once reached, and survive ascension, so each reward pays out only once. Content lives in `src/data/goals.ts` — add a goal whenever a new system is added.
+32 goals in 8 chapters (Workshop basics, Apprentices, Craft & proficiency, Commerce, Adventure, Magic, The company, The long game) teach every mechanic in the order players meet it. Each goal has a one-line *how*, a short explanation of the mechanic, an optional progress bar, a **Show me** button that opens the right tab, and a one-time reward (gold, or items that help with the next step — for example, the reagent goal pays Rune Chalk and Spell Ink toward learning Firebolt). The banner at the top of every tab shows a claimable goal first, otherwise the next unfinished one; the 🎯 Goals tab lists them all. Goals are checked every second, stay done once reached, and survive ascension, so each reward pays out only once. Content lives in `src/data/goals.ts` — add a goal whenever a new system is added.
 
 ### Apprentices (v0.9): one per craft, shaped by you
 

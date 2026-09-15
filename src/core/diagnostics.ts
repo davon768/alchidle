@@ -10,6 +10,11 @@ export interface Runtime {
   renders: number;
   renderErrors: number;
   lastError: string | null;
+  /** The first failure and where it came from — later ones are usually just the same damage again. */
+  firstError: string | null;
+  firstErrorStack: string | null;
+  /** Draws recovered by rebuilding the tree from scratch. */
+  recoveries: number;
   peakNodes: number;
 }
 
@@ -18,8 +23,22 @@ export const runtime: Runtime = {
   renders: 0,
   renderErrors: 0,
   lastError: null,
+  firstError: null,
+  firstErrorStack: null,
+  recoveries: 0,
   peakNodes: 0,
 };
+
+/**
+ * Whether a render failure looks like the page being edited from outside the app.
+ *
+ * lit walks its own comment markers; when an extension, a page translation or a reader mode rewrites the
+ * DOM those markers go missing and lit reaches for a node that is gone. Nothing inside the game can
+ * produce that, so naming it saves the next person guessing at the game's own code.
+ */
+export function looksExternal(err: string | null): boolean {
+  return !!err && /nextSibling|parentNode|insertBefore|removeChild|of null/i.test(err);
+}
 
 /** Current DOM size, tracking the high-water mark so a leak shows up as a rising floor. */
 export function domNodes(): number {

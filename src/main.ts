@@ -5,7 +5,7 @@ import { checkAchievements, simulate, tick, toast } from './core/engine';
 import { computeMods } from './core/mods';
 import { checkGoals } from './core/goals';
 import { setNotation } from './core/format';
-import { mount, showOfflineSummary } from './ui/app';
+import { mount, resetRender, showOfflineSummary } from './ui/app';
 import { runtime } from './core/diagnostics';
 
 const TICK_MS = 100;
@@ -82,9 +82,21 @@ function frame(t: number): void {
     renderErrors++;
     runtime.renderErrors = renderErrors;
     runtime.lastError = String(err);
+    if (!runtime.firstError) {
+      runtime.firstError = String(err);
+      runtime.firstErrorStack = String((err as Error)?.stack ?? '').split(String.fromCharCode(10)).slice(0, 6).join(' | ');
+    }
     if (renderErrors <= 3) {
-      console.error('[alchemy] render failed — the game is still running:', err);
-      if (renderErrors === 1) toast('Something went wrong drawing the screen. The game is still running; please report it.', 'warn');
+      console.error('[alchemy] render failed — rebuilding the screen:', err);
+      if (renderErrors === 1) toast('Something went wrong drawing the screen. The game kept running; the display has been rebuilt.', 'warn');
+    }
+    // A failed draw can leave lit pointing at nodes that are gone, and every later draw hits the same
+    // damage. Rebuild from nothing instead of limping: one dropped frame beats a frozen screen.
+    try {
+      resetRender();
+      runtime.recoveries++;
+    } catch (fatal) {
+      console.error('[alchemy] rebuilding the screen failed too:', fatal);
     }
   }
 }

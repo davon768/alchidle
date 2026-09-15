@@ -72,6 +72,7 @@ export function newState(prev?: GameState): GameState {
     hotPotion: null,
     hotTimer: 90,
     prof: {},
+    income: {},
     guild: { id: null, rep: 0, contracts: [] },
     trade: { offers: [], timer: 0 },
     asc: { stones: 0, total: 0, count: 0, nodes: {} },
@@ -105,6 +106,7 @@ export function newState(prev?: GameState): GameState {
     s.achievements = prev.achievements;
     s.goals = prev.goals;
     s.prof = prev.prof;
+    s.income = prev.income; // lifetime record, like proficiency
     s.autoSell = prev.autoSell;
     s.settings = prev.settings;
     s.belt = prev.belt;

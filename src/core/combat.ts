@@ -249,7 +249,7 @@ function castSpells(s: GameState, m: Mods, hero: HeroStats, e: Enemy): boolean {
 
 function onKill(s: GameState, m: Mods, d: DungeonDef, e: Enemy): void {
   const c = s.combat;
-  addGold(s, e.gold);
+  addGold(s, e.gold, true, 'dungeon');
   gainXp(s, m, e.xp);
   s.stats.kills++;
   const floorLoot = m.lootFind * (1 + 0.04 * (c.floor - 1));

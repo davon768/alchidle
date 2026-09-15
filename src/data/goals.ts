@@ -53,6 +53,12 @@ export const GOALS: GoalDef[] = [
     about: 'You earn a skill point every level, plus 2 bonus points every 10th level. Deeper rows of a tree need points spent in that tree first.',
     check: (s) => Object.values(s.skills).some((v) => v > 0), reward: { gold: 60 } },
 
+  { id: 'ledger', chapter: 'Workshop basics', title: 'Find your bottleneck', level: 5, tab: 'ledger',
+    how: 'Earn gold from three different systems, then read the 📊 Ledger.',
+    about: 'The Ledger says which system is actually paying you and what is standing still — a cauldron waiting on one herb, a bed left fallow, a party never sent. It is the fastest way to find the one thing holding a run back.',
+    check: (s) => Object.keys(s.income ?? {}).length >= 3,
+    progress: (s) => [Math.min(3, Object.keys(s.income ?? {}).length), 3], reward: { gold: 500 } },
+
   // ── Apprentices ────────────────────────────────────────────
   { id: 'hire', chapter: 'Apprentices', title: 'Take on an apprentice', level: 3, tab: 'library',
     how: 'Finish A Gardener\u2019s Hands in the \ud83d\udcda Library.',
