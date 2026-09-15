@@ -9,6 +9,7 @@ import { toast } from '../../core/engine';
 import { fmt, fmtTime, setNotation } from '../../core/format';
 import { act, closeModal, openModal, refresh, sectionTitle } from '../common';
 import { domNodes, heapMB, looksExternal, rendersPerSecond, runtime } from '../../core/diagnostics';
+import { buildReport, downloadReport, logStalls } from '../../core/log';
 
 function showExport(): void {
   const code = exportSave(game.s);
@@ -104,6 +105,7 @@ export function journalView(s: GameState): TemplateResult {
         <div>💾 ${fmt(saveKB(s))} KB save</div>
         <div>🧠 ${heapMB() === null ? 'n/a in this browser' : `${heapMB()} MB heap`}</div>
         <div class=${runtime.renderErrors > 0 ? 'warn' : ''}>⚠️ ${runtime.renderErrors} draw error${runtime.renderErrors === 1 ? '' : 's'}${runtime.recoveries > 0 ? ` · ${runtime.recoveries} rebuilt` : ''}</div>
+        <div class=${logStalls().count > 0 ? 'warn' : ''}>🧊 ${logStalls().count} freeze${logStalls().count === 1 ? '' : 's'}${logStalls().count ? ` · worst ${(logStalls().worst / 1000).toFixed(1)}s` : ''}</div>
       </div>
       ${runtime.firstError ? html`<div class="small warn">First error: ${runtime.firstError}</div>
         ${runtime.firstErrorStack ? html`<div class="dim small" style="word-break:break-all">${runtime.firstErrorStack}</div>` : ''}
@@ -113,6 +115,15 @@ export function journalView(s: GameState): TemplateResult {
               extension, a page translation, or a reader mode are the usual culprits. The screen rebuilds itself when it happens,
               so the game keeps running; turning extensions off for this page should stop it entirely.</div>`
           : ''}` : ''}
+      <div class="row">
+        <button class="btn primary" @click=${() => { downloadReport(game.s); toast('Log saved. Send the file along with what you saw.', 'good'); }}>⬇ Download log</button>
+        <button class="btn" @click=${() => navigator.clipboard?.writeText(buildReport(game.s))
+          .then(() => toast('Log copied — paste it anywhere.', 'good'))
+          .catch(() => toast('Could not reach the clipboard; use Download instead.', 'warn'))}>Copy log</button>
+      </div>
+      <div class="dim small">The log covers this session only: what your browser is, how often the screen
+        drew, every error and freeze, and a summary of your save — no items, no save data. If something looked
+        wrong or the tab locked up, grab it before reloading: a reload starts the log over.</div>
       <div class="dim">Elements should settle at a few hundred and stay there. A peak that keeps climbing the longer you play is the signature of a leak — that is the number worth reporting.</div>
     </div>
 
