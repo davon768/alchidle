@@ -2,7 +2,7 @@ import type { CombatState, GameState, Stats } from './types';
 import { startGoldFor } from '../data/ascension';
 import { profLevel } from '../data/proficiency';
 
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 
 /**
  * XP from one level to the next.

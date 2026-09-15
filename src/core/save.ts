@@ -79,10 +79,13 @@ function migrate(raw: LegacySave): GameState {
   }
   // v6 → v7: the stir window became a wall-clock stamp. Old cauldrons carry `stirLeft`; a missing
   // `stirStart` would read as NaN through Date.now() arithmetic, so close every window on load.
-  for (const c of s.cauldrons as (typeof s.cauldrons[number] & { stirLeft?: number })[]) {
+  // v11 → v12: stirring became a mash, so the sweet-spot centre it used to aim at is dead weight.
+  type LegacyCauldron = typeof s.cauldrons[number] & { stirLeft?: number; stirTarget?: number };
+  for (const c of s.cauldrons as LegacyCauldron[]) {
     delete c.stirLeft;
+    delete c.stirTarget;
     if (typeof c.stirStart !== 'number' || !Number.isFinite(c.stirStart)) c.stirStart = 0;
-    if (typeof c.stirTarget !== 'number' || !Number.isFinite(c.stirTarget)) c.stirTarget = 0.5;
+    if (typeof c.stirClicks !== 'number' || !Number.isFinite(c.stirClicks)) c.stirClicks = 0;
     if (typeof c.stirQ !== 'number' || !Number.isFinite(c.stirQ)) c.stirQ = 0;
   }
   // Both halves of a seed key have to still exist: checking only the trait left seeds for deleted plants

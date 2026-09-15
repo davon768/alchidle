@@ -11,7 +11,7 @@ import { ACHIEVEMENTS } from '../data/achievements';
 import { CONTRACT_COUNT } from '../data/guilds';
 import { DUNGEONS, REWARD_GROWTH } from '../data/combat';
 import { MILESTONES, PROF_MAP, emptyBonus, profBonus, profLevel, type ProfBonus } from '../data/proficiency';
-import { QUAL_MAX, quality, qualityName, rollQuality, rollStirTarget, stirElapsed, STIR_MAX, STIR_WINDOW } from '../data/quality';
+import { QUAL_MAX, quality, qualityName, rollQuality, stirElapsed, STIR_MAX, STIR_WINDOW } from '../data/quality';
 import { QUALITY_RESEARCH_BOOST, QUALITY_RESEARCH_MAX, RESEARCH_MAP } from '../data/research';
 import { CROSS_CHANCE, TRAITS, seedKey, traitEffect } from '../data/mutations';
 import { FAMILIAR_MAP, familiarLevel, familiarsOfZone, feedXp, milestonesAt } from '../data/familiars';
@@ -368,7 +368,7 @@ export function syncSlots(s: GameState, m: Mods): void {
     if (arr.length > n) arr.length = n;
   };
   fit<Plot>(s.plots, Math.floor(m.plots), () => ({ plantId: null, progress: 0, ready: false, trait: null }));
-  fit<Cauldron>(s.cauldrons, Math.floor(m.cauldrons), () => ({ recipeId: null, progress: 0, active: false, repeat: false, stirStart: 0, stirTarget: 0.5, stirQ: 0 }));
+  fit<Cauldron>(s.cauldrons, Math.floor(m.cauldrons), () => ({ recipeId: null, progress: 0, active: false, repeat: false, stirStart: 0, stirClicks: 0, stirQ: 0 }));
   fit(s.expeditions, Math.floor(m.expSlots), () => null);
   while (s.belt.length < Math.floor(m.potionSlots)) s.belt.push(null);
 }
@@ -394,7 +394,7 @@ export function startBrew(s: GameState, c: Cauldron, byHand = false, m?: Mods): 
   c.progress = 0;
   c.stirQ = (carried > 0 ? carry / Math.max(1, carried) : 0) + autoStirQ(m ?? computeMods(s));
   c.stirStart = byHand ? Date.now() : 0;
-  c.stirTarget = rollStirTarget();
+  c.stirClicks = 0;
   return true;
 }
 

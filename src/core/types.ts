@@ -121,10 +121,11 @@ export interface Cauldron {
   progress: number;
   active: boolean;
   repeat: boolean;
-  // Stirring minigame: a one-shot window that opens when you start a brew by hand.
-  // Wall-clock stamp (ms) rather than a ticked countdown, so the marker and the hit test agree — see data/quality.ts.
+  // Stirring minigame: a mash window that opens when you start a brew by hand.
+  // Wall-clock stamp (ms) rather than a ticked countdown, so the window closes on time whatever the
+  // tick size — including when an offline catch-up runs the whole thing in one step.
   stirStart: number; // Date.now() when the window opened; 0 = closed
-  stirTarget: number; // sweet-spot centre, 0–1 across the bar
+  stirClicks: number; // taps worked into this brew so far
   stirQ: number; // quality score banked for the brew in progress
 }
 

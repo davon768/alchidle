@@ -59,41 +59,32 @@ export function rollQuality(q: number): number {
 }
 
 // ── The stirring minigame ────────────────────────────────────
-/** Seconds the stir window stays open after a manual brew starts. */
-export const STIR_WINDOW = 3.5;
-/** Seconds for one left→right traverse of the bar. One full there-and-back cycle is twice this. */
-export const STIR_TRAVERSE = 1.1;
-/** Half-width of the sweet spot, as a fraction of the bar. */
-export const STIR_BAND = 0.12;
-/** Quality score awarded by a dead-centre stir. */
-export const STIR_MAX = 0.7;
-
 /**
- * Marker position 0–1, bouncing left↔right, as a function of seconds since the window opened.
+ * Stirring is a mash: when you start a brew by hand the window opens, and every tap on the spoon works
+ * more quality into the pot until the pot cannot take any more.
  *
- * This takes wall-clock elapsed time rather than the ticked countdown on purpose: the engine ticks at
- * 10 Hz, so a tick-derived marker moved in visible jumps *and* disagreed with what the player clicked on.
- * The CSS animation in styles.css (`stir-sweep`) is the same function — alternate direction, period
- * STIR_TRAVERSE — so the bar renders at 60 fps and the hit test still matches what is on screen.
+ * It replaced a timing game — a marker sweeping a bar, click inside the band — which asked for one
+ * precise input and gave nothing for effort. A mash is honest about what it wants, reads the same on a
+ * phone as on a desk, and never leaves a player who tried with nothing to show for it.
  */
-export function stirPos(elapsed: number): number {
-  const phase = (Math.max(0, elapsed) / STIR_TRAVERSE) % 2;
-  return phase <= 1 ? phase : 2 - phase;
-}
+/** Seconds the stir window stays open after a manual brew starts. */
+export const STIR_WINDOW = 4;
+/** Quality score a fully stirred pot is worth. */
+export const STIR_MAX = 0.7;
+/** Stirs that fill the pot completely. Reaching it wants roughly four or five taps a second. */
+export const STIR_CLICKS = 18;
 
 /**
- * Quality score from a stir. Anywhere inside the band pays out; dead centre pays double.
- * A miss costs nothing — stirring is optional, never a penalty.
+ * Quality from a number of stirs. Flat per tap so the bar moves visibly with every one, and capped so
+ * hammering past the point of a well-mixed pot does nothing — the reward is speed, not endurance.
  */
-export function stirBonus(pos: number, target: number): number {
-  const d = Math.abs(pos - target);
-  if (d > STIR_BAND) return 0;
-  return STIR_MAX * (0.45 + 0.55 * (1 - d / STIR_BAND));
+export function stirBonus(clicks: number): number {
+  return STIR_MAX * Math.min(1, Math.max(0, clicks) / STIR_CLICKS);
 }
 
-/** Where the sweet spot sits for a brew. Kept far enough from the edges that the band always fits. */
-export function rollStirTarget(): number {
-  return STIR_BAND + Math.random() * (1 - 2 * STIR_BAND);
+/** Quality one more tap would add right now — what the button can promise before it is pressed. */
+export function stirStep(clicks: number): number {
+  return stirBonus(clicks + 1) - stirBonus(clicks);
 }
 
 /** Seconds a stir window has been open, from the wall-clock stamp taken when the brew started. */

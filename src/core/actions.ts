@@ -6,7 +6,7 @@ import {
   addGold, addItem, buyUnitPrice, count, doSell, generateContract, generateOffers, hasAll, harvestPlot, plantCost,
   removeItem, offerGetQty, gainXp, feedFamiliar, researchDone, researchStatus, skillPointsFree, startBrew, studyCut, toast, autoStirQ,
 } from './engine';
-import { STIR_MAX, STIR_WINDOW, quality, stirBonus, stirElapsed, stirPos } from '../data/quality';
+import { STIR_CLICKS, STIR_WINDOW, quality, stirBonus, stirElapsed } from '../data/quality';
 import { RESEARCH_MAP, researchCost, researchTime } from '../data/research';
 
 /** How much of a potion's quality value the guild pays on top of a contract. */
@@ -225,29 +225,22 @@ export function brew(s: GameState, ci: number): void {
 }
 
 /**
- * Tap the stir bar. Landing in the sweet spot banks a quality bonus for the brew in progress; a miss
- * costs nothing.
+ * One stir. Each tap works more quality into the pot, and the gain is banked immediately so the bar on
+ * screen is the truth rather than a promise settled at the end.
  *
- * `pos` is where the marker actually was on screen, measured from the DOM by the caller. The bar is
- * animated by CSS on the document timeline, which is not the same clock as `Date.now()` — it pauses
- * while the tab is hidden — so scoring a position derived from the wall clock could differ from what
- * the player saw. Taking the observed position makes the hit test true by construction. It falls back
- * to the wall clock only when the caller cannot measure (no DOM, tests).
+ * A Brewer who stirs for you sets the floor: your own stirring only counts once it beats what they were
+ * already doing, which is why an early tap can read as no gain at all.
  */
-export function stir(s: GameState, ci: number, pos?: number): void {
+export function stir(s: GameState, ci: number): void {
   const c = s.cauldrons[ci];
   if (!c?.active || c.stirStart <= 0) return;
-  const elapsed = stirElapsed(c.stirStart);
-  if (elapsed >= STIR_WINDOW) { c.stirStart = 0; return; }
-  const at = pos === undefined || !Number.isFinite(pos) ? stirPos(elapsed) : Math.max(0, Math.min(1, pos));
-  const bonus = stirBonus(at, c.stirTarget);
-  c.stirStart = 0;
-  if (bonus <= 0) {
-    toast('The brew clouds for a moment — no quality bonus.', 'warn');
-    return;
-  }
-  c.stirQ += Math.max(0, bonus - autoStirQ(computeMods(s)));
-  toast(bonus >= STIR_MAX * 0.9 ? '🥄 A perfect stir! The mixture gleams.' : '🥄 A good stir.', 'good');
+  if (stirElapsed(c.stirStart) >= STIR_WINDOW) { c.stirStart = 0; return; }
+  const auto = autoStirQ(computeMods(s));
+  const before = Math.max(auto, stirBonus(c.stirClicks));
+  c.stirClicks++;
+  const after = stirBonus(c.stirClicks);
+  c.stirQ += Math.max(0, after - before);
+  if (c.stirClicks === STIR_CLICKS) toast('🥄 The mixture gleams — perfectly stirred.', 'good');
 }
 
 export function cancelBrew(s: GameState, ci: number): void {

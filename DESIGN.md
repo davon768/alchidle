@@ -51,6 +51,15 @@ Also added: Battlemage skill tree (14 nodes), Spellblade Order guild, 4 Workshop
 
 ### Potion quality (v0.6)
 
+**Stirring is a mash** (v1.2). Starting a brew by hand opens a four-second window; every tap works
+`STIR_MAX / STIR_CLICKS` more quality into the pot, and eighteen taps fill it. It replaced a timing game
+— a marker sweeping a bar, click inside the glowing band — which asked for one precise input, gave
+nothing for effort, and read badly on a phone. Taps commit on `pointerdown` rather than `click`, since
+the browser's click delay costs several stirs at four taps a second. A Brewer who stirs for you sets the
+floor: your own stirring only counts once it beats theirs, so a fully trained Brewer already stirs
+perfectly and manual taps add nothing.
+
+
 Every brew rolls one of four tiers — Common, ✦ Fine, ✦✦ Masterwork, ★ Legendary — multiplying that bottle's
 sell value (×1 / ×1.6 / ×2.8 / ×6) and its combat potency (×1 / ×1.25 / ×1.6 / ×2.2). Quality must be earned:
 a fresh brewer with no proficiency, no quality bonuses and no stirring rolls Common every time, so first-ascension

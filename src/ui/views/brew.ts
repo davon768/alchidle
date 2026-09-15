@@ -2,46 +2,33 @@ import { html, type TemplateResult } from 'lit-html';
 import type { GameState, Mods } from '../../core/types';
 import { RECIPES, RECIPE_MAP } from '../../data/recipes';
 import { profProgress } from '../../data/proficiency';
-import { QUALITIES, STIR_BAND, STIR_WINDOW, qualityChances, stirElapsed } from '../../data/quality';
+import { QUALITIES, STIR_CLICKS, STIR_WINDOW, qualityChances, stirElapsed } from '../../data/quality';
 import { brewQualityScore, brewRate, count, hasAll, potionBasePrice, profLevelOf, unlockedRecipes, autoStirQ } from '../../core/engine';
 import { brew, cancelBrew, selectRecipe, stir, toggleRepeat } from '../../core/actions';
 import { fmt, fmtTime } from '../../core/format';
 import { act, bar, chip, gold, qualityChips, sectionTitle } from '../common';
 
 /**
- * Where the marker is right now, as a fraction of the track, read straight off the laid-out DOM.
- * Returns undefined if it cannot be measured, and stir() falls back to its own clock.
+ * The stirring mash.
+ *
+ * Every tap is committed immediately by `stir()`, so the fill below is what the pot has actually taken
+ * rather than a promise. `pointerdown` rather than `click`: a mash wants the gain on the way down, and
+ * on a phone the browser's click delay is long enough to cost a player several stirs.
+ *
+ * The button is deliberately the whole panel — at four or five taps a second nobody is aiming.
  */
-function markerPosition(el: HTMLElement): number | undefined {
-  const track = el.closest('.stir')?.querySelector('.stir-track');
-  const marker = track?.querySelector('.stir-marker');
-  if (!track || !marker) return undefined;
-  const t = track.getBoundingClientRect();
-  const m = marker.getBoundingClientRect();
-  if (!t.width) return undefined;
-  return (m.left + m.width / 2 - t.left) / t.width;
-}
-
-/**
- * The one-shot stirring minigame. The marker is animated entirely in CSS (`stir-sweep`) rather than by
- * binding its position each render: the app re-renders at only ~10 Hz, which made the marker jump in
- * visible steps — further per frame than the sweet spot is wide — and left it out of step with the hit
- * test. CSS animates it on the compositor at the display's refresh rate, and the click reports the
- * marker's measured position, so what you see is what you hit.
- */
-function stirBar(ci: number, target: number, remaining: number): TemplateResult {
-  const band = STIR_BAND * 100;
-  const onStir = (e: Event) => {
-    const pos = markerPosition(e.currentTarget as HTMLElement);
-    act((st) => stir(st, ci, pos))(e);
-  };
-  return html`<div class="stir" @click=${onStir} title="Tap while the marker is in the glowing band">
-    <div class="stir-track">
-      <div class="stir-band" style="left:${(target - STIR_BAND) * 100}%;width:${band * 2}%"></div>
-      <div class="stir-marker"></div>
+function stirPanel(ci: number, clicks: number, remaining: number): TemplateResult {
+  const filled = Math.min(1, clicks / STIR_CLICKS);
+  const done = clicks >= STIR_CLICKS;
+  return html`<button class="stir-mash ${done ? 'done' : ''}"
+    @pointerdown=${act((st) => stir(st, ci))}
+    title="Tap as fast as you can — every stir works more quality into the pot">
+    <div class="stir-fill" style="width:${filled * 100}%"></div>
+    <div class="stir-face">
+      <span class="stir-shout">${done ? '✨ Perfectly stirred' : '🥄 STIR!'}</span>
+      <span class="stir-count">${Math.min(clicks, STIR_CLICKS)}/${STIR_CLICKS} · ${remaining.toFixed(1)}s</span>
     </div>
-    <button class="btn small primary stir-btn">🥄 Stir · ${remaining.toFixed(1)}s</button>
-  </div>`;
+  </button>`;
 }
 
 /** Current odds of each quality tier for a recipe, including anything the cauldron has already banked. */
@@ -84,7 +71,7 @@ export function brewView(s: GameState, m: Mods): TemplateResult {
           </select>
           ${r ? html`
             <div class="row">${r.inputs.map((inp) => chip(inp, count(s, inp.id)))} <span class="muted">→</span> ${chip({ id: r.id, qty: 1 })}</div>
-            ${c.stirStart > 0 ? stirBar(i, c.stirTarget, Math.max(0, STIR_WINDOW - stirElapsed(c.stirStart))) : qualityOdds(s, m, r.id, c.active ? c.stirQ : autoStirQ(m))}
+            ${c.stirStart > 0 ? stirPanel(i, c.stirClicks, Math.max(0, STIR_WINDOW - stirElapsed(c.stirStart))) : qualityOdds(s, m, r.id, c.active ? c.stirQ : autoStirQ(m))}
             <div class="row between small muted">
               <span>⏱ ${c.active ? fmtTime((r.time - c.progress) / rate) : fmtTime(r.time / rate)}</span>
               <span>Sells ~${gold(potionBasePrice(s, m, r.id))}</span>
