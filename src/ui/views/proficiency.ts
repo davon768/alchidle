@@ -18,7 +18,7 @@ export function proficiencyView(s: GameState, m: Mods): TemplateResult {
     <div class="card">
       <div class="row between">
         <span>Total proficiency: <b>${fmt(totalLevels)}</b> <span class="dim">/ ${fmt(open.length * PROF_MAX)} across ${open.length} unlocked crafts${lockedCount ? ` (${lockedCount} more unlock as you level)` : ''}</span></span>
-        <span class="dim">Milestones every 10 levels · permanent through ascension</span>
+        <span class="dim">Milestones every 10 levels · kept through the Great Work only with 🎖️ Muscle Memory</span>
       </div>
       ${bar(totalLevels / Math.max(1, open.length * PROF_MAX), '#f5c542')}
     </div>

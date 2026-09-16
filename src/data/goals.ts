@@ -110,7 +110,7 @@ export const GOALS: GoalDef[] = [
     check: (s) => Object.keys(s.familiars).length > 0, reward: { gold: 250 } },
   { id: 'research', chapter: 'Craft & proficiency', title: 'Begin a study', level: 4, tab: 'library',
     how: 'Start any study in the 📚 Research Library.',
-    about: 'Studies run on their own clock — minutes at first, hours later — and keep going while the game is closed. They are the one thing that competes with the market for your materials, and their bonuses are permanent: they survive ascension.',
+    about: 'Studies run on their own clock — minutes at first, hours later — and keep going while the game is closed. They are the one thing that competes with the market for your materials, and their bonuses last the whole run. They are undone by the Great Work unless you own \ud83c\udfdb\ufe0f The Standing Archive.',
     check: (s) => Object.keys(s.research.done).length > 0 || s.research.queue.length > 0, reward: { gold: 500 } },
 
   // ── Commerce ───────────────────────────────────────────────
@@ -185,7 +185,7 @@ export const GOALS: GoalDef[] = [
   { id: 'relic', chapter: 'The company', title: 'Bring back a relic', level: 14, tab: 'party',
     when: (s) => s.party.roster.length > 0,
     how: 'Clear depth 10, where the first Rift boss waits.',
-    about: 'Every tenth depth is a boss holding a relic. Relics are permanent ranks, not gear — pulling the same one again makes it stronger, and they all survive ascension.',
+    about: 'Every tenth depth is a boss holding a relic. Relics are ranks, not gear — pulling the same one again makes it stronger. The company and everything it has earned is unmade by the Great Work unless you own \ud83c\udfd5\ufe0f Standing Company.',
     check: (s) => Object.keys(s.party.relics).length > 0,
     progress: (s) => [Math.min(10, s.party.depth), 10], reward: { gold: 250000 } },
 
@@ -200,7 +200,7 @@ export const GOALS: GoalDef[] = [
     check: (s) => Object.values(s.asc.nodes).some((v) => v > 0), reward: { gold: 5000 } },
   { id: 'graduate', chapter: 'The long game', title: 'Master a craft', level: 3, tab: 'staff',
     how: 'Take any apprentice to level 30 by leaving them at their work.',
-    about: 'Thirty levels is thirty skill points, enough to take a tree deep rather than wide. Apprentices and everything you have spent on them survive ascension.',
+    about: 'Thirty levels is thirty skill points, enough to take a tree deep rather than wide. Apprentices and their trees are undone by the Great Work unless you own \ud83e\udd1d Loyal Apprentices.',
     check: (s) => Object.values(s.staff.crew).some((a) => a && apprenticeLevel(a.xp) >= 30),
     progress: (s) => {
       const best = Math.max(0, ...Object.values(s.staff.crew).map((a) => (a ? apprenticeLevel(a.xp) : 0)));

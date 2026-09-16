@@ -1,8 +1,8 @@
 import { html, type TemplateResult } from 'lit-html';
 import type { GameState, Mods } from '../../core/types';
 import {
-  ASC_GOLD_GROWTH, ASC_NODES, STONE_RESONANCE, ascCost, ascGoldTarget, ascStatus, startGoldFor,
-  stoneBreakdown, stonesFor,
+  ASC_GOLD_GROWTH, ASC_NODES, RETENTION, STONE_RESONANCE, ascCost, ascGoldTarget, ascStatus,
+  startGoldFor, stoneBreakdown, stonesFor,
 } from '../../data/ascension';
 import { ascend, buyAscNode } from '../../core/actions';
 import { describeEffects } from '../../core/mods';
@@ -16,8 +16,21 @@ function confirmAscend(stones: number): void {
   openModal(html`<div class="modal">
     <h2>🌟 Perform the Magnum Opus?</h2>
     <p>You will gain <b class="gold-text">${fmt(stones)} Philosopher's Stones</b>.</p>
-    <div class="small"><b>Resets:</b> gold, items, level, skills, workshop upgrades, garden, cauldrons, expeditions, guild membership, Rift depth.</div>
-    <div class="small"><b>Keeps:</b> Philosopher's Stones & ascension perks, proficiency, achievements, lifetime stats, settings.</div>
+    ${(() => {
+      // Spelled out from the tree itself rather than written by hand, because this is now the single
+      // most consequential screen in the game: the Great Work unmakes everything except what a perk has
+      // bought back, and a player deserves to see which of those they own before they press the button.
+      const kept = RETENTION.filter((r) => game.s.asc.nodes[r.node]);
+      const lost = RETENTION.filter((r) => !game.s.asc.nodes[r.node]);
+      return html`
+        <div class="small"><b>Always kept:</b> Philosopher's Stones and everything in this tree, achievements,
+          lifetime stats and your settings.</div>
+        ${kept.length ? html`<div class="small good"><b>Kept by your perks:</b> ${kept.map((r) => r.label).join(', ')}.</div>` : ''}
+        ${lost.length ? html`<div class="small warn"><b>Lost:</b> ${lost.map((r) => r.label).join(', ')} —
+          along with gold, items, level, skills, workshop upgrades, the garden, cauldrons, expeditions,
+          guild membership and Rift depth.</div>` : ''}
+        ${lost.length ? html`<div class="dim small">Each of those can be bought back permanently in the tree below.</div>` : ''}`;
+    })()}
     <div class="row">
       <button class="btn gold" @click=${() => {
         const next = ascend(game.s);
@@ -85,7 +98,8 @@ export function ascendView(s: GameState, m: Mods): TemplateResult {
               : ''}
             <div class="dim">The Great Work asks for level ${need.levelNeed} and ${fmt(need.goldNeed)} gold in a single run.
               Stones scale with the square root of gold earned, and every Great Work after this one asks for
-              ${ASC_GOLD_GROWTH}× the gold and three more levels — because so much of what earns that gold is permanent.</div>`}
+              ${ASC_GOLD_GROWTH}× the gold and three more levels. What carries over is whatever your perks
+              have bought back — everything else is unmade.</div>`}
     </div>
 
     ${stonePanel(s, m)}

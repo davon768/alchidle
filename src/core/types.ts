@@ -366,7 +366,7 @@ export interface GameState {
   /** Familiars found so far, by id, with the XP fed into each. */
   familiars: Record<string, number>;
   equippedFamiliars: string[];
-  // Adventurer company (survives ascension, like familiars and apprentices)
+  // Adventurer company (kept through ascension only with the Standing Company perk)
   party: PartyState;
   // Apprentices
   staff: StaffState;

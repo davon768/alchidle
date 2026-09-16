@@ -392,11 +392,15 @@ export function runBot(opts: BotOptions): BotResult {
         s = next;
         runMinutes.push(+((t - runStart) / 60).toFixed(1));
         runStart = t;
+        // Prefer a perk never bought over another rank of one already owned — the same correction the
+        // Workshop needed. It matters more here: the one-off perks are what the Great Work now spares
+        // from the reset, so a bot taking the cheapest rank every time would buy none of them and
+        // measure a game in which nothing ever carries over.
         for (let g = 0; g < 40; g++) {
           const pick = ASC_NODES
             .map((n) => ({ n, cost: ascCost(n, s.asc.nodes[n.id] ?? 0), owned: s.asc.nodes[n.id] ?? 0 }))
             .filter((x) => (x.n.max === 0 || x.owned < x.n.max) && x.cost <= s.asc.stones)
-            .sort((x, y) => x.cost - y.cost)[0];
+            .sort((x, y) => (x.owned === 0 ? 0 : 1) - (y.owned === 0 ? 0 : 1) || x.cost - y.cost)[0];
           if (!pick) break;
           buyAscNode(s, pick.n.id);
         }

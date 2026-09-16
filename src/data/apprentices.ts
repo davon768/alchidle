@@ -5,7 +5,8 @@
  * There is no hiring, no candidate list and no rolling for talents or traits. An apprentice is not a
  * lucky draw you keep rerolling for — it is a long-running investment you direct. Every level is one
  * skill point, and where those points go decides whether your Gardener tends many beds badly or few
- * beds superbly. Their levels and spent points survive ascension, like proficiency and research.
+ * beds superbly. Their levels and spent points are unmade by the Great Work unless Loyal Apprentices
+ * is owned — as are proficiency and research, each behind its own perk.
  */
 import type { Effect, RoleId, StatKey } from '../core/types';
 import type { ProfKind } from './proficiency';

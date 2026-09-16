@@ -2,7 +2,8 @@
  * The Research Library: a queue of long-timer projects (minutes to days) that grant permanent bonuses.
  *
  * It is the game's "come back later" hook — every other system pays out in seconds to minutes — and the
- * only competitor for the materials the player would otherwise sell. Projects survive ascension, so a
+ * only competitor for the materials the player would otherwise sell. Projects are undone by the Great
+ * Work unless the player owns The Standing Archive, so a
  * study started on one run finishes on the next.
  */
 import type { Effect, ItemStack, RoleId } from '../core/types';

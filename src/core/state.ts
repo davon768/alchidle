@@ -105,25 +105,38 @@ export function newState(prev?: GameState): GameState {
   };
   if (prev) {
     s.asc = prev.asc;
+    // Kept deliberately, and not for sale in the tree: every achievement tests a *lifetime* stat, so
+    // clearing them would re-award the whole list within one tick and mean nothing.
     s.achievements = prev.achievements;
+    // Also kept deliberately: goal rewards pay out once, so resetting them would make the tutorial an
+    // infinitely repeatable source of gold and items.
     s.goals = prev.goals;
-    s.prof = prev.prof;
-    s.income = prev.income; // lifetime record, like proficiency
-    s.autoSell = prev.autoSell;
-    s.settings = prev.settings;
-    s.belt = prev.belt;
+    s.income = prev.income; // a lifetime record with no power attached
+    s.settings = prev.settings; // display preferences, not progress
     s.stats.bestRunGold = Math.max(prev.stats.bestRunGold, prev.stats.runGold);
     for (const k of LIFETIME_STATS) s.stats[k] = prev.stats[k];
     s.gold += startGoldFor(s.asc.nodes['head_start'] ?? 0);
-    s.research = prev.research; // studies and their bonuses are permanent, like proficiency
-    s.catalogue = prev.catalogue; // the seed catalogue is a lifetime record
-    s.strains = prev.strains; // and so is how deeply each strain has been bred
-    s.familiars = prev.familiars; // companions stay with you through ascension
-    s.equippedFamiliars = prev.equippedFamiliars;
-    s.staff = prev.staff; // apprentices and their trees are a lifetime investment
-    // The company keeps its heroes, its relics and everything it has mapped; only the delve in progress
-    // is abandoned, because the world it was walking through no longer exists.
-    s.party = { ...prev.party, delve: null };
+
+    // Everything below here is bought back, one node at a time. The Great Work unmakes the workshop
+    // entirely; the ascension tree is meant to be the only permanence in the game, because a rebirth
+    // that leaves proficiency, studies, apprentices and a veteran company standing is not a beginning,
+    // it is a lap. Anything not listed here resets, including the Repeat and auto-sell choices, which
+    // name recipes the new run has not unlocked yet.
+    if (s.asc.nodes['mastery']) s.prof = prev.prof;
+    if (s.asc.nodes['archive']) s.research = prev.research;
+    if (s.asc.nodes['seedvault']) {
+      s.catalogue = prev.catalogue;
+      s.strains = prev.strains;
+    }
+    if (s.asc.nodes['menagerie']) {
+      s.familiars = prev.familiars;
+      s.equippedFamiliars = prev.equippedFamiliars;
+    }
+    if (s.asc.nodes['loyal']) s.staff = prev.staff;
+    if (s.asc.nodes['company_legacy']) {
+      // Only the delve in progress is abandoned: the world it was walking through no longer exists.
+      s.party = { ...prev.party, delve: null };
+    }
     if (s.asc.nodes['arcane_memory']) {
       s.spells = prev.spells;
       s.spellSlots = prev.spellSlots;

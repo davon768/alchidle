@@ -9,7 +9,7 @@
  *
  * Depth is the long game. What a depth demands grows 18% forever while a hero's own power grows only by
  * levels, so the way down is more adventurers, better supplies and stacked relics. Depth, heroes and
- * relics all survive ascension, like familiars and apprentices.
+ * relics are all unmade by the Great Work unless the Standing Company perk is owned.
  */
 import type { Effect, GameState, Mods, StatKey } from '../core/types';
 

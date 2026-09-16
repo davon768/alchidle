@@ -22,10 +22,17 @@ export interface AscNode {
 export const ASC_MIN_GOLD = 600_000;
 
 /**
- * What each further ascension demands. Nearly everything that earns gold is permanent — research,
- * proficiency, apprentices, familiars, stone resonance — so a flat target made every run shorter than
- * the last: measured at 77, 40, 31 and 22 minutes. The target has to outgrow the compounding, or the
- * Great Work stops being a milestone and becomes a lap counter.
+ * What each further ascension demands.
+ *
+ * Set when almost everything that earns gold was permanent — research, proficiency, apprentices,
+ * familiars — so a flat target made every run *shorter* than the last: measured at 77, 40, 31 and 22
+ * minutes. The target had to outgrow the compounding or the Great Work became a lap counter.
+ *
+ * Far less compounds now: the Magnum Opus resets everything the tree has not bought back, so a player
+ * who has spent their stones elsewhere begins each run very close to where they began the first. The
+ * steep target is therefore doing less work than it was, and this number is a candidate for lowering —
+ * but only against a measurement, since the answer depends entirely on how much retention a given player
+ * has bought, which is now a choice rather than a constant.
  */
 export const ASC_GOLD_GROWTH = 2.5;
 export function ascGoldTarget(count: number): number {
@@ -175,6 +182,39 @@ export const ASC_NODES: AscNode[] = [
     effects: [{ stat: 'autoSkills', value: 1 }] },
   { id: 'heirloom', name: 'Heirloom Armory', icon: '🗝️', desc: 'Keep your equipped gear when you ascend', max: 1, baseCost: 12, growth: 1,
     effects: [] },
+
+  // ── What survives the Great Work ───────────────────────────
+  // The Magnum Opus now unmakes everything it can, and each of these buys one thread back. They are
+  // priced above the rest of the tree on purpose: a rank of Quicksilver makes a run faster, whereas one
+  // of these changes what every run after it starts from.
+  { id: 'mastery', name: 'Muscle Memory', icon: '🎖️', desc: 'Keep all proficiency levels when you ascend', max: 1, baseCost: 15, growth: 1,
+    effects: [] },
+  { id: 'archive', name: 'The Standing Archive', icon: '🏛️', desc: 'Keep finished studies when you ascend', max: 1, baseCost: 12, growth: 1,
+    effects: [] },
+  { id: 'company_legacy', name: 'Standing Company', icon: '🏕️', desc: 'Keep your adventurers, their relics and the depth they reached', max: 1, baseCost: 10, growth: 1,
+    effects: [] },
+  { id: 'menagerie', name: 'The Menagerie', icon: '🐾', desc: 'Keep your familiars when you ascend', max: 1, baseCost: 8, growth: 1,
+    effects: [] },
+  { id: 'seedvault', name: 'The Seed Vault', icon: '🫙', desc: 'Keep the seed catalogue and every strain you have bred', max: 1, baseCost: 6, growth: 1,
+    effects: [] },
+];
+
+/**
+ * Every thread the Great Work can spare, and the node that spares it.
+ *
+ * The Magnum Opus resets everything it possibly can: the tree is meant to be the only permanence in the
+ * game, so that a rebirth is a real beginning and the tree is what you are playing for. What is left out
+ * of this list is left out deliberately — see `newState`.
+ */
+export const RETENTION: { node: string; label: string }[] = [
+  { node: 'mastery', label: 'proficiency' },
+  { node: 'archive', label: 'finished studies' },
+  { node: 'loyal', label: 'apprentices and their trees' },
+  { node: 'company_legacy', label: 'the company and its relics' },
+  { node: 'menagerie', label: 'familiars' },
+  { node: 'seedvault', label: 'the seed catalogue and strains' },
+  { node: 'arcane_memory', label: 'spells and their ranks' },
+  { node: 'heirloom', label: 'equipped gear' },
 ];
 
 export const ASC_MAP: Record<string, AscNode> = Object.fromEntries(ASC_NODES.map((a) => [a.id, a]));

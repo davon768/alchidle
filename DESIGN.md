@@ -457,9 +457,60 @@ Most of the game's tallies are lifetime, so "what this run did" is measured agai
 snapshot taken when the run begins. The Magnum Opus screen shows the full breakdown; a single number
 would leave the entire point invisible.
 
-### What persists through ascension
-Stones and eternal perks, proficiency, achievements, lifetime stats, settings, your potion belt layout, research, the seed catalogue and strain ranks, familiars, apprentices, and the adventurer company (roster, relics and depth). **Arcane Memory** also keeps spells, and **Heirloom Armory** keeps equipped gear. Everything else resets.
+### What persists through ascension (rewritten in v1.3)
 
+**The Magnum Opus unmakes everything the tree has not bought back.** It used to spare proficiency,
+research, apprentices, familiars, the company, the seed catalogue and every strain — unconditionally,
+whatever you had spent your stones on. That made a rebirth a lap rather than a beginning: the workshop you
+woke up in was most of the workshop you had just dissolved, and the tree was a side dish.
+
+Now the tree is the only permanence in the game, and each thread is a perk:
+
+| Perk | Keeps | Stones |
+|---|---|---|
+| 🎖️ Muscle Memory | every proficiency level | 15 |
+| 🏛️ The Standing Archive | finished studies | 12 |
+| 🤝 Loyal Apprentices | apprentices and their trees | 8 |
+| 🏕️ Standing Company | adventurers, relics and the depth reached | 10 |
+| 🐾 The Menagerie | familiars | 8 |
+| 🫙 The Seed Vault | the seed catalogue and every strain bred | 6 |
+| 📘 Arcane Memory | spells and their ranks | 10 |
+| 🗝️ Heirloom Armory | equipped gear | 12 |
+
+They are priced above the rest of the tree deliberately: a rank of Quicksilver makes one run faster, while
+one of these changes what every run after it *starts from*. `RETENTION` in `data/ascension.ts` is the
+single list, and the ascend confirmation is generated from it — the most consequential button in the game
+should not be explained by a hand-written sentence that drifts.
+
+Buying them also repaired a dead perk: **Loyal Apprentices cost 8 stones to keep apprentices that
+`newState` was keeping unconditionally anyway**, so it had always bought something you already had.
+
+Three things persist regardless, and are deliberately not for sale:
+
+- **Achievements.** Every one tests a *lifetime* stat, so clearing them would re-award the entire list
+  within a tick and mean nothing.
+- **Goals.** Their rewards pay out once; resetting them would make the tutorial a repeatable source of
+  gold and items.
+- **Lifetime stats and `income`.** Records with no power attached.
+
+Everything else resets, including the auto-sell and belt choices, which name recipes the new run has not
+unlocked yet.
+
+The measured effect is longer runs that keep growing, which is the point: **130 → 120 → 168 → 234 → 269 →
+432 minutes** across six ascensions, against 128 → 119 → 142 → 171 → 195 → 334 before. The first ascension
+is unchanged at ~130 minutes, as it must be — a first run has nothing to carry over either way. What moves
+is everything after it: studies completed per run fall from 23 to 14, the company rebuilds from depth ~19
+rather than ~38, and the time for any item to reach proficiency 50 goes from 189 minutes to **452**, since
+a run no longer inherits a century of practice.
+
+Two knock-on notes. The income-by-level curve now *rises* through level 60 instead of sagging after 50,
+because the longer runs reach those levels in richer states — and its run-to-run spread inside the fit
+range tightened to 1–2×, so the measurement is steadier than the one the prices were set from. The 20–40
+stretch that upgrade costs are anchored on moved by 0.6% (×1.1725 → ×1.165), so the Workshop pricing
+still holds and needs no re-anchoring. And
+`ASC_GOLD_GROWTH` at 2.5 was set precisely *because* almost everything compounded — far less does now, so
+it is a candidate for lowering, but how much less depends on which perks a player bought, which is a
+choice rather than a constant.
 ### The v1.0 content pass, and what paces it
 
 Content now runs to **level 100** across every system, roughly doubling what was there:
