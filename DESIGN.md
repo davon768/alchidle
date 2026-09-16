@@ -149,8 +149,12 @@ Eight hybrid herbs, interleaved through the level curve (6, 16, 24, 30, 44, 60, 
 something to hunt at most stages of a run. Each beats both its parents on yield and value — a cross has to
 be worth the seeds it costs — and none of them exist in the garden until you have made it.
 
-**You never start knowing a recipe.** A cross has to be read off a torn journal page, which turns up from
-expeditions (6%), dungeon bosses (25%) and finished studies (34%). That was a deliberate choice over
+**You never start knowing a recipe.** A cross has to be read off a torn journal page — a real item that
+drops from expeditions (6%), dungeon bosses (25%) and finished studies (34%), sits in your satchel, and is
+spent when you choose to read it. Finding a thing you can see and open is a thing; knowledge that simply
+appears at the end of an expedition is a notification. A Scribe reads for you if you leave that craft to
+them, and once the book is complete a page is never spent — it stays as stock worth selling rather than
+evaporating. That was a deliberate choice over
 letting players brute-force pairs at the bench: it makes the garden depend on the rest of the game rather
 than sitting beside it, and it means a hybrid is something you *found*. Pages are biased towards crosses
 within twelve levels of the player, so a lead is always something you could act on, and a page with
@@ -168,6 +172,18 @@ than a pile:
 
 Both seeds contribute, so a pairing is a real trade-off against what those seeds would have been worth as
 strain ranks.
+
+**Familiarity keeps the ingredients as findable as the knowledge.** A cross asks for a mutated seed of
+each parent, and nobody keeps a bed of Sunleaf at level 40 — so a lead for an early cross meant replanting
+two herbs abandoned thirty levels ago and waiting on a 2% roll for each. The recipe was findable and the
+ingredients were not, which made a discovered cross read as a chore rather than a prize. Every level
+between you and a plant now adds 15% to its mutation chance, to a ceiling of 6×: Sunleaf rolls 12% for a
+level-40 alchemist instead of 2%, and going back for a cross is a detour rather than a grind. It changes
+nothing at the level where a plant is current.
+
+Measured across three 24-hour runs: hybrids discovered went from 1–2 of 8 to **3–4 of 8** (the bot reaches
+level 40–56, so five are within its reach), while strains found went 20.3 → 17.7 — familiarity did not
+flood the tray or trivialise strain ranks, which was the risk. First ascension was unaffected at 122 min.
 
 **What you learn outlasts the Great Work.** This is the one thing outside the ascension tree that survives
 a rebirth, and it is deliberate: the garden, the seeds and the strains are all unmade, but a recipe once

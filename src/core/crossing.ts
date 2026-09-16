@@ -20,7 +20,7 @@ import type { GameState } from '../core/types';
 import { HYBRIDS, HYBRID_MAP, crossBonus, crossHerbCost, type HybridDef } from '../data/hybrids';
 import { PLANT_MAP } from '../data/plants';
 import { parseSeed, seedKey } from '../data/mutations';
-import { addItem, count, removeItem, toast } from './engine';
+import { count, removeItem, toast } from './engine';
 import { moment } from './telemetry';
 
 /** Whether a cross can be started right now, and what is missing if not. */
@@ -125,14 +125,23 @@ export function readPage(s: GameState, quiet = false): HybridDef | null {
 }
 
 /**
- * Turn a found page into a lead. Called wherever a page can turn up.
+ * Read one page from the satchel: spend it to learn a cross.
  *
- * A page with nothing left to teach is not wasted — it becomes a collectible worth selling, which keeps
- * the drop from feeling like a dud once the book is finished.
+ * Reading is deliberately a separate act from finding. A page you can see in your satchel and choose when
+ * to open is a thing; knowledge that simply appears at the end of an expedition is a notification. Once
+ * the book is complete a page is never spent — it stays as stock worth selling, rather than evaporating.
  */
-export function consumePage(s: GameState, quiet = false): void {
-  if (count(s, 'journal_page') < 1) return;
+export function consumePage(s: GameState, quiet = false): boolean {
+  if (count(s, 'journal_page') < 1) return false;
+  if (!pagesWorthReading(s)) {
+    if (!quiet) toast('Every cross in the book is already yours. The page is worth keeping, not reading.', 'info');
+    return false;
+  }
   removeItem(s, 'journal_page', 1);
-  if (readPage(s, quiet)) return;
-  addItem(s, 'journal_page', 1); // nothing left to learn; keep it as a curio
+  return !!readPage(s, quiet);
+}
+
+/** Whether a page could still teach anything. When it cannot, pages stay in the satchel as stock to sell. */
+export function pagesWorthReading(s: GameState): boolean {
+  return HYBRIDS.some((h) => !s.clues[h.id] && !s.codex[h.id]);
 }

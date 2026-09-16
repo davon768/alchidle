@@ -13,7 +13,7 @@ import { DUNGEONS, REWARD_GROWTH } from '../data/combat';
 import { MILESTONES, PROF_MAP, emptyBonus, profBonus, profLevel, type ProfBonus } from '../data/proficiency';
 import { QUAL_MAX, quality, qualityName, rollQuality, stirElapsed, STIR_MAX, STIR_WINDOW } from '../data/quality';
 import { QUALITY_RESEARCH_BOOST, QUALITY_RESEARCH_MAX, RESEARCH_MAP } from '../data/research';
-import { CROSS_CHANCE, TRAITS, seedKey, traitEffect } from '../data/mutations';
+import { CROSS_CHANCE, TRAITS, familiarity, seedKey, traitEffect } from '../data/mutations';
 import { FAMILIAR_MAP, familiarLevel, familiarsOfZone, feedXp, milestonesAt } from '../data/familiars';
 import { dungeonUnlocked, tickCombat } from './combat';
 import { tickMagic } from './magic';
@@ -23,7 +23,7 @@ import { noteStarved as recordStarved, recordIncome, type IncomeSource } from '.
 import { kitReserve, tickParty } from './party';
 import { bestPlant, tickAutomation } from './automation';
 import { moment, tickTelemetry } from './telemetry';
-import { readPage, tickCrossing } from './crossing';
+import { tickCrossing } from './crossing';
 
 // ── Notifications ────────────────────────────────────────────
 export type ToastKind = 'info' | 'good' | 'warn' | 'epic';
@@ -452,7 +452,8 @@ function rollCrossBreed(s: GameState, m: Mods, idx: number): string | null {
   if (!plot?.plantId) return null;
   const neighbours = [s.plots[idx - 1], s.plots[idx + 1]];
   if (!neighbours.some((n) => n?.plantId && n.plantId !== plot.plantId)) return null;
-  if (Math.random() >= CROSS_CHANCE * m.mutationChance) return null;
+  const known = familiarity(s.level, PLANT_MAP[plot.plantId]?.level ?? s.level);
+  if (Math.random() >= CROSS_CHANCE * m.mutationChance * known) return null;
   const trait = TRAITS[Math.floor(Math.random() * TRAITS.length)];
   const key = seedKey(plot.plantId, trait.id);
   s.seeds[key] = (s.seeds[key] ?? 0) + 1;
@@ -506,7 +507,7 @@ function completeExpedition(s: GameState, m: Mods, z: ZoneDef): void {
   s.stats.expeditions++;
   // Something in the ruins was written on. Rare enough to be a find, common enough to keep the garden
   // fed with leads while a player is out exploring.
-  if (Math.random() < 0.06) readPage(s, quiet);
+  if (Math.random() < 0.06) addItem(s, 'journal_page', 1);
   if (z.endless) s.riftDepth++;
   rollFamiliar(s, m, z);
 }
@@ -613,8 +614,8 @@ export function tickResearch(s: GameState, m: Mods, dt: number): void {
     toast(`📚 Research complete: ${def.icon} ${def.name}!`, 'epic');
     moment('research', `finished ${def.name}`);
     // Studies turn up more than their own result: roughly every third one yields a page from somebody
-    // else's notebook. This is one of the three ways a cross is ever learned.
-    if (Math.random() < 0.34) readPage(s, quiet);
+    // else's notebook. This is one of the three ways a cross is ever found.
+    if (Math.random() < 0.34) addItem(s, 'journal_page', 1);
     if (def.unlocksRole) unlockApprentice(s, def.unlocksRole);
   }
 }

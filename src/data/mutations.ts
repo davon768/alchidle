@@ -25,6 +25,24 @@ export const TRAIT_MAP: Record<string, TraitDef> = Object.fromEntries(TRAITS.map
 /** Base chance that harvesting a plot beside a different herb yields a mutated seed. */
 export const CROSS_CHANCE = 0.02;
 
+/**
+ * How much more readily a herb throws a seed once you have long outgrown it.
+ *
+ * Crossing asks for a seed of each parent, and nobody keeps a bed of Sunleaf at level 40 — so a lead for
+ * an early cross meant replanting two herbs you abandoned thirty levels ago and waiting on a 2% roll for
+ * each. The knowledge was findable and the *ingredients* were not, which made a discovered recipe feel
+ * like a chore rather than a prize.
+ *
+ * A herb you have grown a thousand times gives up its secrets faster: every level between you and the
+ * plant adds 15%, to a ceiling of six times the base rate. Going back for a cross is now a short detour
+ * rather than a grind, and it costs nothing at the level where a plant is current.
+ */
+export const FAMILIARITY_PER_LEVEL = 0.15;
+export const FAMILIARITY_CAP = 6;
+export function familiarity(playerLevel: number, plantLevel: number): number {
+  return Math.min(FAMILIARITY_CAP, 1 + FAMILIARITY_PER_LEVEL * Math.max(0, playerLevel - plantLevel));
+}
+
 /** Seed keys are `plantId:trait`. */
 export const seedKey = (plantId: string, trait: string): string => `${plantId}:${trait}`;
 export function parseSeed(key: string): { plantId: string; trait: string } {

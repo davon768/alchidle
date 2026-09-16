@@ -14,6 +14,7 @@
  *   sale, delve or study is identical to a manual one — including its cost, its toast and its ledger tag.
  */
 import type { GameState, Mods } from './types';
+import { consumePage } from './crossing';
 import {
   count, demandOf, doSell, feedFamiliar, hasAll, plantCost, researchStatus, sellValue, skillPointsFree,
   unlockedPlants, unlockedRecipes, unlockedZones,
@@ -223,6 +224,9 @@ function autoScribe(s: GameState, m: Mods): void {
       }
     }
   }
+  // Whoever is already reading all day may as well open the post. Covered by the Scribe's handover
+  // switch, so a player hunting crosses by hand simply turns them off.
+  if (on(m.autoStudy)) while (consumePage(s, true));
   if (on(m.autoStudy)) {
     const open = RESEARCH.filter((r) => researchStatus(s, m, r.id).ok && hasAll(s, r.cost));
     if (open.length) startResearch(s, open[0].id);

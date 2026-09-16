@@ -3,12 +3,12 @@ import type { GameState, Mods } from '../../core/types';
 import { PLANT_MAP } from '../../data/plants';
 import { TRAITS, TRAIT_MAP, describeTrait, parseSeed } from '../../data/mutations';
 import { item } from '../../data/items';
-import { growRate, plantCost, profBonusOf, profLevelOf, strainRank, unlockedPlants } from '../../core/engine';
+import { count, growRate, plantCost, profBonusOf, profLevelOf, strainRank, unlockedPlants } from '../../core/engine';
 import { clearPlot, harvest, harvestAll, plant, plantAll, sowAll, sowBest } from '../../core/actions';
 import { fmt, fmtTime } from '../../core/format';
 import { act, bar, gold, handover, refresh, sectionTitle, ui } from '../common';
 import { HYBRIDS, HYBRID_MAP, codexProgress, crossBonus, crossHerbCost, knownCrosses } from '../../data/hybrids';
-import { cancelCross, crossStatus, startCross } from '../../core/crossing';
+import { cancelCross, consumePage, crossStatus, pagesWorthReading, startCross } from '../../core/crossing';
 
 /**
  * The crossing bench, kept small.
@@ -28,7 +28,7 @@ function crossingBench(s: GameState): TemplateResult | string {
   const prog = codexProgress(s);
   const bench = s.bench;
   const open = knownCrosses(s);
-  if (!prog.known && !prog.found && !bench) {
+  if (!prog.known && !prog.found && !bench && count(s, 'journal_page') < 1) {
     return html`<div class="card compact">
       <div class="row between">
         <b class="small">🧬 Crossing Bench</b>
@@ -37,6 +37,7 @@ function crossingBench(s: GameState): TemplateResult | string {
     </div>`;
   }
 
+  const pages = Math.floor(count(s, 'journal_page'));
   const shut = !ui.benchOpen;
   return html`<div class="card compact">
     <div class="row between bench-head" @click=${() => { ui.benchOpen = !ui.benchOpen; refresh(); }}>
@@ -46,6 +47,13 @@ function crossingBench(s: GameState): TemplateResult | string {
         <span class="chev">${shut ? '▸' : '▾'}</span>
       </span>
     </div>
+
+    ${pages > 0 ? html`<div class="row between small">
+      <span>📄 ${fmt(pages)} torn page${pages === 1 ? '' : 's'}</span>
+      ${pagesWorthReading(s)
+        ? html`<button class="btn tiny primary" @click=${act((st) => { consumePage(st); })}>Read one</button>`
+        : html`<span class="dim tiny">nothing left to learn — worth selling</span>`}
+    </div>` : ''}
 
     ${bench ? (() => {
       const h = HYBRID_MAP[bench.hybrid];

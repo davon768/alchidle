@@ -35,7 +35,7 @@ import { learnNode, nodeStatus, pointsFree } from '../src/core/staff.ts';
 import { canDelve, canHire, hireAdventurer, partyReport, setKit, startDelve, suppliable } from '../src/core/party.ts';
 import { delveOdds, hireCost } from '../src/data/adventurers.ts';
 import { ROLES, apprenticeLevel } from '../src/data/apprentices.ts';
-import { PLANTS } from '../src/data/plants.ts';
+import { PLANTS, PLANT_MAP } from '../src/data/plants.ts';
 import { ALL_ITEMS } from '../src/data/items.ts';
 import { UPGRADES, upgradeCost } from '../src/data/upgrades.ts';
 import { SKILLS } from '../src/data/skills.ts';
@@ -43,6 +43,9 @@ import { RESEARCH, researchCost } from '../src/data/research.ts';
 import { ASC_NODES, ascCost, ascStatus } from '../src/data/ascension.ts';
 import { ascend, buyAscNode } from '../src/core/actions.ts';
 import { QUALITIES } from '../src/data/quality.ts';
+import { consumePage, crossStatus, startCross } from '../src/core/crossing.ts';
+import { HYBRIDS } from '../src/data/hybrids.ts';
+import { parseSeed } from '../src/data/mutations.ts';
 
 /** Simulated seconds between decisions. The engine itself is correct for any dt. */
 const STEP = 5;
@@ -93,6 +96,9 @@ export interface BotResult {
   endGoldPerMin: number;
   /** The whole final state, only when --dump asked for it. */
   finalState: GameState | null;
+  /** Hybrids discovered, and how many are in the ground at the end — is the content reachable and worth it? */
+  hybridsFound: number;
+  hybridsPlanted: number;
   /** How many distinct upgrades were bought, and the level of the deepest one — is the tail reachable? */
   upgradesOwned: number;
   deepestUpgrade: { name: string; level: number } | null;
@@ -119,15 +125,47 @@ function tendGarden(s: GameState, m: Mods, opts: BotOptions): void {
   harvestAll(s);
   const affordable = PLANTS.filter((p) => p.level <= s.level && s.gold > plantCost(s, m, p) * 4);
   if (!affordable.length) return;
-  const choices = opts.starter
+  let choices = opts.starter
     ? [affordable[0]]
     : opts.singleHerb ? [affordable[affordable.length - 1]] : affordable.slice(-2);
 
-  // Sow every mutated seed on hand: a strain now stays with the bed, so a seed is a permanent upgrade
-  // to one plot rather than a single planting, and holding them back is never right.
+  // Go back and grow what an open cross asks for.
+  //
+  // Nobody keeps a bed of Sunleaf at level 40, so a bot that only ever plants its best two herbs can
+  // never hold a seed of both parents and never discovers anything. A player reading a lead plants the
+  // two herbs it names; so does this. Only while a lead is actually open, and only the parents still
+  // missing a seed, so it costs nothing the rest of the time.
+  if (!opts.starter && !opts.singleHerb) {
+    const wanted: string[] = [];
+    for (const h of HYBRIDS) {
+      if (s.codex[h.id] || !s.clues[h.id] || s.level < h.level) continue;
+      for (const parent of h.parents) {
+        const haveSeed = Object.keys(s.seeds).some((k) => (s.seeds[k] ?? 0) > 0 && parseSeed(k).plantId === parent);
+        if (!haveSeed && PLANT_MAP[parent] && !wanted.includes(parent)) wanted.push(parent);
+      }
+    }
+    // Two unlike herbs side by side is what crossing needs, so the pair goes in together.
+    if (wanted.length) choices = wanted.slice(0, 2).map((id) => PLANT_MAP[id]);
+    if (choices.length === 1) choices = [choices[0], affordable[affordable.length - 1]];
+  }
+
+  // Sow every mutated seed on hand — except the ones a cross is waiting on.
+  //
+  // "Holding them back is never right" was true until crossing existed. Now a seed is either a strain
+  // rank or the price of a hybrid, and sowing the instant one appears meant the bench never saw a single
+  // seed and the hybrids were never discovered at all.
+  const reserved = new Set<string>();
+  for (const h of HYBRIDS) {
+    if (s.codex[h.id] || !s.clues[h.id] || s.level < h.level) continue;
+    for (const parent of h.parents) {
+      const held = Object.keys(s.seeds).filter((k) => (s.seeds[k] ?? 0) > 0 && parseSeed(k).plantId === parent).sort()[0];
+      if (held) reserved.add(held);
+    }
+  }
   for (const [key, n] of Object.entries(s.seeds)) {
     if (n <= 0) continue;
-    for (let i = 0; i < n; i++) if (!sowBest(s, key)) break;
+    const spare = reserved.has(key) ? n - 1 : n;
+    for (let i = 0; i < spare; i++) if (!sowBest(s, key)) break;
   }
   s.plots.forEach((p, i) => {
     if (p.plantId) return;
@@ -236,6 +274,33 @@ function buyUpgrades(s: GameState, opts: BotOptions): void {
   }
 }
 
+/**
+ * Read every page, then make any cross it can.
+ *
+ * Without this the bot never discovers a hybrid, never plants one, and the eight of them are content that
+ * nothing has ever exercised — the same hole that left the top of the Workshop priced past anything the
+ * game earns. A cross it *cannot* afford is left alone rather than forced: what we want to learn is
+ * whether hybrids are reachable in ordinary play, so the policy must be allowed to fail.
+ */
+function tendBench(s: GameState): void {
+  while (consumePage(s, true));
+  if (s.bench) return;
+  for (const h of HYBRIDS) {
+    if (s.codex[h.id] || !s.clues[h.id] || s.level < h.level) continue;
+    // Spend the cheapest seed available for each parent: a seed held back is a strain rank, and the bot
+    // should not raid its own garden for traits it would rather keep.
+    const pick = (plantId: string) => Object.keys(s.seeds)
+      .filter((k) => (s.seeds[k] ?? 0) > 0 && parseSeed(k).plantId === plantId)
+      .sort()[0] ?? '';
+    const a = pick(h.parents[0]);
+    const b = pick(h.parents[1]);
+    if (!a || !b) continue;
+    if (!crossStatus(s, h, a, b).ok) continue;
+    startCross(s, h.id, a, b);
+    return;
+  }
+}
+
 function spendGold(s: GameState, m: Mods, opts: BotOptions): void {
   for (const it of ALL_ITEMS) {
     if (!it.buyLevel || it.buyLevel > s.level) continue;
@@ -334,6 +399,7 @@ export function runBot(opts: BotOptions): BotResult {
     tendStaff(s, m, opts);
     tendCompany(s, m, opts);
     spendGold(s, m, opts);
+    tendBench(s);
 
     simulate(s, STEP);
 
@@ -439,6 +505,8 @@ export function runBot(opts: BotOptions): BotResult {
     // or decoration: an entry costing more than the whole late run earns is one nobody will ever buy.
     endGold: Math.round(s.gold),
     endGoldPerMin: Math.round(s.stats.runGold / Math.max(1, s.stats.runTime / 60)),
+    hybridsFound: HYBRIDS.filter((h) => s.codex[h.id]).length,
+    hybridsPlanted: HYBRIDS.filter((h) => s.plots.some((p) => p.plantId === h.id)).length,
     upgradesOwned: Object.keys(s.upgrades).filter((id) => (s.upgrades[id] ?? 0) > 0).length,
     deepestUpgrade: UPGRADES.filter((u) => (s.upgrades[u.id] ?? 0) > 0)
       .sort((a, b) => b.level - a.level)
@@ -513,6 +581,7 @@ if (flag('json')) {
     console.log(`        top proficiency ${r.topProficiencies.slice(0, 3).map(([k, v]) => `${k} ${v}`).join(', ')}`
       + ` · ${r.apprentices} apprentices (best lv ${r.bestApprenticeLevel})`);
     console.log(`        purse ${r.endGold.toExponential(2)}, earning ${r.endGoldPerMin.toExponential(2)}/min in the current run`);
+    console.log(`        hybrids ${r.hybridsFound}/${HYBRIDS.length} discovered, ${r.hybridsPlanted} in the ground`);
     console.log(`        upgrades ${r.upgradesOwned}/${UPGRADES.length} bought`
       + (r.deepestUpgrade ? `, deepest ${r.deepestUpgrade.name} (level ${r.deepestUpgrade.level})` : ''));
   }
