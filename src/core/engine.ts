@@ -23,6 +23,7 @@ import { noteStarved as recordStarved, recordIncome, type IncomeSource } from '.
 import { kitReserve, tickParty } from './party';
 import { bestPlant, tickAutomation } from './automation';
 import { moment, tickTelemetry } from './telemetry';
+import { readPage, tickCrossing } from './crossing';
 
 // ── Notifications ────────────────────────────────────────────
 export type ToastKind = 'info' | 'good' | 'warn' | 'epic';
@@ -328,7 +329,9 @@ export function unlockedRecipes(s: GameState): Recipe[] {
   return RECIPES.filter((r) => r.level <= s.level);
 }
 export function unlockedPlants(s: GameState): PlantDef[] {
-  return PLANTS.filter((p) => p.level <= s.level);
+  // A hybrid is not gated on level alone: it does not exist for you until you have made the cross, which
+  // is the whole point of discovering one. See data/hybrids.ts.
+  return PLANTS.filter((p) => p.level <= s.level && (!p.hybrid || s.codex?.[p.id]));
 }
 export function unlockedZones(s: GameState): ZoneDef[] {
   return ZONES.filter((z) => z.level <= s.level);
@@ -501,6 +504,9 @@ function completeExpedition(s: GameState, m: Mods, z: ZoneDef): void {
   }
   gainXp(s, m, z.xp * Math.sqrt(mult));
   s.stats.expeditions++;
+  // Something in the ruins was written on. Rare enough to be a find, common enough to keep the garden
+  // fed with leads while a player is out exploring.
+  if (Math.random() < 0.06) readPage(s, quiet);
   if (z.endless) s.riftDepth++;
   rollFamiliar(s, m, z);
 }
@@ -606,6 +612,9 @@ export function tickResearch(s: GameState, m: Mods, dt: number): void {
     if (!def) continue;
     toast(`📚 Research complete: ${def.icon} ${def.name}!`, 'epic');
     moment('research', `finished ${def.name}`);
+    // Studies turn up more than their own result: roughly every third one yields a page from somebody
+    // else's notebook. This is one of the three ways a cross is ever learned.
+    if (Math.random() < 0.34) readPage(s, quiet);
     if (def.unlocksRole) unlockApprentice(s, def.unlocksRole);
   }
 }
@@ -762,6 +771,7 @@ export function tick(s: GameState, dt: number): void {
   tickParty(s, m, dt);
   // Last: apprentices act on the state the rest of the tick just produced.
   tickAutomation(s, m, dt);
+  tickCrossing(s, dt, quiet);
   tickTelemetry(s, dt, quiet);
 }
 

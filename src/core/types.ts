@@ -318,6 +318,15 @@ export interface GameState {
   catalogue: Record<string, true>; // every plant × trait pair ever discovered (permanent)
   /** Rank per strain, keyed `plantId:trait`: how many seeds of it have been sown (permanent). */
   strains: Record<string, number>;
+  /**
+   * Hybrid crosses discovered, and the ones read about but not yet made. Both are *knowledge* rather than
+   * stock, so both survive the Great Work unconditionally — re-finding the same journal page every run
+   * would be a chore rather than a challenge. See data/hybrids.ts.
+   */
+  codex: Record<string, true>;
+  clues: Record<string, true>;
+  /** The crossing bench, when something is on it. One cross at a time. */
+  bench: { hybrid: string; seedA: string; seedB: string; progress: number; time: number } | null;
   level: number;
   xp: number;
   skills: Record<string, number>;

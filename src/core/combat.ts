@@ -1,4 +1,5 @@
 import type { CombatEffect, Enemy, EnemyRank, GameState, Mods } from './types';
+import { readPage } from './crossing';
 import { addGold, addItem, count, gainXp, isQuiet, potionPotency, randInt, removeItem, rollAmount, takenTier, toast } from './engine';
 import { qualityName } from '../data/quality';
 import { computeMods } from './mods';
@@ -257,6 +258,9 @@ function onKill(s: GameState, m: Mods, d: DungeonDef, e: Enemy): void {
   rollDrops(s, m, d.drops, floorLoot * (e.rank === 'elite' ? 2 : 1));
   if (e.rank === 'boss' || e.rank === 'champion') {
     s.stats.bosses++;
+  // Bosses sit on hoards, and hoards have books in them. The surest of the three sources, because a boss
+  // is a deliberate trip rather than something that happens while you are elsewhere.
+  if (Math.random() < 0.25) readPage(s);
     rollDrops(s, m, d.bossDrops, floorLoot);
   }
   const gearChance = { normal: 0.03, elite: 0.4, boss: 1, champion: 1 }[e.rank] * m.lootFind;

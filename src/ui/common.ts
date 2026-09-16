@@ -27,6 +27,8 @@ export const ui = {
   /** Potion chosen for feeding familiars; falls back to whatever is on hand. */
   feedPotion: '' as string,
   /** Item keys gained since the Inventory tab was last open (shows NEW badges). */
+  /** Which seeds are selected for each cross on the bench. A half-finished thought, not progress. */
+  crossPick: {} as Record<string, { a: string; b: string }>,
   newItems: new Set<string>(),
 };
 

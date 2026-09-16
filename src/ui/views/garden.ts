@@ -6,7 +6,95 @@ import { item } from '../../data/items';
 import { growRate, plantCost, profBonusOf, profLevelOf, strainRank, unlockedPlants } from '../../core/engine';
 import { clearPlot, harvest, harvestAll, plant, plantAll, sowAll, sowBest } from '../../core/actions';
 import { fmt, fmtTime } from '../../core/format';
-import { act, bar, gold, sectionTitle, ui } from '../common';
+import { act, bar, gold, refresh, sectionTitle, ui } from '../common';
+import { HYBRIDS, HYBRID_MAP, codexProgress, crossBonus, crossHerbCost, knownCrosses } from '../../data/hybrids';
+import { cancelCross, crossStatus, startCross } from '../../core/crossing';
+
+/**
+ * The crossing bench.
+ *
+ * What finally gives the seed tray a purpose: a cross is paid for in seeds, one carrying each parent, so
+ * a seed is now either a strain rank or crossing material and spending it is a choice. Which trait you
+ * feed in changes the result, which is why the picker shows the traits rather than just a count.
+ *
+ * Recipes are never listed before they are learned — an unread cross shows as a locked slot, because the
+ * whole point is that a hybrid is something you found.
+ */
+function crossingBench(s: GameState): TemplateResult | string {
+  const prog = codexProgress(s);
+  if (!prog.known && !prog.found) {
+    // Nothing read yet: say where pages come from rather than showing an empty shelf.
+    return html`<div class="card">
+      <div class="row between"><b>🧬 Crossing Bench</b><span class="dim">no recipes yet</span></div>
+      <div class="dim small">Somewhere out there people have written down how to cross two herbs into one
+        that does not grow wild. Torn journal pages turn up on expeditions, in the hoards of dungeon
+        bosses, and folded into the studies your Library finishes.</div>
+    </div>`;
+  }
+
+  const bench = s.bench;
+  const open = knownCrosses(s);
+  const pick = ui.crossPick ?? {};
+  return html`<div class="card">
+    <div class="row between">
+      <b>🧬 Crossing Bench</b>
+      <span class="dim">${prog.found}/${prog.total} discovered · ${prog.known - prog.found} lead${prog.known - prog.found === 1 ? '' : 's'} open</span>
+    </div>
+
+    ${bench ? (() => {
+      const h = HYBRID_MAP[bench.hybrid];
+      const left = Math.max(0, bench.time - bench.progress);
+      return html`<div class="small">Crossing <b>${h?.name ?? bench.hybrid}</b></div>
+        ${bar(bench.progress / bench.time, '#7fd8ff', fmtTime(left) + ' left')}
+        <button class="btn small" @click=${act((st) => cancelCross(st))}>Scrap it</button>`;
+    })() : ''}
+
+    ${!bench && open.length ? html`<div class="col" style="gap:8px">
+      ${open.map((h) => {
+        const a = PLANT_MAP[h.parents[0]];
+        const b = PLANT_MAP[h.parents[1]];
+        const seedsFor = (plantId: string) => Object.entries(s.seeds)
+          .filter(([k, n]) => n > 0 && parseSeed(k).plantId === plantId);
+        const mine = pick[h.id] ?? { a: '', b: '' };
+        const st = crossStatus(s, h, mine.a, mine.b);
+        const bonus = crossBonus(mine.a, mine.b);
+        const chip = (key: string, side: 'a' | 'b') => {
+          const tr = TRAIT_MAP[parseSeed(key).trait];
+          const on = mine[side] === key;
+          return html`<button class="btn small seed-chip ${on ? 'primary' : ''}" style="--t:${tr?.color ?? '#888'}"
+            @click=${() => { ui.crossPick = { ...pick, [h.id]: { ...mine, [side]: on ? '' : key } }; refresh(); }}>
+            ${tr?.icon} ${tr?.name}<span class="dim"> ×${s.seeds[key]}</span>
+          </button>`;
+        };
+        return html`<div class="cross-row">
+          <div class="row between">
+            <b class="small">${a?.name} × ${b?.name}</b>
+            <span class="dim small">${s.level < h.level ? `needs level ${h.level}` : `${crossHerbCost(h)} of each herb`}</span>
+          </div>
+          <div class="dim small">"${h.hint}"</div>
+          <div class="row wrap" style="gap:4px">
+            <span class="dim small">${a?.name} seed:</span>
+            ${seedsFor(h.parents[0]).length ? seedsFor(h.parents[0]).map(([k]) => chip(k, 'a'))
+              : html`<span class="dim small warn">none in the tray</span>`}
+          </div>
+          <div class="row wrap" style="gap:4px">
+            <span class="dim small">${b?.name} seed:</span>
+            ${seedsFor(h.parents[1]).length ? seedsFor(h.parents[1]).map(([k]) => chip(k, 'b'))
+              : html`<span class="dim small warn">none in the tray</span>`}
+          </div>
+          ${bonus.notes.length ? html`<div class="small good">${bonus.notes.join(' · ')}</div>` : ''}
+          <button class="btn small ${st.ok ? 'primary' : ''}" ?disabled=${!st.ok} title=${st.reason}
+            @click=${act((g) => startCross(g, h.id, mine.a, mine.b))}>
+            ${st.ok ? 'Cross them' : st.reason || 'Cross them'}
+          </button>
+        </div>`;
+      })}
+    </div>` : ''}
+
+    ${prog.found ? html`<div class="dim small">Discovered: ${HYBRIDS.filter((h) => s.codex[h.id]).map((h) => h.name).join(', ')}.
+      A cross once made is known forever — the Great Work unmakes the garden, never the notebook.</div>` : ''}
+  </div>`;
+}
 
 /** Mutated seeds on hand, plus how much of the catalogue has been filled in. */
 function seedTray(s: GameState): TemplateResult | string {
@@ -75,6 +163,7 @@ export function gardenView(s: GameState, m: Mods): TemplateResult {
       </div>
     </div>
 
+    ${crossingBench(s)}
     ${seedTray(s)}
 
     <div class="plots">

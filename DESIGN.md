@@ -138,6 +138,46 @@ forever and pays +1% growth and +1% harvest yield. With 9 plants × 4 traits tha
 collection grind that only advances when the player deliberately mixes herbs across neighbouring plots —
 planting one herb everywhere never crosses at all.
 
+### The Crossing Bench (v1.3): hybrids you have to find
+
+The seed tray was a shelf. Seeds accumulated, you sowed them into beds, and there was no decision anywhere
+in it — the catalogue bonus arrived whether you thought about it or not. The bench gives the tray a job:
+**a cross is paid for in seeds**, one carrying each parent, so every seed is now either a strain rank or
+crossing material and spending it is a choice.
+
+Eight hybrid herbs, interleaved through the level curve (6, 16, 24, 30, 44, 60, 76, 92) so there is
+something to hunt at most stages of a run. Each beats both its parents on yield and value — a cross has to
+be worth the seeds it costs — and none of them exist in the garden until you have made it.
+
+**You never start knowing a recipe.** A cross has to be read off a torn journal page, which turns up from
+expeditions (6%), dungeon bosses (25%) and finished studies (34%). That was a deliberate choice over
+letting players brute-force pairs at the bench: it makes the garden depend on the rest of the game rather
+than sitting beside it, and it means a hybrid is something you *found*. Pages are biased towards crosses
+within twelve levels of the player, so a lead is always something you could act on, and a page with
+nothing left to teach becomes a sellable curio rather than a dud.
+
+**Which seed you spend changes the result**, which is the part that makes the tray a hand of cards rather
+than a pile:
+
+| Trait spent | Effect on the cross |
+|---|---|
+| 💨 Swift | 35% less time |
+| 🧺 Bountiful | +2 seeds of the new strain |
+| 🌟 Radiant | +1 seed of the new strain |
+| 🪨 Hardy | the parent herbs are not consumed |
+
+Both seeds contribute, so a pairing is a real trade-off against what those seeds would have been worth as
+strain ranks.
+
+**What you learn outlasts the Great Work.** This is the one thing outside the ascension tree that survives
+a rebirth, and it is deliberate: the garden, the seeds and the strains are all unmade, but a recipe once
+read stays read and a hybrid once discovered stays plantable. Knowledge is not stock, and re-finding the
+same journal page every run would be a chore rather than a challenge.
+
+Hybrids are hidden from `unlockedPlants` until `s.codex` holds them, so they never inflate the seed
+catalogue's denominator either — a plant you have not discovered does not make the collection look
+incomplete.
+
 ### Familiars (v0.8)
 
 Seven companions, one per zone, each turning up on a completed expedition there (2–4% a run, scaled by

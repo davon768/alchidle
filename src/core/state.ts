@@ -61,6 +61,9 @@ export function newState(prev?: GameState): GameState {
     seeds: {},
     catalogue: {},
     strains: {},
+    codex: {},
+    clues: {},
+    bench: null,
     level: 1,
     xp: 0,
     skills: {},
@@ -112,6 +115,10 @@ export function newState(prev?: GameState): GameState {
     // infinitely repeatable source of gold and items.
     s.goals = prev.goals;
     s.income = prev.income; // a lifetime record with no power attached
+    // Knowledge, not stock: the garden, the seeds and the strains are all unmade, but a recipe once read
+    // stays read and a hybrid once discovered stays plantable. Deliberately not for sale in the tree.
+    s.codex = prev.codex;
+    s.clues = prev.clues;
     s.settings = prev.settings; // display preferences, not progress
     s.stats.bestRunGold = Math.max(prev.stats.bestRunGold, prev.stats.runGold);
     for (const k of LIFETIME_STATS) s.stats[k] = prev.stats[k];

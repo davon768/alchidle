@@ -28,6 +28,17 @@ const BASE_ITEMS: ItemDef[] = [
   { id: 'soulthistle', name: 'Soul Thistle', icon: '🏵️', kind: 'herb', value: 13000 },
   { id: 'glassfern', name: 'Glass Fern', icon: '🍀', kind: 'herb', value: 30000 },
   { id: 'eternabloom', name: 'Eternabloom', icon: '🌻', kind: 'herb', value: 70000 },
+  // Hybrid herbs — only ever obtained by discovering the cross that makes them
+  { id: 'dawnpetal', name: 'Dawnpetal', icon: '🌅', kind: 'herb', value: 8 },
+  { id: 'emberfrost', name: 'Emberfrost', icon: '❄️', kind: 'herb', value: 34 },
+  { id: 'dreamroot', name: 'Dreamroot', icon: '💤', kind: 'herb', value: 120 },
+  { id: 'thornlotus', name: 'Thornlotus', icon: '🥀', kind: 'herb', value: 210 },
+  { id: 'starhazel', name: 'Starhazel', icon: '✨', kind: 'herb', value: 1100 },
+  { id: 'voidlily', name: 'Voidlily', icon: '🕳️', kind: 'herb', value: 5400 },
+  { id: 'mirrorthistle', name: 'Mirror Thistle', icon: '🪞', kind: 'herb', value: 28000 },
+  { id: 'glassbloom', name: 'Glassbloom', icon: '🔮', kind: 'herb', value: 150000 },
+  // A page torn from someone else's notebook, naming a cross you have not made.
+  { id: 'journal_page', name: 'Torn Journal Page', icon: '📄', kind: 'material', value: 40 },
   // Materials — found on expeditions, some sold at the market
   { id: 'clearwater', name: 'Clearwater', icon: '💧', kind: 'material', value: 1, buyLevel: 1 },
   { id: 'quartz', name: 'Quartz', icon: '🪨', kind: 'material', value: 6, buyLevel: 9 },

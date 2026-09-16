@@ -1,4 +1,5 @@
 import type { GameState } from './types';
+import { HYBRID_MAP } from '../data/hybrids';
 import { freshCombat, newState, snapshotRun, SAVE_VERSION } from './state';
 import { DUNGEON_MAP } from '../data/combat';
 import { BELT_MAX } from './combat';
@@ -95,6 +96,11 @@ function migrate(raw: LegacySave): GameState {
     if (!TRAIT_MAP[trait] || !PLANT_MAP[plantId]) delete s.seeds[key];
   }
   for (const key of Object.keys(s.strains ?? {})) if (!TRAIT_MAP[parseSeed(key).trait] || !PLANT_MAP[parseSeed(key).plantId]) delete s.strains[key];
+  // Hybrid ids index into game data like any other content id, so a cross that no longer exists is
+  // dropped rather than left to be read every tick.
+  for (const id of Object.keys(s.codex ?? {})) if (!HYBRID_MAP[id]) delete s.codex[id];
+  for (const id of Object.keys(s.clues ?? {})) if (!HYBRID_MAP[id]) delete s.clues[id];
+  if (s.bench && !HYBRID_MAP[s.bench.hybrid]) s.bench = null;
   // v7 → v8: familiars. mergeDefaults supplies the empty records; drop anything whose definition is
   // gone and trim the equipped list so a stale id cannot reach computeMods.
   for (const id of Object.keys(s.familiars)) if (!FAMILIAR_MAP[id]) delete s.familiars[id];

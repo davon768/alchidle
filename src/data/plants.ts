@@ -14,6 +14,8 @@ export interface PlantDef {
    * on from Sunleaf. Yield is the third term that makes later beds worth the wait.
    */
   yield: number;
+  /** Only obtainable by discovering its cross — hidden from the garden until then. See data/hybrids.ts. */
+  hybrid?: true;
 }
 
 export const PLANTS: PlantDef[] = [
@@ -32,6 +34,19 @@ export const PLANTS: PlantDef[] = [
   { id: 'soulthistle', herb: 'soulthistle', name: 'Soul Thistle', icon: '🌱', level: 74, cost: 13000, time: 600, yield: 13.8 },
   { id: 'glassfern', herb: 'glassfern', name: 'Glass Fern', icon: '🌱', level: 82, cost: 30000, time: 760, yield: 16.4 },
   { id: 'eternabloom', herb: 'eternabloom', name: 'Eternabloom', icon: '🌱', level: 90, cost: 70000, time: 960, yield: 19.5 },
+
+  // ── Hybrids ────────────────────────────────────────────────
+  // Each beats both its parents on yield and value; a cross has to be worth the seeds it costs. They sit
+  // between the parent levels and the next ordinary plant, so finding one is a genuine jump rather than a
+  // sidegrade. Hidden until discovered — see data/hybrids.ts.
+  { id: 'dawnpetal', herb: 'dawnpetal', name: 'Dawnpetal', icon: '🌱', level: 6, cost: 8, time: 18, yield: 4.2, hybrid: true },
+  { id: 'emberfrost', herb: 'emberfrost', name: 'Emberfrost', icon: '🌱', level: 16, cost: 34, time: 52, yield: 4.6, hybrid: true },
+  { id: 'dreamroot', herb: 'dreamroot', name: 'Dreamroot', icon: '🌱', level: 24, cost: 120, time: 100, yield: 5.2, hybrid: true },
+  { id: 'thornlotus', herb: 'thornlotus', name: 'Thornlotus', icon: '🌱', level: 30, cost: 210, time: 135, yield: 5.9, hybrid: true },
+  { id: 'starhazel', herb: 'starhazel', name: 'Starhazel', icon: '🌱', level: 44, cost: 1100, time: 250, yield: 8.4, hybrid: true },
+  { id: 'voidlily', herb: 'voidlily', name: 'Voidlily', icon: '🌱', level: 60, cost: 5400, time: 400, yield: 12, hybrid: true },
+  { id: 'mirrorthistle', herb: 'mirrorthistle', name: 'Mirror Thistle', icon: '🌱', level: 76, cost: 28000, time: 640, yield: 17, hybrid: true },
+  { id: 'glassbloom', herb: 'glassbloom', name: 'Glassbloom', icon: '🌱', level: 92, cost: 150000, time: 1000, yield: 24, hybrid: true },
 ];
 
 export const PLANT_MAP: Record<string, PlantDef> = Object.fromEntries(PLANTS.map((p) => [p.id, p]));
