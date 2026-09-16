@@ -476,3 +476,27 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
 .handover:hover { border-color: var(--accent); }
 .handover.on { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .handover input { accent-color: var(--accent); margin: 0; cursor: pointer; }
+
+/* The crossing bench earns a line on the Garden screen, not half of it. */
+.card.compact { padding: 8px 10px; gap: 6px; }
+.bench-head { cursor: pointer; user-select: none; }
+.bench-head .chev { margin-left: 6px; opacity: 0.7; }
+.cross-row {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 3px 0;
+  border-top: 1px solid var(--line);
+}
+.cross-row:first-child { border-top: 0; }
+.cross-name { flex: 1 1 auto; min-width: 120px; }
+.btn.tiny {
+  padding: 2px 7px; font-size: 11px; line-height: 1.5; min-width: 0;
+}
+.tiny { font-size: 11px; }
+.bar.slim { height: 4px; }
+
+@media (max-width: 620px) {
+  /* On a phone the name and the pickers cannot share a line without wrapping into four. Give the name
+     its own row and keep every chip and the button together on the next one. */
+  .cross-row { gap: 4px; }
+  .cross-name { flex: 0 0 100%; min-width: 0; }
+}

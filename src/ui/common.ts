@@ -31,6 +31,8 @@ export const ui = {
   /** Item keys gained since the Inventory tab was last open (shows NEW badges). */
   /** Which seeds are selected for each cross on the bench. A half-finished thought, not progress. */
   crossPick: {} as Record<string, { a: string; b: string }>,
+  /** Whether the crossing bench is expanded. Shut by default: the garden is the screen. */
+  benchOpen: false,
   newItems: new Set<string>(),
 };
 
