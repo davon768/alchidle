@@ -6,7 +6,7 @@ import { item } from '../../data/items';
 import { growRate, plantCost, profBonusOf, profLevelOf, strainRank, unlockedPlants } from '../../core/engine';
 import { clearPlot, harvest, harvestAll, plant, plantAll, sowAll, sowBest } from '../../core/actions';
 import { fmt, fmtTime } from '../../core/format';
-import { act, bar, gold, refresh, sectionTitle, ui } from '../common';
+import { act, bar, gold, handover, refresh, sectionTitle, ui } from '../common';
 import { HYBRIDS, HYBRID_MAP, codexProgress, crossBonus, crossHerbCost, knownCrosses } from '../../data/hybrids';
 import { cancelCross, crossStatus, startCross } from '../../core/crossing';
 
@@ -143,8 +143,10 @@ export function gardenView(s: GameState, m: Mods): TemplateResult {
 
   return html`<div class="view">
     ${sectionTitle('🌱 Garden', html`${s.plots.length} plots · ${m.autoHarvest > 0
-      ? html`<span class="good">🧑‍🌾 ${Math.min(Math.floor(m.autoHarvest), s.plots.length)}/${s.plots.length} plots tended by Gardeners</span>`
+      ? html`<span class="good">🧑‍🌾 ${Math.min(Math.floor(m.autoHarvest), s.plots.length)}
+/${s.plots.length} plots tended by Gardeners</span>`
       : 'Tap ripe plants to harvest — hire a Gardener apprentice to automate'}`)}
+    ${handover(s, 'gardener', 'what to plant')}
 
     <div class="card">
       <div class="dim">Choose what to plant — each herb has its own 🎖️ proficiency</div>

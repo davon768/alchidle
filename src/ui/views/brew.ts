@@ -6,7 +6,7 @@ import { QUALITIES, STIR_CLICKS, STIR_WINDOW, qualityChances, stirElapsed } from
 import { brewQualityScore, brewRate, count, hasAll, potionBasePrice, profLevelOf, unlockedRecipes, autoStirQ } from '../../core/engine';
 import { brew, cancelBrew, selectRecipe, stir, toggleRepeat } from '../../core/actions';
 import { fmt, fmtTime } from '../../core/format';
-import { act, bar, chip, gold, qualityChips, sectionTitle } from '../common';
+import { act, bar, chip, gold, handover, qualityChips, sectionTitle } from '../common';
 
 /**
  * The stirring mash.
@@ -48,8 +48,10 @@ export function brewView(s: GameState, m: Mods): TemplateResult {
   const recipes = unlockedRecipes(s);
   return html`<div class="view">
     ${sectionTitle('⚗️ Cauldrons', html`${s.cauldrons.length} cauldron${s.cauldrons.length > 1 ? 's' : ''} · ${m.autoBrew > 0
-      ? html`<span class="good">🧑‍🔬 ${Math.min(Math.floor(m.autoBrew), s.cauldrons.length)}/${s.cauldrons.length} tended by Brewers</span>`
+      ? html`<span class="good">🧑‍🔬 ${Math.min(Math.floor(m.autoBrew), s.cauldrons.length)}
+/${s.cauldrons.length} tended by Brewers</span>`
       : 'Brew one batch at a time — hire a Brewer apprentice to auto-repeat'}`)}
+    ${handover(s, 'brewer', 'what to brew')}
 
     <div class="grid wide">
       ${s.cauldrons.map((c, i) => {

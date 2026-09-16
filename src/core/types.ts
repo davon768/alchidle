@@ -379,5 +379,11 @@ export interface GameState {
   party: PartyState;
   // Apprentices
   staff: StaffState;
+  /**
+   * Crafts the player has taken back from their apprentice, keyed by role (plus 'meta' for the two
+   * eternal perks that spend for you). An apprentice still tends their beds and pots — that is what they
+   * *are* — but stops making choices: what to plant, which recipe, what to sell, where to send a party.
+   */
+  autoOff: Record<string, true>;
   lastTick: number;
 }

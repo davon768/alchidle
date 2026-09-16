@@ -5,12 +5,13 @@ import { item } from '../../data/items';
 import { expBaseTime } from '../../core/engine';
 import { recall, startExpedition, toggleExpRepeat } from '../../core/actions';
 import { fmt, fmtPct, fmtTime } from '../../core/format';
-import { act, bar, sectionTitle } from '../common';
+import { act, bar, handover, sectionTitle } from '../common';
 
 export function exploreView(s: GameState, m: Mods): TemplateResult {
   const freeSlot = s.expeditions.findIndex((e) => !e);
   return html`<div class="view">
     ${sectionTitle('🧭 Expeditions', html`${s.expeditions.length} part${s.expeditions.length > 1 ? 'ies' : 'y'} · loot is collected automatically`)}
+    ${handover(s, 'scout', 'where to send parties')}
 
     <div class="grid">
       ${s.expeditions.map((e, i) => {

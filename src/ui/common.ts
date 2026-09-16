@@ -1,4 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit-html';
+import { ROLE_MAP, type RoleId } from '../data/apprentices';
+import { setHandover, working } from '../core/automation';
 import type { GameState, GearSlot, ItemStack } from '../core/types';
 import { game } from '../core/game';
 import { item, type ItemKind } from '../data/items';
@@ -94,6 +96,30 @@ export function bar(frac: number, color?: string, label?: string, cls = ''): Tem
 
 export function gold(n: number): TemplateResult {
   return html`<span class="gold-text">🪙 ${fmt(n)}</span>`;
+}
+
+/**
+ * The handover switch: who is deciding here, you or your apprentice.
+ *
+ * Shown on every screen an apprentice acts on, because automation that cannot be turned off is not a
+ * convenience, it is a loss of the game. It only appears once that craft actually has an apprentice with
+ * something to decide — an inert toggle on an empty craft is just noise.
+ *
+ * Turning it off stops the *choosing* only. The apprentice still tends the beds and pots assigned to
+ * them; that is what they are, and a toggle should not amount to firing someone you have spent a hundred
+ * levels training.
+ */
+export function handover(s: GameState, role: string, what: string): TemplateResult | typeof nothing {
+  const named = role === 'meta' ? 'Your eternal perks' : ROLE_MAP[role as RoleId]?.name;
+  if (!named) return nothing;
+  if (role !== 'meta' && !s.staff.crew[role as RoleId]) return nothing;
+  const auto = working(s, role);
+  return html`<label class="handover ${auto ? 'on' : ''}" title=${auto
+      ? `${named} ${role === 'meta' ? 'handle' : 'decides'} ${what}. Switch off to do it yourself.`
+      : `You decide ${what}. Switch on to hand it back to ${named}.`}>
+    <input type="checkbox" .checked=${auto} @change=${act((st) => setHandover(st, role, !auto))} />
+    <span>${auto ? `${named} ${role === 'meta' ? 'handle' : 'decides'} ${what}` : `You decide ${what}`}</span>
+  </label>`;
 }
 
 export function sectionTitle(title: string, sub?: string | TemplateResult): TemplateResult {

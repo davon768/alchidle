@@ -104,6 +104,7 @@ export function newState(prev?: GameState): GameState {
     equippedFamiliars: [],
     party: { roster: [], kit: [], delve: null, depth: 0, relics: {}, repeat: false, nextId: 1 },
     staff: { crew: {}, repush: 0 },
+    autoOff: {},
     lastTick: Date.now(),
   };
   if (prev) {
@@ -120,6 +121,7 @@ export function newState(prev?: GameState): GameState {
     s.codex = prev.codex;
     s.clues = prev.clues;
     s.settings = prev.settings; // display preferences, not progress
+    s.autoOff = prev.autoOff; // how you like to play, not progress: a handover survives the rebirth
     s.stats.bestRunGold = Math.max(prev.stats.bestRunGold, prev.stats.runGold);
     for (const k of LIFETIME_STATS) s.stats[k] = prev.stats[k];
     s.gold += startGoldFor(s.asc.nodes['head_start'] ?? 0);

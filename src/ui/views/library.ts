@@ -4,7 +4,7 @@ import { RESEARCH, RESEARCH_MAP, researchCost, researchTime } from '../../data/r
 import { researchActive, researchDone, researchStatus, studyCut } from '../../core/engine';
 import { cancelResearch, startResearch } from '../../core/actions';
 import { fmtTime } from '../../core/format';
-import { act, bar, costChips, sectionTitle } from '../common';
+import { act, bar, costChips, handover, sectionTitle } from '../common';
 import { QUALITY_RESEARCH_BOOST } from '../../data/research';
 import { QUAL_MAX } from '../../data/quality';
 import { RECIPE_MAP } from '../../data/recipes';
@@ -21,6 +21,7 @@ export function libraryView(s: GameState, m: Mods): TemplateResult {
   return html`<div class="view">
     ${sectionTitle('📚 Research Library', html`${queue.length}/${desks} desk${desks > 1 ? 's' : ''} in use ·
       studies keep running while you are away${m.researchSpeed > 1 ? html` · <span class="good">${Math.round(m.researchSpeed * 100)}% speed</span>` : ''}`)}
+    ${handover(s, 'scribe', 'what to study')}
 
     <div class="grid wide">
       ${Array.from({ length: desks }, (_, i) => {

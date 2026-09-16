@@ -10,7 +10,7 @@ import { delveOdds, delveReq } from '../../data/adventurers';
 import { describeEffects } from '../../core/mods';
 import { quality } from '../../data/quality';
 import { fmt, fmtPct, fmtTime } from '../../core/format';
-import { act, bar, costChips, sectionTitle, ui } from '../common';
+import { act, bar, costChips, handover, sectionTitle, ui } from '../common';
 
 /** The whole chain of studies that ends at the charter, so the wait is legible rather than mysterious. */
 function charterChain(s: GameState): { def: ResearchDef; done: boolean; open: boolean }[] {
@@ -147,6 +147,7 @@ export function partyView(s: GameState, m: Mods): TemplateResult {
     ${sectionTitle('🏕️ The Company', chartered
       ? html`Deepest cleared: <b>${s.party.depth}</b> · ${s.party.roster.length} / ${slots} adventurers · ${fmt(s.stats.delves)} delves run`
       : 'Heroes you hire, supply from your own cauldrons, and send down the Endless Rift.')}
+    ${handover(s, 'captain', 'the company')}
 
     ${!chartered ? lockedCard(s) : html`
       ${delveCard(s, m)}

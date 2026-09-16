@@ -429,6 +429,18 @@ hand a whole system over is doing it *after* the rebirth that opened them, not b
 apprentice decide* — teaches the tier, and derives its check from `minAsc` rather than a list of ids, so
 a new judgement talent counts the day it is added.
 
+**Every craft can be taken back.** A handover switch sits on each screen an apprentice acts on — the
+Garden, Cauldrons, Market, Expeditions, Armory, Library, the Company, and Goals for the two eternal perks
+that spend for you. Automation that cannot be turned off is not a convenience, it is a loss of the game:
+a player who wants to pick their own recipes should not have to respec an apprentice to do it. The switch
+only appears once that craft *has* an apprentice with something to decide, and `s.autoOff` rides with
+settings through a rebirth, because it is a preference about how you like to play rather than progress.
+
+The line it draws is judgement, not employment. A handed-over apprentice still tends the beds and pots
+assigned to them — that is what an apprentice *is*, and a toggle should not amount to firing someone you
+have spent a hundred levels training. What stops is the choosing: what to plant, which recipe to run, what
+to sell, where to send a party.
+
 Everything lives in `core/automation.ts`, runs once a second from `tick`, and calls the same functions a
 click would — so an automated sale, delve or study is identical to a manual one, ledger tag included.
 Order matters and is the one thing that bit during the build: every consumer of potions (belt, supply

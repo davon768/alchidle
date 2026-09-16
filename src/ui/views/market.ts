@@ -5,7 +5,7 @@ import { buyUnitPrice, count, demandOf, qualCounts, sellValue } from '../../core
 import { affordableUnits, buy, sell, sellAllPotions, sellTier, toggleAutoSell } from '../../core/actions';
 import { quality } from '../../data/quality';
 import { fmt, fmtPct } from '../../core/format';
-import { act, gold, sectionTitle, ui } from '../common';
+import { act, gold, handover, sectionTitle, ui } from '../common';
 
 export function marketView(s: GameState, m: Mods): TemplateResult {
   const owned = ALL_ITEMS.filter((i) => i.kind === ui.marketFilter && count(s, i.id) >= 1);
@@ -15,6 +15,7 @@ export function marketView(s: GameState, m: Mods): TemplateResult {
 
   return html`<div class="view">
     ${sectionTitle('🏪 Market', 'Selling lots of one potion lowers its price — demand recovers over time. Finer bottles sell for more, and can be sold on their own.')}
+    ${handover(s, 'shopkeeper', 'what to sell')}
     ${hot ? html`<div class="goal">📣 Hot seller: <b>${hot.icon} ${hot.name}</b> at ${fmtPct(demandOf(s, hot.id))} demand!</div>` : ''}
 
     <div class="card">

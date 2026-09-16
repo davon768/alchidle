@@ -3,7 +3,7 @@ import type { GameState } from '../../core/types';
 import { GOALS, GOAL_CHAPTERS, type GoalDef } from '../../data/goals';
 import { claimGoal, currentGoal, goalStatus, type GoalStatus } from '../../core/goals';
 import { fmt } from '../../core/format';
-import { act, bar, chip, sectionTitle, ui, type TabId } from '../common';
+import { act, bar, chip, handover, sectionTitle, type TabId, ui } from '../common';
 
 const STATUS_ICON: Record<GoalStatus, string> = { claimed: '✅', done: '🎁', active: '🎯', locked: '🔒' };
 
@@ -51,6 +51,7 @@ export function goalsView(s: GameState): TemplateResult {
   const claimed = GOALS.filter((g) => goalStatus(s, g) === 'claimed').length;
   return html`<div class="view">
     ${sectionTitle('🎯 Goals', `${claimed} / ${GOALS.length} complete · each goal teaches one part of the game`)}
+    ${handover(s, 'meta', 'goals and skill points')}
     ${bar(claimed / GOALS.length, '#f5c542')}
     ${GOAL_CHAPTERS.map((chapter) => {
       const goals = GOALS.filter((g) => g.chapter === chapter);

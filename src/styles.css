@@ -463,3 +463,16 @@ textarea { width: 100%; min-height: 120px; background: #120d1c; color: var(--tex
   vertical-align: super;
   opacity: 0.75;
 }
+
+/* Who is deciding on this screen — the player, or the craft's apprentice. */
+.handover {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin: 0 0 10px; padding: 5px 10px;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--panel);
+  font-size: 12px; color: var(--dim);
+  cursor: pointer; user-select: none;
+}
+.handover:hover { border-color: var(--accent); }
+.handover.on { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.handover input { accent-color: var(--accent); margin: 0; cursor: pointer; }

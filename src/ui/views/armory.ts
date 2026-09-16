@@ -7,7 +7,7 @@ import { enhanceGear, equip, findGear, forgeCost, forgeGear, forgeUnlocked, gear
 import { heroStats } from '../../core/combat';
 import { describeEffects } from '../../core/mods';
 import { fmt } from '../../core/format';
-import { act, chip, costChips, sectionTitle, ui } from '../common';
+import { act, chip, costChips, handover, sectionTitle, ui } from '../common';
 import { heroStatGrid } from './dungeon';
 
 function gearHeader(it: GearItem): TemplateResult {
@@ -59,7 +59,9 @@ export function armoryView(s: GameState, m: Mods): TemplateResult {
   const salvageOpts: [number, string][] = [[0, 'Off'], [1, 'Common'], [2, '≤ Fine'], [3, '≤ Rare']];
 
   return html`<div class="view">
-    ${sectionTitle('🗡️ Armory', html`${s.gear.length}/${GEAR_CAP} items · ✴️ ${fmt(Math.floor(count(s, 'arcanedust')))} Arcane Dust`)}
+    ${sectionTitle('🗡️ Armory', html`${s.gear.length}/${GEAR_CAP} items · ✴️ ${fmt(Math.floor(count(s, 'arcanedust')))}
+Arcane Dust`)}
+    ${handover(s, 'squire', 'your kit')}
     <div class="grid">${GEAR_SLOTS.map((slot) => equippedCard(s, slot))}</div>
     <div class="card">${heroStatGrid(heroStats(s, m), m)}</div>
 

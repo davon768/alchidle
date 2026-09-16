@@ -43,6 +43,25 @@ let since = 0;
 
 const on = (v: number): boolean => v >= 1;
 
+/**
+ * Whether this craft's apprentice is still making the decisions, or the player has taken them back.
+ *
+ * A handover stops *judgement* only — the choosing of what to plant, which recipe to run, what to sell,
+ * where to send a party. The apprentice keeps tending the beds and pots they are assigned, because that
+ * is what an apprentice is; switching them off entirely would mean firing them, and the tree they have
+ * spent a hundred levels in is not something to throw away with a toggle.
+ */
+export function working(s: GameState, role: string): boolean {
+  return !s.autoOff?.[role];
+}
+
+/** Hand a craft back and forth. Called from every view that has an apprentice acting on it. */
+export function setHandover(s: GameState, role: string, apprenticeDecides: boolean): void {
+  s.autoOff ??= {};
+  if (apprenticeDecides) delete s.autoOff[role];
+  else s.autoOff[role] = true;
+}
+
 // ── Garden ───────────────────────────────────────────────────
 /** The best herb the player can actually afford to keep planting. */
 export function bestPlant(s: GameState, m: Mods): { id: string } | null {
@@ -252,16 +271,15 @@ export function tickAutomation(s: GameState, m: Mods, dt: number): void {
   since += dt;
   if (since < EVERY) return;
   since = 0;
-  autoGarden(s, m);
-  autoCauldrons(s, m);
-  autoRestock(s, m);
-  autoExpeditions(s, m);
+  if (working(s, 'gardener')) autoGarden(s, m);
+  if (working(s, 'brewer')) { autoCauldrons(s, m); autoRestock(s, m); }
+  if (working(s, 'scout')) autoExpeditions(s, m);
   // Everyone who *consumes* potions claims what they need before the Shopkeeper sells the surplus.
   // With the seller first, Open Books emptied the shelves every second and the Quartermaster, the belt
   // and the familiars never saw a bottle.
-  autoAdventure(s, m);
-  autoScribe(s, m);
-  autoCompany(s, m);
-  autoMarket(s, m);
-  autoMeta(s, m);
+  if (working(s, 'squire')) autoAdventure(s, m);
+  if (working(s, 'scribe')) autoScribe(s, m);
+  if (working(s, 'captain')) autoCompany(s, m);
+  if (working(s, 'shopkeeper')) autoMarket(s, m);
+  if (working(s, 'meta')) autoMeta(s, m);
 }
