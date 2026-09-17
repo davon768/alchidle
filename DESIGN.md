@@ -138,6 +138,49 @@ forever and pays +1% growth and +1% harvest yield. With 9 plants × 4 traits tha
 collection grind that only advances when the player deliberately mixes herbs across neighbouring plots —
 planting one herb everywhere never crosses at all.
 
+### Assembling the crew (v1.4): why four apprentices never arrived
+
+The owner's report was that a run ended with five cauldrons, a full garden of high-rank herbs and the
+ascension gate open, while three apprentices were still missing. The bot said the same and worse: at the
+gate it held **three of seven**, and asked when each one arrived it answered
+
+    Gardener:7m  Brewer:18m  Scout:64m  Shopkeeper:never  Squire:never  Scribe:never  Captain:never
+
+**The blocker was iron ore, not time or gold.** At level 31, having run dungeons all game, the bot held
+*zero*. Iron ore drops only from the first dungeon, so the supply quietly ends the moment you outlevel it,
+while the forge eats 8–10 a tier. That blocked the Squire (12 ore) and the Annex (20 ore) — and the Annex
+gates the Scribe, so one exhausted material stalled three apprentices and the second research desk. It was
+also the only mundane material that could not be bought, while quartz, slime gel, bat wing and crystal all
+could. Making it buyable from level 10 was the single change that moved the needle most.
+
+The rest of the pass:
+
+- The three long apprentice studies cut from 90 / 120 / 180 minutes to **40 / 50 / 70**. Seven apprentices
+  had cost 7.6 hours of desk time against a two-hour run.
+- The third desk (**The Scriptorium**) brought from 6 hours at level 20 to **80 minutes at level 17**. A
+  desk should be something a first run can win, not a reward for having already finished.
+- The Scribe now asks for **Spell Ink** rather than Soul Ink. Soul Ink needs Ectoplasm — a crypt drop with
+  exactly the same "supply ends" trap as iron ore. Spell Ink still means crafting in the Arcanum, and for
+  a study called *A Scribe's Alphabet* it is the more obvious ink.
+- The gate raised to **2M gold, level floor 20**, so a run cannot end before the last apprentice study is
+  even visible at level 18.
+
+| | before | after |
+|---|---|---|
+| First ascension | 123 min | **178 min** (range 150–211) |
+| Apprentices at the gate | 3.3 | **5.5** |
+| Arriving reliably in run 1 | 3 | 5, with the Captain and Scribe at the edge |
+
+**A gold reserve was tried and removed.** Making the bot hold back what an apprentice study needed did
+deliver all seven — at a 622-minute first ascension, with gold per second collapsing from 183 to 53. Ten
+hours to meet your seventh apprentice is worse than the problem it solves, and a bot that stops buying
+upgrades for hours has stopped modelling a player. The note survives in `balance-bot.ts` so it is not
+tried again.
+
+The bot's research policy was **cheapest-study-first**, which starved exactly the apprentice studies
+because those are the expensive ones. That is the third system where cheapest-first hid a real problem,
+after the Workshop and the ascension tree.
+
 ### The Crossing Bench (v1.3): hybrids you have to find
 
 The seed tray was a shelf. Seeds accumulated, you sowed them into beds, and there was no decision anywhere

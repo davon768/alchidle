@@ -57,7 +57,7 @@ const BASE_ITEMS: ItemDef[] = [
   { id: 'emberglass', name: 'Ember Glass', icon: '🟠', kind: 'material', value: 9000 },
   { id: 'auroradust', name: 'Aurora Dust', icon: '🎆', kind: 'material', value: 26000 },
   // Dungeon materials — dropped by monsters
-  { id: 'ironore', name: 'Iron Ore', icon: '⛏️', kind: 'material', value: 10 },
+  { id: 'ironore', name: 'Iron Ore', icon: '⛏️', kind: 'material', value: 10, buyLevel: 10 },
   { id: 'fang', name: 'Beast Fang', icon: '🦷', kind: 'material', value: 14 },
   { id: 'bonedust', name: 'Bone Dust', icon: '🦴', kind: 'material', value: 30 },
   { id: 'ectoplasm', name: 'Ectoplasm', icon: '👻', kind: 'material', value: 45 },

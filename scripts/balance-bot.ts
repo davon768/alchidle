@@ -24,7 +24,7 @@ import { newState } from '../src/core/state.ts';
 import { computeMods } from '../src/core/mods.ts';
 import {
   buyUnitPrice, count, hasAll, plantCost, profLevelOf, qualCounts, qualityMixMult,
-  researchStatus, simulate, syncSlots, unlockedRecipes, unlockedZones,
+  researchDone, researchStatus, simulate, syncSlots, unlockedRecipes, unlockedZones,
 } from '../src/core/engine.ts';
 import {
   brew, buy, buyUpgrade, buySkill, harvestAll, plant, selectRecipe, sell,
@@ -43,6 +43,8 @@ import { RESEARCH, researchCost } from '../src/data/research.ts';
 import { ASC_NODES, ascCost, ascStatus } from '../src/data/ascension.ts';
 import { ascend, buyAscNode } from '../src/core/actions.ts';
 import { QUALITIES } from '../src/data/quality.ts';
+import { craftReagent, maxCraftable } from '../src/core/magic.ts';
+import { REAGENTS } from '../src/data/spells.ts';
 import { consumePage, crossStatus, startCross } from '../src/core/crossing.ts';
 import { HYBRIDS } from '../src/data/hybrids.ts';
 import { parseSeed } from '../src/data/mutations.ts';
@@ -92,6 +94,8 @@ export interface BotResult {
   bestApprenticeLevel: number;
   /** Gold per minute over the stretch leading up to each level — the curve costs must be set against. */
   goldPerMinAtLevel: Record<number, number>;
+  /** Minute each apprentice first appeared — the crew against the gate. */
+  crewMinutes: Record<string, number>;
   endGold: number;
   endGoldPerMin: number;
   /** The whole final state, only when --dump asked for it. */
@@ -306,6 +310,9 @@ function spendGold(s: GameState, m: Mods, opts: BotOptions): void {
     if (!it.buyLevel || it.buyLevel > s.level) continue;
     if (count(s, it.id) < 40 && s.gold > buyUnitPrice(it.id) * 80) buy(s, it.id, 40);
   }
+  // (A gold reserve for unlock studies was tried here and removed: holding back 200k for the Scribe
+  // starved the Workshop and pushed the first ascension from three hours to ten, for half an apprentice.
+  // A player does not stop buying upgrades for hours, and a bot that does stops modelling one.)
   buyUpgrades(s, opts);
   for (let g = 0; g < 4; g++) {
     const node = SKILLS.filter((n) => skillStatus(s, n).ok)[0];
@@ -313,12 +320,45 @@ function spendGold(s: GameState, m: Mods, opts: BotOptions): void {
     buySkill(s, node.id);
   }
   if (!opts.research) return;
-  // Fill every free desk, cheapest study first — studies compete with upgrades for the same gold.
+  // Make whatever a study is short of, if it is something we know how to make.
+  //
+  // A study asking for Soul Ink was simply skipped forever, because nothing here had ever crafted a
+  // reagent — so the Scribe read as unreachable content when the real cause was the bot's own blind spot.
+  for (const def of RESEARCH) {
+    if (def.level > s.level || researchDone(s, def.id)) continue;
+    for (const need of researchCost(def, s.research.done[def.id] ?? 0)) {
+      const recipe = REAGENTS.find((x) => x.id === need.id);
+      if (!recipe || s.level < recipe.level) continue;
+      // One level of recursion: a reagent whose own inputs are reagents was otherwise uncraftable, and
+      // the chain simply read as missing content.
+      for (const sub of recipe.inputs) {
+        const subRecipe = REAGENTS.find((x) => x.id === sub.id);
+        if (!subRecipe || s.level < subRecipe.level) continue;
+        let subGuard = 0;
+        while (count(s, sub.id) < sub.qty * need.qty && subGuard++ < 40 && maxCraftable(s, subRecipe.inputs) >= 1) {
+          craftReagent(s, subRecipe.id, 1);
+        }
+      }
+      let guard = 0;
+      while (count(s, need.id) < need.qty && guard++ < 20 && maxCraftable(s, recipe.inputs) >= 1) {
+        craftReagent(s, recipe.id, 1);
+      }
+    }
+  }
+
+  // Fill every free desk. Studies that open something come first, then the cheapest.
+  //
+  // Cheapest-first for the third time, and starving the same kind of thing each time: the studies that
+  // unlock an apprentice or a desk are the expensive ones, so the bot bought trinkets forever and four of
+  // seven apprentices never arrived at all. A player researches to get their crew and their desks, then
+  // fills the gaps with whatever is cheap.
+  const opens = (r: { unlocksRole?: string; effects?: { stat: string }[] }): number =>
+    (r.unlocksRole || r.effects?.some((e) => e.stat === 'researchSlots')) ? 0 : 1;
   for (let g = 0; g < 3; g++) {
     const open = RESEARCH.filter((r) => researchStatus(s, m, r.id).ok)
       .map((r) => ({ r, cost: researchCost(r, s.research.done[r.id] ?? 0) }))
       .filter((o) => hasAll(s, o.cost))
-      .sort((a, b) => (a.cost[0]?.qty ?? 0) - (b.cost[0]?.qty ?? 0))[0];
+      .sort((a, b) => opens(a.r) - opens(b.r) || (a.cost[0]?.qty ?? 0) - (b.cost[0]?.qty ?? 0))[0];
     if (!open) break;
     startResearch(s, open.r.id);
   }
@@ -383,6 +423,7 @@ export function runBot(opts: BotOptions): BotResult {
   let atAscend: BotResult['atAscend'] = null;
   const runMinutes: number[] = [];
   const goldPerMinAtLevel: Record<number, number> = {};
+  const crewMinutes: Record<string, number> = {};
   let lastSample = { t: 0, gold: 0 };
   let runStart = 0;
 
@@ -403,6 +444,9 @@ export function runBot(opts: BotOptions): BotResult {
 
     simulate(s, STEP);
 
+    for (const r of ROLES) {
+      if (crewMinutes[r.id] === undefined && s.staff.crew[r.id]) crewMinutes[r.id] = +(t / 60).toFixed(1);
+    }
     for (const L of [10, 20, 30, 40, 50]) {
       if (levelMinutes[`lvl${L}`] === undefined && s.level >= L) levelMinutes[`lvl${L}`] = +(t / 60).toFixed(1);
     }
@@ -525,6 +569,7 @@ export function runBot(opts: BotOptions): BotResult {
     ] as [string, number][]).sort((x, y) => y[1] - x[1]).slice(0, 6),
     runMinutes,
     goldPerMinAtLevel,
+    crewMinutes,
     atAscend,
     finalState: opts.dump ? s : null,
     partyDepth: s.party.depth,
@@ -621,6 +666,19 @@ if (flag('json')) {
         return xs.length > 1 ? `${L}:${(Math.max(...xs) / Math.min(...xs)).toFixed(0)}x` : `${L}:-`;
       }).join('  '));
     }
+  }
+
+  {
+    // Across every run, not run 1. Printing a single run's crew beside a mean apprentice count read as a
+    // contradiction — "6.0 apprentices" next to "Squire:never" — when it was only one unlucky trajectory.
+    // The same single-sample mistake the income curve made before it.
+    const rows = ROLES.map((r) => {
+      const got = results.map((x) => x.crewMinutes[r.id]).filter((v): v is number => v !== undefined);
+      if (!got.length) return `${r.name}:never`;
+      const median = got.sort((a, b) => a - b)[Math.floor(got.length / 2)];
+      return `${r.name}:${Math.round(median)}m(${got.length}/${results.length})`;
+    });
+    console.log('\nwhen each apprentice arrived (run 1): ' + rows.join('  '));
   }
 
   if (asc.length) {

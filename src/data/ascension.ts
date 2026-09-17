@@ -19,7 +19,7 @@ export interface AscNode {
  * pace the first ascension at all — that is gated on gold, so slowing levels alone just meant ascending
  * at level 25 instead of 30, having seen less of the game rather than more of it.
  */
-export const ASC_MIN_GOLD = 600_000;
+export const ASC_MIN_GOLD = 2_000_000;
 
 /**
  * What each further ascension demands.
@@ -45,7 +45,9 @@ export function ascGoldTarget(count: number): number {
  * the content than the one before it.
  */
 export function ascMinLevel(count: number): number {
-  return Math.min(60, 15 + 3 * count);
+  // The floor starts above the deepest apprentice study (the Scribe, level 18) on purpose: a first run
+  // that can end before the last of your crew is even visible in the Library has skipped its own content.
+  return Math.min(60, 20 + 3 * count);
 }
 
 /** Whether the Magnum Opus can be performed, and what is still missing. */
